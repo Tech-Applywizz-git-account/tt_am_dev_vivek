@@ -421,10 +421,10 @@ function App() {
 
     const { error: insertError } = await supabase.from('clients').insert({
       full_name: clientData.full_name,
-      personal_email: clientData.personal_email,
+      personal_email: clientData.personal_email.trim().toLowerCase(),
       whatsapp_number: clientData.whatsapp_number,
       callable_phone: clientData.callable_phone,
-      company_email: clientData.company_email,
+      company_email: clientData.company_email.trim().toLowerCase(),
       job_role_preferences: clientData.job_role_preferences,
       salary_range: clientData.salary_range,
       location_preferences: clientData.location_preferences,
@@ -470,8 +470,8 @@ function App() {
 
     const { error: userInsertError } = await supabase.from('users').insert({
       id: userData.user.id, // must match auth.users.id
-      name: clientData.full_name,
-      email: clientData.company_email,
+      name: name,
+      email: email,
       role: 'client',
       department: 'Client Services',
       is_active: true,
