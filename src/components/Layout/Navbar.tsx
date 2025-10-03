@@ -90,6 +90,7 @@ import { LogOut, X } from 'lucide-react';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
 import { ProfileMenu } from "./ProfileMenu";
+import { supabase } from '../../lib/supabaseClient';
 
 
 interface NavbarProps {
@@ -99,6 +100,34 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
   const [isBetaOpen, setIsBetaOpen] = useState(false);
+  const [badgeValue, setBadgeValue] = useState<number | null>(null);
+  const [codingLabUrl, setCodingLabUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBadgeValue = async () => {
+      if (!user?.email) return;
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("badge_value,coding_lab_url,company_email")
+        .eq("company_email", user.email)
+        .single();
+
+      if (error) {
+        console.error("Error fetching badge value:", error.message);
+        return;
+      }
+
+      if (data?.badge_value !== null) {
+        setBadgeValue(data.badge_value);
+      }
+      if (data?.coding_lab_url) {
+        setCodingLabUrl(data.coding_lab_url);
+      }
+    };
+
+    fetchBadgeValue();
+  }, [user?.email]);
   
   useEffect(() => {
     if (!isBetaOpen) return;
@@ -190,6 +219,28 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
               </div>
             </div>
           </div>
+
+          {(user.role === 'client' && badgeValue) && ( // show the button only if the user is a client and has a badgeValue
+              <button
+                className="text-sm px-2 py-1 bg-blue-100 text-blue-600 rounded-lg font-medium"
+                onClick={() => {
+                  const uid = encodeURIComponent(user.id ?? user.email);
+                  if (codingLabUrl==="vivek") {
+                    window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener'); //uid
+                  }else if (codingLabUrl==="be1") {
+                    window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener'); //uid
+                  }else if (codingLabUrl==="be2") {
+                    window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener'); //uid
+                  }else if (codingLabUrl==="be3") {
+                    window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener'); //uid
+                  }else {
+                    window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener'); //uid
+                  }}
+                }
+              >
+                Coding Lab
+              </button>
+            )}
 
           <ProfileMenu user={user} onLogout={onLogout} />
         </div>
