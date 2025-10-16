@@ -1,5 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '../src/lib/supabaseAdminClient';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false
+  }
+});
 
 // Define the structure of the incoming client data
 interface ClientSyncData {
@@ -21,7 +36,7 @@ interface ClientSyncData {
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.CRM_SYNC_API_KEY;
+  const expectedApiKey = process.env.CRM_SYNC_API_KEY || process.env.VITE_CRM_SYNC_API_KEY;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
