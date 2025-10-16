@@ -109,7 +109,6 @@ function App() {
       setPendingClients(pendingClientsData || []);
     }
 
-
     setTickets(ticketData || []);
     setUsers(userData || []);
     setAssignments(assignmentMap);
