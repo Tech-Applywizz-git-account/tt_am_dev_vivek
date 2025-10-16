@@ -16,7 +16,6 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   }
 });
 
-
 // Define the structure of the incoming client data
 interface ClientSyncData {
   applywizz_id?: string;  // The common AWL-XXXX ID
@@ -33,12 +32,11 @@ interface ClientSyncData {
   [key: string]: any; // Allow for additional fields
 }
 
-
 // Simple authentication middleware
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.SYNC_API_KEY;
+  const expectedApiKey = process.env.SYNC_API_KEY ;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
