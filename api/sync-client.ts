@@ -16,7 +16,6 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   }
 });
 
-
 // Define the structure of the incoming client data
 interface ClientSyncData {
   applywizz_id?: string;  // The common AWL-XXXX ID
@@ -32,7 +31,6 @@ interface ClientSyncData {
   // Add any other fields that might be updated
   [key: string]: any; // Allow for additional fields
 }
-
 
 // Simple authentication middleware
 function authenticateRequest(req: VercelRequest): boolean {
@@ -57,6 +55,15 @@ function authenticateRequest(req: VercelRequest): boolean {
 // Validate the client data
 function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
+  
+  // Handle case where data is undefined or not an object
+  if (!data || typeof data !== 'object') {
+    errors.push('ApplyWizz ID is required');
+    return {
+      isValid: false,
+      errors
+    };
+  }
   
   // Check if applywizz_id or awl_id exists
   const applywizzId = data.applywizz_id || data.awl_id;
@@ -98,6 +105,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  
+  // Check if required environment variables are set
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'Server configuration error', details: 'Missing Supabase environment variables' });
+  }
 
   try {
     // Authenticate the request
@@ -107,12 +119,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Extract the client data from the request body
     const clientData: ClientSyncData = req.body;
+    
+    // Check if clientData exists
+    if (!clientData || typeof clientData !== 'object') {
+      return res.status(400).json({ 
+        error: 'Invalid request body', 
+        details: 'Request body must be a valid JSON object' 
+      });
+    }
 
     // Use applywizz_id or awl_id as the applywizz_id
     const applywizzId = clientData.applywizz_id || clientData.awl_id;
 
     // Validate the client data
-    const validation = validateClientData({...clientData, applywizz_id: applywizzId});
+    const validationData = clientData ? {...clientData, applywizz_id: applywizzId} : {applywizz_id: applywizzId};
+    const validation = validateClientData(validationData);
     if (!validation.isValid) {
       return res.status(400).json({ 
         error: 'Validation failed', 
