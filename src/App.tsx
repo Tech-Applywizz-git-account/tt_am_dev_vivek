@@ -236,8 +236,6 @@ function App() {
   //     supabase.removeChannel(commentsChannel);
   //   };
   // }, []);
-
-
   // assignments: Record<string, { id: string; name: string; role: string }[]>
 
   // Function to handle user login
@@ -436,6 +434,9 @@ function App() {
       scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376",
       onboarded_by: currentUser!.id,
       sponsorship: clientData.sponsorship,
+      applywizz_id: clientData.applywizz_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
 
     if (insertError) {

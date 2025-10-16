@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 interface PendingClient {
   id: string;
   full_name: string;
-  personal_email: string;
+  company_email: string;
   job_role_preferences: string[];
   location_preferences: string[];
   salary_range: string;
@@ -107,7 +107,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-lg font-semibold">{client.full_name}</p>
-                  <p className="text-sm text-gray-600">{client.personal_email}</p>
+                  <p className="text-sm text-gray-600">{client.company_email}</p>
                   <p className="text-sm">
                     Job Prefs: {client.job_role_preferences?.join(", ")}
                   </p>
