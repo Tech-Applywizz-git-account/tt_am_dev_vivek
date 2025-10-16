@@ -236,8 +236,6 @@ function App() {
   //     supabase.removeChannel(commentsChannel);
   //   };
   // }, []);
-
-
   // assignments: Record<string, { id: string; name: string; role: string }[]>
 
   // Function to handle user login
