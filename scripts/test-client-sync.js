@@ -9,8 +9,8 @@
  */
 
 // Configuration - Update these values
-const API_URL = process.env.API_URL || 'http://localhost:3000/api/sync-client';
-const API_KEY = process.env.API_KEY || 'test-api-key'; // Set to null for development mode
+const API_URL = process.env.API_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/sync-client` : 'http://localhost:3000/api/sync-client';
+const API_KEY = process.env.API_KEY || process.env.CRM_SYNC_API_KEY || process.env.VITE_CRM_SYNC_API_KEY || 'test-api-key'; // Set to null for development mode
 
 // Test client data
 const testClientData = {
