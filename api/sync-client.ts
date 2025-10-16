@@ -120,19 +120,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract the client data from the request body
     let clientData: ClientSyncData = req.body;
     
-    // Log the request for debugging (remove in production)
-    console.log('Received request:', { 
-      method: req.method, 
-      headers: req.headers, 
-      body: req.body,
-      bodyType: typeof req.body
-    });
+    // Log detailed request information for debugging
+    console.log('=== REQUEST DEBUG INFO ===');
+    console.log('Method:', req.method);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Raw body:', req.body);
+    console.log('Body type:', typeof req.body);
+    console.log('Content-Type header:', req.headers['content-type']);
+    console.log('===========================');
     
     // In some cases, the body might be a string that needs to be parsed
     if (typeof clientData === 'string') {
       try {
         clientData = JSON.parse(clientData);
+        console.log('Parsed clientData:', clientData);
       } catch (parseError) {
+        console.error('JSON parse error:', parseError);
         return res.status(400).json({ 
           error: 'Invalid JSON in request body', 
           details: 'Request body must be valid JSON' 
@@ -142,6 +145,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Check if clientData exists and is valid
     if (!clientData) {
+      // Check if content-type is set correctly
+      const contentType = req.headers['content-type'];
+      console.log('Content-Type header:', contentType);
+      
+      // If no content-type or incorrect content-type, suggest fix
+      if (!contentType || !contentType.includes('application/json')) {
+        return res.status(400).json({ 
+          error: 'Missing or invalid Content-Type header', 
+          details: 'Request must include Content-Type: application/json header',
+          receivedContentType: contentType || 'none'
+        });
+      }
+      
       return res.status(400).json({ 
         error: 'Missing request body', 
         details: 'Request body is required and must contain client data' 
