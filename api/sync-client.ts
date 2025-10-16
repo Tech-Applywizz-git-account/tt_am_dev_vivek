@@ -118,13 +118,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // Extract the client data from the request body
-    const clientData: ClientSyncData = req.body;
+    let clientData: ClientSyncData = req.body;
     
-    // Check if clientData exists
-    if (!clientData || typeof clientData !== 'object') {
+    // Log the request for debugging (remove in production)
+    console.log('Received request:', { 
+      method: req.method, 
+      headers: req.headers, 
+      body: req.body,
+      bodyType: typeof req.body
+    });
+    
+    // In some cases, the body might be a string that needs to be parsed
+    if (typeof clientData === 'string') {
+      try {
+        clientData = JSON.parse(clientData);
+      } catch (parseError) {
+        return res.status(400).json({ 
+          error: 'Invalid JSON in request body', 
+          details: 'Request body must be valid JSON' 
+        });
+      }
+    }
+    
+    // Check if clientData exists and is valid
+    if (!clientData) {
       return res.status(400).json({ 
-        error: 'Invalid request body', 
-        details: 'Request body must be a valid JSON object' 
+        error: 'Missing request body', 
+        details: 'Request body is required and must contain client data' 
+      });
+    }
+    
+    if (typeof clientData !== 'object') {
+      return res.status(400).json({ 
+        error: 'Invalid request body format', 
+        details: `Request body must be a JSON object, received ${typeof clientData}` 
+      });
+    }
+    
+    if (Array.isArray(clientData)) {
+      return res.status(400).json({ 
+        error: 'Invalid request body format', 
+        details: 'Request body must be a JSON object, received an array' 
       });
     }
 
