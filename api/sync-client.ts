@@ -17,6 +17,7 @@ interface ClientSyncData {
   [key: string]: any; // Allow for additional fields
 }
 
+
 // Simple authentication middleware
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
