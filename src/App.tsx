@@ -109,7 +109,6 @@ function App() {
       setPendingClients(pendingClientsData || []);
     }
 
-
     setTickets(ticketData || []);
     setUsers(userData || []);
     setAssignments(assignmentMap);
@@ -436,7 +435,7 @@ function App() {
       sponsorship: clientData.sponsorship,
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      update_at: new Date().toISOString(),
     });
 
     if (insertError) {
