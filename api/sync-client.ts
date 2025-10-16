@@ -38,7 +38,7 @@ interface ClientSyncData {
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.CRM_SYNC_API_KEY || process.env.VITE_CRM_SYNC_API_KEY;
+  const expectedApiKey = process.env.SYNC_API_KEY;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
@@ -57,6 +57,15 @@ function authenticateRequest(req: VercelRequest): boolean {
 // Validate the client data
 function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
+  
+  // Handle case where data is undefined or not an object
+  if (!data || typeof data !== 'object') {
+    errors.push('ApplyWizz ID is required');
+    return {
+      isValid: false,
+      errors
+    };
+  }
   
   // Check if applywizz_id or awl_id exists
   const applywizzId = data.applywizz_id || data.awl_id;
@@ -98,6 +107,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  
+  // Check if required environment variables are set
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'Server configuration error', details: 'Missing Supabase environment variables' });
+  }
 
   try {
     // Authenticate the request
@@ -106,13 +120,72 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // Extract the client data from the request body
-    const clientData: ClientSyncData = req.body;
+    let clientData: ClientSyncData = req.body;
+    
+    // Log detailed request information for debugging
+    console.log('=== REQUEST DEBUG INFO ===');
+    console.log('Method:', req.method);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Raw body:', req.body);
+    console.log('Body type:', typeof req.body);
+    console.log('Content-Type header:', req.headers['content-type']);
+    console.log('===========================');
+    
+    // In some cases, the body might be a string that needs to be parsed
+    if (typeof clientData === 'string') {
+      try {
+        clientData = JSON.parse(clientData);
+        console.log('Parsed clientData:', clientData);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        return res.status(400).json({ 
+          error: 'Invalid JSON in request body', 
+          details: 'Request body must be valid JSON' 
+        });
+      }
+    }
+    
+    // Check if clientData exists and is valid
+    if (!clientData) {
+      // Check if content-type is set correctly
+      const contentType = req.headers['content-type'];
+      console.log('Content-Type header:', contentType);
+      
+      // If no content-type or incorrect content-type, suggest fix
+      if (!contentType || !contentType.includes('application/json')) {
+        return res.status(400).json({ 
+          error: 'Missing or invalid Content-Type header', 
+          details: 'Request must include Content-Type: application/json header',
+          receivedContentType: contentType || 'none'
+        });
+      }
+      
+      return res.status(400).json({ 
+        error: 'Missing request body', 
+        details: 'Request body is required and must contain client data' 
+      });
+    }
+    
+    if (typeof clientData !== 'object') {
+      return res.status(400).json({ 
+        error: 'Invalid request body format', 
+        details: `Request body must be a JSON object, received ${typeof clientData}` 
+      });
+    }
+    
+    if (Array.isArray(clientData)) {
+      return res.status(400).json({ 
+        error: 'Invalid request body format', 
+        details: 'Request body must be a JSON object, received an array' 
+      });
+    }
 
     // Use applywizz_id or awl_id as the applywizz_id
     const applywizzId = clientData.applywizz_id || clientData.awl_id;
 
     // Validate the client data
-    const validation = validateClientData({...clientData, applywizz_id: applywizzId});
+    const validationData = clientData ? {...clientData, applywizz_id: applywizzId} : {applywizz_id: applywizzId};
+    const validation = validateClientData(validationData);
     if (!validation.isValid) {
       return res.status(400).json({ 
         error: 'Validation failed', 
