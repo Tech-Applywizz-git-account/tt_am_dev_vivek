@@ -83,7 +83,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   if (data.company_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.company_email)) {
     errors.push('Invalid company email format');
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors
