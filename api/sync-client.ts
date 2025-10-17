@@ -37,7 +37,7 @@ interface ClientSyncData {
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.SYNC_API_KEY ;
+  const expectedApiKey = process.env.SYNC_API_KEY;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
@@ -84,7 +84,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   if (data.company_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.company_email)) {
     errors.push('Invalid company email format');
   }
-
+  
   return {
     isValid: errors.length === 0,
     errors
