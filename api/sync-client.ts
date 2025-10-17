@@ -37,7 +37,7 @@ interface ClientSyncData {
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.SYNC_API_KEY;
+  const expectedApiKey = process.env.SYNC_API_KEY ;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
