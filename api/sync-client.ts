@@ -22,6 +22,7 @@ interface ClientSyncData {
   full_name?: string;
   personal_email?: string;
   whatsapp_number?: string;
+  company_email?: string;
   callable_phone?: string;
   job_role_preferences?: string[];
   salary_range?: string;
