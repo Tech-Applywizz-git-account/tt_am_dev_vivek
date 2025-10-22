@@ -31,6 +31,8 @@ import FeedbackButton from './components/FeedbackButton';
 import { ClientSearchBar } from './components/ClientSearchBar';
 import { ca } from 'date-fns/locale';
 import { SupabaseAdminCreateClient } from './lib/supabaseAdminCreateClient';
+import ApplicationsOverTime from './components/ClientDashboard/ApplicationsOverTime';
+import ApplicationSummaryList from './components/ClientDashboard/ApplicationSummaryList';
 
 function App() {
   const fetchData = async () => {
@@ -284,10 +286,7 @@ function App() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
-    if (user.role === 'client') {
-      setActiveView('tickets');
-    }
-    // console.log('Logged in user:', user.name, 'with role:', user.role);
+    // console.log('Logged in user:', user.name, 'with role:', user.role, 'with email :', user.email);
   };
   // console.log('Logged in user:', currentUser?.name, currentUser?.role);
 
@@ -757,34 +756,43 @@ function App() {
               </div>
             </div>
 
-            <DashboardStatsComponent
-              stats={stats}
-              userRole={currentUser?.role || ''}
-              onTotalTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('all'); // Reset status filter
-                setFilterType('all');   // Reset type filter
-                setFilterPriority('all');
-              }}
-              onOpenTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('open'); // This will filter to only open tickets
-                setFilterType('all'); // Reset type filter
-                setFilterPriority('all');
-              }}
-              onResolvedTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('resolved');
-                setFilterType('all');
-                setFilterPriority('all');
-              }}
-              onCriticalTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('all');
-                setFilterType('all');
-                setFilterPriority('critical');
-              }}
-            />
+            {currentUser?.role === 'client' ? (
+              <>
+                <ApplicationsOverTime />
+                <ApplicationSummaryList />
+              </>
+            )
+              :
+              (
+                <>
+                <DashboardStatsComponent
+                  stats={stats}
+                  userRole={currentUser?.role || ''}
+                  onTotalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all'); // Reset status filter
+                    setFilterType('all');   // Reset type filter
+                    setFilterPriority('all');
+                  }}
+                  onOpenTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('open'); // This will filter to only open tickets
+                    setFilterType('all'); // Reset type filter
+                    setFilterPriority('all');
+                  }}
+                  onResolvedTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('resolved');
+                    setFilterType('all');
+                    setFilterPriority('all');
+                  }}
+                  onCriticalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all');
+                    setFilterType('all');
+                    setFilterPriority('critical');
+                  }}
+                />            
             {isExecutive ? (
               <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
             ) : (
@@ -852,6 +860,8 @@ function App() {
                   </div>
                 </div>
               </div>
+            )}
+            </>
             )}
             <FeedbackButton user={currentUser} />
           </div>

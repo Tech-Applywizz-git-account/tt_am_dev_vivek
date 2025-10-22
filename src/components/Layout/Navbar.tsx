@@ -158,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
             </div> */}
 
             {/* Small/Medium: open modal instead of details */}
-            <button
+            {/* <button
               type="button"
               onClick={() => setIsBetaOpen(true)}
               className="lg:hidden text-xs sm:text-sm text-gray-600 bg-transparent border border-green-200 rounded px-2 py-1 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-300"
@@ -172,9 +172,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
             </button>
             {isBetaOpen && (
               <div id="beta-modal" role="dialog" aria-modal="true" className="fixed inset-0 z-[70]">
-                {/* overlay */}
+                {/* overlay * /}
                 <div className="absolute inset-0 bg-black/40" onClick={() => setIsBetaOpen(false)} aria-hidden="true" />
-                {/* centered panel */}
+                {/* centered panel * /}
                 <div className="absolute inset-0 grid place-items-center px-4">
                   <div className="w-full max-w-md rounded-xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
                     <div className="flex items-center justify-center  py-3 bg-gray-100 ">
@@ -202,11 +202,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
 
 
             {/* Full text only on large+ (unchanged look) */}
-            <div className="hidden lg:block text-sm text-gray-600 bg-transparent border border-green-200 rounded px-3 py-2 text-gray-900">
+            {/* <div className="hidden lg:block text-sm text-gray-600 bg-transparent border border-green-200 rounded px-3 py-2 text-gray-900">
               <div className="text-center">🚀 ApplyWizz Ticketing Tool – Beta Version Launched!</div>
               <div className="px-4 text-center ">
                 <p>
@@ -217,7 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
                   - ApplyWizz Ops &amp; Tech Team
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {(user.role === 'client' && badgeValue) && ( // show the button only if the user is a client and has a badgeValue
