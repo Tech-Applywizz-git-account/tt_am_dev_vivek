@@ -194,12 +194,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Prepare the data for upsert - map to the correct database column
-    const upsertData = {
-      ...clientData,
-      applywizz_id: applywizzId, // Ensure we have the applywizz_id
-      update_at: new Date().toISOString() // Use the correct column name from your schema
-    };
+    // First, check if the client already exists
+    const { data: existingClient, error: fetchError } = await supabaseAdmin
+      .from('clients')
+      .select('id, company_email')
+      .eq('applywizz_id', applywizzId)
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error checking existing client:', fetchError);
+      return res.status(500).json({ error: 'Failed to check existing client', details: fetchError.message });
+    }
+
+    let upsertData;
+    
+    if (existingClient) {
+      // UPDATE: Client exists, do not update company_email
+      // Remove company_email from the update data
+      const { company_email, ...updateData } = clientData;
+      upsertData = {
+        ...updateData,
+        applywizz_id: applywizzId,
+        update_at: new Date().toISOString()
+      };
+    } else {
+      // INSERT: New client, handle company_email according to requirements:
+      // 1. If company_email is provided, use it
+      // 2. If company_email is not provided, use personal_email
+      // 3. If neither is provided, use a default email
+      let companyEmail = clientData.company_email;
+      if (!companyEmail) {
+        companyEmail = clientData.personal_email || `${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}@noemail.com`;
+      }
+
+      upsertData = {
+        ...clientData,
+        company_email: companyEmail, // Ensure we always have a company_email for new records
+        applywizz_id: applywizzId,
+        update_at: new Date().toISOString()
+      };
+    }
 
     // Perform upsert operation based on the ApplyWizz ID
     // This uses the applywizz_id column as the conflict key
