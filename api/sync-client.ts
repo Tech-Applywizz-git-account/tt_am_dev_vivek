@@ -67,7 +67,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     };
   }
   
-  // Check if applywizz_id or awl_id exists
+  // Check if applywizz_id exists
   const applywizzId = data.applywizz_id ;
   
   // Check if applywizz_id exists and follows the AWL-X to AWL-XXXX pattern
