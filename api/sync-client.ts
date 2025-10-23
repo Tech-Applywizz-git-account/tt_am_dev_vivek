@@ -19,7 +19,6 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 // Define the structure of the incoming client data
 interface ClientSyncData {
   applywizz_id?: string;  // The common AWL-XXXX ID
-  awl_id?: string;  // Alternative field name for backward compatibility
   full_name?: string;
   personal_email?: string;
   whatsapp_number?: string;
@@ -65,8 +64,8 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     };
   }
   
-  // Check if applywizz_id or awl_id exists
-  const applywizzId = data.applywizz_id || data.awl_id;
+  // Check if applywizz_id exists
+  const applywizzId = data.applywizz_id ;
   
   // Check if applywizz_id exists and follows the AWL-X to AWL-XXXX pattern
   if (!applywizzId) {
@@ -89,6 +88,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     errors
   };
 }
+
 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -170,8 +170,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Use applywizz_id or awl_id as the applywizz_id
-    const applywizzId = clientData.applywizz_id || clientData.awl_id;
+    // Use applywizz_id  as the applywizz_id
+    const applywizzId = clientData.applywizz_id;
 
     // Validate the client data
     const validationData = clientData ? {...clientData, applywizz_id: applywizzId} : {applywizz_id: applywizzId};
