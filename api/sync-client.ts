@@ -18,8 +18,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 // Define the structure of the incoming client data
 interface ClientSyncData {
-  applywizz_id?: string;  // The common AWL-XXXX ID
-  awl_id?: string;  // Alternative field name for backward compatibility
+  applywizz_id?: string;  // The Common AWL-XXXX ID
   full_name?: string;
   personal_email?: string;
   whatsapp_number?: string;
