@@ -205,6 +205,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       upsertData = {
         ...updateData,
         applywizz_id: applywizzId,
+        company_email: existingClient.company_email,
         update_at: new Date().toISOString()
       };
     } else {
