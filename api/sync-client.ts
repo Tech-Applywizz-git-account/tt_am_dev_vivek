@@ -122,15 +122,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract the client data from the request body
     let clientData: ClientSyncData = req.body;
     
-    // Log detailed request information for debugging
-    // console.log('=== REQUEST DEBUG INFO ===');
-    // console.log('Method:', req.method);
-    // console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    // console.log('Raw body:', req.body);
-    // console.log('Body type:', typeof req.body);
-    // console.log('Content-Type header:', req.headers['content-type']);
-    // console.log('===========================');
-    
     // In some cases, the body might be a string that needs to be parsed
     if (typeof clientData === 'string') {
       try {
