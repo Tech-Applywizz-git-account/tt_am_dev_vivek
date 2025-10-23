@@ -170,8 +170,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Use applywizz_id or awl_id as the applywizz_id
-    const applywizzId = clientData.applywizz_id || clientData.awl_id;
+    // Use applywizz_id  as the applywizz_id
+    const applywizzId = clientData.applywizz_id;
 
     // Validate the client data
     const validationData = clientData ? {...clientData, applywizz_id: applywizzId} : {applywizz_id: applywizzId};
