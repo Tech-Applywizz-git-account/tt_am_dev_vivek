@@ -758,8 +758,8 @@ function App() {
 
             {currentUser?.role === 'client' ? (
               <>
-                <ApplicationsOverTime />
-                <ApplicationSummaryList />
+                <ApplicationsOverTime currentUserEmail={currentUser?.email} />
+                <ApplicationSummaryList currentUserEmail={currentUser?.email} />
               </>
             )
               :

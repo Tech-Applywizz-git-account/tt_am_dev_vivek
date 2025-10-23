@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { supabase } from '@/lib/supabaseClient';
 
 // ✅ Types
 interface TaskCount {
@@ -11,207 +12,134 @@ interface JobItem {
   id: string;
   jobTitle: string | null;
   company: string | null;
+  status: string;
   description: string;
   location: string | null;
+  salary: string | null;
+  createdAt: string;
+  dueDate: string;
   score: number;
-  joburl: string | null;
+  jobUrl: string | null;
 }
 
 type JobsData = Record<string, JobItem[]>;
 
-const ApplicationSummaryList: React.FC = () => {
+interface ApplicationSummaryListProps {
+  currentUserEmail?: string;
+}
+
+const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({ currentUserEmail }) => {
   const [data, setData] = useState<TaskCount[]>([]);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [jobsData, setJobsData] = useState<JobsData>({});
   const [loading, setLoading] = useState<boolean>(false);
+  const [jobsLoading, setJobsLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     fetchApplicationsData();
-  }, []);
+  }, [currentUserEmail]);
 
   const fetchApplicationsData = async () => {
-    setLoading(true);
-    setTimeout(() => {
-      const completedTasks: Record<string, number> = {
-        "2025-09-01": 3,
-        "2025-09-02": 5,
-        "2025-09-03": 22,
-        "2025-09-04": 7,
-        "2025-09-05": 4,
-        "2025-09-06": 6,
-        "2025-09-07": 8,
-      };
+    if (!currentUserEmail) {
+      setError("User email not available");
+      return;
+    }
 
-      const formattedData: TaskCount[] = Object.entries(completedTasks)
-        .map(([date, count]) => ({ date, count }))
+    setLoading(true);
+    setError("");
+
+    try {
+      // First, get the applywizz_id from Supabase based on the user's email
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('applywizz_id')
+        .eq('company_email', currentUserEmail)
+        .single();
+
+      if (clientError) {
+        throw new Error(`Failed to fetch client data: ${clientError.message}`);
+      }
+
+      if (!clientData || !clientData.applywizz_id) {
+        throw new Error("Applywizz ID not found for this user");
+      }
+
+      const applywizzId = clientData.applywizz_id;
+
+      // Now fetch the actual data from the external API
+      const apiUrl = import.meta.env.VITE_APPLYWIZZ_API_URL;
+      if (!apiUrl) {
+        throw new Error('VITE_APPLYWIZZ_API_URL is not defined in environment variables');
+      }
+      
+      const response = await fetch(`${apiUrl}?lead_id=${applywizzId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+      }
+
+      const apiData = await response.json();
+      
+      // Transform the API data to match our expected format
+      const formattedData: TaskCount[] = Object.entries(apiData.completed_tasks || {})
+        .map(([date, count]) => ({ date, count: Number(count) }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setData(formattedData);
+    } catch (err) {
+      console.error("Error fetching applications data:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const fetchJobsForDate = async (date: string): Promise<JobItem[]> => {
     try {
-      const response = await fetch(`http://192.168.0.110:8000/api/client/lead_id=254&date=${date}`);
-      const json = await response.json();
+      // Set loading state for this specific date
+      setJobsLoading(prev => ({ ...prev, [date]: true }));
+      
+      // Get the applywizz_id from Supabase based on the user's email
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('applywizz_id')
+        .eq('company_email', currentUserEmail)
+        .single();
 
-      // Dummy data:
-      const dummy: JobsData = {
-        "2025-09-07": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-        "2025-09-06": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-        "2025-09-05": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-        "2025-09-04": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-        "2025-09-03": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-        "2025-09-02": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-        "2025-09-01": [
-          {
-            id: "x1y2z3-1111-2222-3333-4444aaaa",
-            jobTitle: "Frontend Developer",
-            company: "Tech Corp",
-            description:
-              "Role: 28, Experience: 10, Skills: 8, Qualifications: 5, Location: 5, Other: 0 -> total 56.",
-            location: "New York, USA",
-            score: 56,
-            joburl: "https://example.com",
-          },
-          {
-            id: "x1y2z3-aaaa-bbbb-cccc-ddddeeee",
-            jobTitle: "Backend Developer",
-            company: "CodeWorks",
-            description: "Excellent match but missing location data.",
-            location: "Remote",
-            score: 115,
-            joburl: "https://example.com",
-          },
-        ],
-      };
+      if (clientError) {
+        throw new Error(`Failed to fetch client data: ${clientError.message}`);
+      }
 
-      return dummy[date] || [];
+      if (!clientData || !clientData.applywizz_id) {
+        throw new Error("Applywizz ID not found for this user");
+      }
+
+      const applywizzId = clientData.applywizz_id;
+
+      // Fetch the job data for the specific date
+      const apiUrl = import.meta.env.VITE_APPLYWIZZ_API_URL;
+      if (!apiUrl) {
+        throw new Error('VITE_APPLYWIZZ_API_URL is not defined in environment variables');
+      }
+      
+      const response = await fetch(`${apiUrl}?lead_id=${applywizzId}&date=${date}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch job data from external API: ${response.status} ${response.statusText}`);
+      }
+
+      const apiData = await response.json();
+      
+      // Transform the API data to match our expected format
+      return apiData.tasks || [];
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching job data:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred while fetching job data");
       return [];
+    } finally {
+      // Reset loading state for this specific date
+      setJobsLoading(prev => ({ ...prev, [date]: false }));
     }
   };
 
@@ -295,7 +223,12 @@ const ApplicationSummaryList: React.FC = () => {
               {/* Expanded Job List */}
               {isExpanded && (
                 <div className="mt-3 space-y-4 bg-gray-50 p-4 rounded-lg">
-                  {jobs.length > 0 ? (
+                  {jobsLoading[item.date] ? (
+                    <div className="flex justify-center items-center py-4">
+                      <Loader2 className="animate-spin mr-2" size={20} />
+                      <span>Loading jobs...</span>
+                    </div>
+                  ) : jobs.length > 0 ? (
                     jobs.map((job) => (
                       <div
                         key={job.id}
@@ -308,11 +241,11 @@ const ApplicationSummaryList: React.FC = () => {
                           <p className="text-sm text-gray-600">
                             {job.company || "Unknown Company"}
                           </p>
-                          {/* <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
+                          <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
                             <MapPin size={14} />
                             <span>{job.location || "Not Available"}</span>
                           </div>
-                          <p className="text-sm text-gray-700 mt-2">{job.description}</p> */}
+                          {/* <p className="text-sm text-gray-700 mt-2">{job.description}</p>  */}
                           {/* <p className="text-sm mt-1 font-semibold text-blue-600">
                             Score: {job.score ?? "N/A"}
                           </p> */}
@@ -320,7 +253,7 @@ const ApplicationSummaryList: React.FC = () => {
 
                         <div>
                           <a
-                            href={job.joburl || "#"}
+                            href={job.jobUrl || "#"}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="bg-blue-600 text-white px-3 py-2 rounded-md flex items-center gap-1 text-sm hover:bg-blue-700 transition"

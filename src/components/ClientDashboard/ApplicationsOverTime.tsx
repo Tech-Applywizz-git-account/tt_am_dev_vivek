@@ -8,6 +8,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
+import { supabase } from '@/lib/supabaseClient';
 
 // ✅ Types
 interface ChartItem {
@@ -15,38 +16,71 @@ interface ChartItem {
     count: number;
 }
 
-const ApplicationsOverTime: React.FC = () => {
+interface ApplicationsOverTimeProps {
+    currentUserEmail?: string;
+}
+
+const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ currentUserEmail }) => {
     const [data, setData] = useState<ChartItem[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
 
     useEffect(() => {
         fetchApplicationsData();
-    }, []);
+    }, [currentUserEmail]);
 
     const fetchApplicationsData = async () => {
-        setLoading(true);
-        setTimeout(() => {
-            const completedTasks: Record<string, number> = {
-                "2025-09-01": 3,
-                "2025-09-02": 5,
-                "2025-09-03": 22,
-                "2025-09-04": 7,
-                "2025-09-05": 4,
-                "2025-09-06": 6,
-                "2025-09-07": 8,
-            };
+        if (!currentUserEmail) {
+            setError("User email not available");
+            return;
+        }
 
-            const formattedData: ChartItem[] = Object.entries(completedTasks).map(
-                ([date, count]) => ({
-                    date,
-                    count,
-                })
-            );
+        setLoading(true);
+        setError("");
+
+        try {
+            // First, get the applywizz_id from Supabase based on the user's email
+            const { data: clientData, error: clientError } = await supabase
+                .from('clients')
+                .select('applywizz_id')
+                .eq('company_email', currentUserEmail)
+                .single();
+
+            if (clientError) {
+                throw new Error(`Failed to fetch client data: ${clientError.message}`);
+            }
+
+            if (!clientData || !clientData.applywizz_id) {
+                throw new Error("Applywizz ID not found for this user");
+            }
+
+            const applywizzId = clientData.applywizz_id;
+
+            // Now fetch the actual data from the external API
+            const apiUrl = import.meta.env.VITE_APPLYWIZZ_API_URL;
+            if (!apiUrl) {
+                throw new Error('VITE_APPLYWIZZ_API_URL is not defined in environment variables');
+            }
+            
+            const response = await fetch(`${apiUrl}?lead_id=${applywizzId}`);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+            }
+
+            const apiData = await response.json();
+            
+            // Transform the API data to match our expected format
+            const formattedData: ChartItem[] = Object.entries(apiData.completed_tasks || {})
+                .map(([date, count]) => ({ date, count: Number(count) }));
 
             setData(formattedData);
+        } catch (err) {
+            console.error("Error fetching applications data:", err);
+            setError(err instanceof Error ? err.message : "An unknown error occurred");
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
 
     return (
