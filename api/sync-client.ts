@@ -92,6 +92,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   };
 }
 
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS for cross-origin requests
   res.setHeader('Access-Control-Allow-Origin', '*');
