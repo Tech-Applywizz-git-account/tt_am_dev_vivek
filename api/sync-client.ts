@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -23,14 +22,11 @@ interface ClientSyncData {
   full_name?: string;
   personal_email?: string;
   whatsapp_number?: string;
-  company_email?: string;
   callable_phone?: string;
+  company_email?: string;
   job_role_preferences?: string[];
   salary_range?: string;
   location_preferences?: string[];
-  work_auth_details?: string;
-  visa_type?: string;
-  sponsorship?: string;
   // Add any other fields that might be updated
   [key: string]: any; // Allow for additional fields
 }
@@ -39,7 +35,7 @@ interface ClientSyncData {
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.SYNC_API_KEY;
+  const expectedApiKey = process.env.SYNC_API_KEY ;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
@@ -69,7 +65,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   }
   
   // Check if applywizz_id or awl_id exists
-  const applywizzId = data.applywizz_id ;
+  const applywizzId = data.applywizz_id || data.awl_id;
   
   // Check if applywizz_id exists and follows the AWL-X to AWL-XXXX pattern
   if (!applywizzId) {
@@ -92,6 +88,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     errors
   };
 }
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS for cross-origin requests
@@ -172,8 +169,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Use applywizz_id as the applywizz_id
-    const applywizzId = clientData.applywizz_id;
+    // Use applywizz_id or awl_id as the applywizz_id
+    const applywizzId = clientData.applywizz_id || clientData.awl_id;
 
     // Validate the client data
     const validationData = clientData ? {...clientData, applywizz_id: applywizzId} : {applywizz_id: applywizzId};
