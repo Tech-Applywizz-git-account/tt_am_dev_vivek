@@ -18,18 +18,15 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 // Define the structure of the incoming client data
 interface ClientSyncData {
-  applywizz_id?: string;  // The common AWL-XXXX ID
+  applywizz_id?: string;  // The Common AWL-XXXX ID
   full_name?: string;
   personal_email?: string;
   whatsapp_number?: string;
-  company_email?: string;
   callable_phone?: string;
+  company_email?: string;
   job_role_preferences?: string[];
   salary_range?: string;
   location_preferences?: string[];
-  work_auth_details?: string;
-  visa_type?: string;
-  sponsorship?: string;
   // Add any other fields that might be updated
   [key: string]: any; // Allow for additional fields
 }
@@ -38,7 +35,7 @@ interface ClientSyncData {
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
   const authHeader = req.headers['authorization'];
-  const expectedApiKey = process.env.SYNC_API_KEY;
+  const expectedApiKey = process.env.SYNC_API_KEY ;
   
   // If no API key is configured, allow the request (development mode)
   if (!expectedApiKey) {
@@ -91,6 +88,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     errors
   };
 }
+
 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -172,8 +170,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Use applywizz_id as the applywizz_id
-    const applywizzId = clientData.applywizz_id;
+    // Use applywizz_id or awl_id as the applywizz_id
+    const applywizzId = clientData.applywizz_id || clientData.awl_id;
 
     // Validate the client data
     const validationData = clientData ? {...clientData, applywizz_id: applywizzId} : {applywizz_id: applywizzId};
