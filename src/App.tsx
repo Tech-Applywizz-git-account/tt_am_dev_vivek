@@ -945,15 +945,15 @@ function App() {
                         .filter(client => client.careerassociateid === currentUser.id)
                         .filter(client =>
                           client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase())
+                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
                         ).map((client, index) => (
                           <tr key={client.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
-                                <div className="font-medium text-gray-900">{client.full_name}</div>
+                                <div className="font-medium text-gray-900">{client.full_name}({client.applywizz_id})</div>
                                 <div className="text-sm text-gray-500">{client.company_email}</div>
-                                
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -997,64 +997,66 @@ function App() {
                         .filter(client => client.careerassociatemanagerid === currentUser.id)
                         .filter(client =>
                           client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()
-                          )).map((client, index) => (
-                            <tr key={client.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div>
-                                  <div className="font-medium text-gray-900">{client.full_name}</div>
-                                  <div className="text-sm text-gray-500">{client.personal_email}</div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
-                                <div className="text-sm text-gray-500">{client.callable_phone}</div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="text-sm text-gray-900">{<p className="text-sm text-gray-600">
-                                  Roles:{" "}
-                                  {client.job_role_preferences ? client.job_role_preferences.join(", ") : '-'}
-                                </p>
-                                }</div>
-                                <div className="text-sm text-gray-500">{client.salary_range}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{format(new Date(client.created_at), 'yyyy-MM-dd')}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                {currentUser?.role == 'career_associate' && (
-                                  <button
-                                    onClick={() => handleClientEdit(client)}
-                                    className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                  >
-                                    <span>View</span>
-                                  </button>
-                                )}
-                                {currentUser?.role !== 'career_associate' && (
-                                  <button
-                                    onClick={() => handleClientEdit(client)}
-                                    className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                    <span>Edit</span>
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                    {(currentUser?.role !== 'ca_team_lead' && currentUser?.role !== 'career_associate') &&
-                      clients
-                        .filter(client =>
-                          client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase())
+                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
                         ).map((client, index) => (
                           <tr key={client.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
-                                <div className="font-medium text-gray-900">{client.full_name}</div>
-                                <div className="text-sm text-gray-500">{client.personal_email}</div>
+                                <div className="font-medium text-gray-900">{client.full_name}({client.applywizz_id})</div>
+                                <div className="text-sm text-gray-500">{client.company_email}</div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
+                              <div className="text-sm text-gray-500">{client.callable_phone}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-900">{<p className="text-sm text-gray-600">
+                                Roles:{" "}
+                                {client.job_role_preferences ? client.job_role_preferences.join(", ") : '-'}
+                              </p>
+                              }</div>
+                              <div className="text-sm text-gray-500">{client.salary_range}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{format(new Date(client.created_at), 'yyyy-MM-dd')}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {currentUser?.role == 'career_associate' && (
+                                <button
+                                  onClick={() => handleClientEdit(client)}
+                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                >
+                                  <span>View</span>
+                                </button>
+                              )}
+                              {currentUser?.role !== 'career_associate' && (
+                                <button
+                                  onClick={() => handleClientEdit(client)}
+                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span>Edit</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    {(currentUser?.role !== 'ca_team_lead' && currentUser?.role !== 'career_associate') &&
+                      clients
+                        .filter(client =>
+                          client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
+                        ).map((client, index) => (
+                          <tr key={client.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="font-medium text-gray-900">{client.full_name}({client.applywizz_id || "Not Found"})</div>
+                                <div className="text-sm text-gray-500">{client.company_email}</div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
