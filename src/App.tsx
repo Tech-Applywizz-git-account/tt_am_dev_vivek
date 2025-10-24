@@ -953,7 +953,8 @@ function App() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
                                 <div className="font-medium text-gray-900">{client.full_name}</div>
-                                <div className="text-sm text-gray-500">{client.personal_email}</div>
+                                <div className="text-sm text-gray-500">{client.company_email}</div>
+                                
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
