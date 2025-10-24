@@ -924,7 +924,6 @@ function App() {
                 <div className="relative w-full max-w-sm mb-4">
                   <h2 className="font-semibold text-gray-900">Client Directory</h2>
                 </div>
-
               </div>
 
 
