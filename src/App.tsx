@@ -925,7 +925,6 @@ function App() {
                   <h2 className="font-semibold text-gray-900">Client Directory</h2>
                 </div>
               </div>
-
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
