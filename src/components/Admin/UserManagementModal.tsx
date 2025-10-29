@@ -25,6 +25,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | 'all'>('all');
+  const [showEmailUpdateDialog, setShowEmailUpdateDialog] = useState(false);
+  const [pendingEmailUpdate, setPendingEmailUpdate] = useState('');
+  const [emailUpdateSuccess, setEmailUpdateSuccess] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -142,12 +145,78 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedUser) {
-      onUpdateUser(selectedUser.id, formData);
-      resetForm();
-      setSelectedUser(null);
-      setActiveTab('list');
+    
+    // Check if email has changed
+    if (selectedUser && formData.email !== selectedUser.email) {
+      setPendingEmailUpdate(formData.email);
+      setShowEmailUpdateDialog(true);
+    } else {
+      // No email change, proceed with normal update
+      if (selectedUser) {
+        onUpdateUser(selectedUser.id, formData);
+        resetForm();
+        setSelectedUser(null);
+        setActiveTab('list');
+      }
     }
+  };
+
+  const confirmEmailUpdate = async () => {
+    setShowEmailUpdateDialog(false);
+    setLoading(true);
+    setError('');
+    setEmailUpdateSuccess('');
+
+    try {
+      // Call admin API to update user email
+      const response = await fetch('/api/update-user-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUser!.id,
+          newEmail: pendingEmailUpdate
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update email');
+      }
+
+      setEmailUpdateSuccess(
+        `Email successfully updated to ${pendingEmailUpdate}. The user can now log in with their new email.`
+      );
+
+      // Update other user fields
+      if (selectedUser) {
+        onUpdateUser(selectedUser.id, { ...formData, email: pendingEmailUpdate });
+      }
+
+      // Refresh user list
+      await fetchUsers();
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        resetForm();
+        setSelectedUser(null);
+        setEmailUpdateSuccess('');
+        setActiveTab('list');
+      }, 3000);
+      
+    } catch (err: any) {
+      setError(`Email update failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+      setPendingEmailUpdate('');
+    }
+  };
+
+  const cancelEmailUpdate = () => {
+    setShowEmailUpdateDialog(false);
+    setPendingEmailUpdate('');
   };
 
   const filteredUsers = users.filter(user => {
@@ -300,6 +369,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         </div>
       )}
 
+      {emailUpdateSuccess && (
+        <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg">
+          <strong>Success:</strong> {emailUpdateSuccess}
+        </div>
+      )}
+
       <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
         <div className="flex items-center space-x-2 mb-4">
           <User className="h-5 w-5 text-blue-600" />
@@ -337,6 +412,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               required
               disabled={loading}
             />
+            {isEdit && selectedUser && formData.email !== selectedUser.email && (
+              <p className="mt-1 text-xs text-orange-600">
+                ⚠️ Email will be updated immediately (no verification required)
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -454,6 +534,63 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   if (!isOpen) return null;
 
   return (
+    <>
+    {/* Email Update Confirmation Dialog */}
+    {showEmailUpdateDialog && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+        <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+          <div className="flex items-center space-x-3 mb-4">
+            <Mail className="h-6 w-6 text-blue-600" />
+            <h3 className="text-lg font-bold text-gray-900">Confirm Email Change</h3>
+          </div>
+          
+          <div className="space-y-4 mb-6">
+            <p className="text-gray-700">
+              Are you sure you want to change this user's email address?
+            </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>User:</strong> {selectedUser?.name}
+              </p>
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Current Email:</strong> {selectedUser?.email}
+              </p>
+              <p className="text-sm text-gray-900">
+                <strong>New Email:</strong> {pendingEmailUpdate}
+              </p>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm text-green-800">
+                ✅ The email will be updated immediately. No verification required.
+              </p>
+              <p className="text-sm text-green-800 mt-1">
+                The user can log in with <strong>{pendingEmailUpdate}</strong> right away.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={cancelEmailUpdate}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmEmailUpdate}
+              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              Confirm & Update Email
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -512,5 +649,6 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         </div>
       </div>
     </div>
+    </>
   );
 };
