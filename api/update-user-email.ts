@@ -1,15 +1,33 @@
-import { Request, Response } from 'express';
-import { supabaseAdmin } from '../src/lib/supabaseAdminClient';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
+
 
 /**
  * API endpoint to update a user's email address (Admin only)
  * This uses Supabase Admin SDK to update ANY user's email
  */
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Create Supabase Admin client
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('Missing Supabase environment variables');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  });
 
   try {
     const { userId, newEmail } = req.body;
