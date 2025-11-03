@@ -395,13 +395,9 @@ function App() {
 
   const handleAssignRoles = async (
     pendingClientId: string,
-    clientData: any,          // ✅ Add this
+    clientData: any,          
     rolesData: any
   ) => {
-    // console.log("INSERT PAYLOAD", {
-    //   ...clientData,
-    //   ...rolesData
-    // });
     const { data: caEmail, error: caEmailError } = await supabase.from('users').select('email').eq('id', rolesData.careerassociateid).single();
     if (caEmailError) {
       console.log("ca id", rolesData.careerassociateid)
@@ -417,6 +413,7 @@ function App() {
     }
 
     const { error: insertError } = await supabase.from('clients').insert({
+      id: pendingClientId,
       full_name: clientData.full_name,
       personal_email: clientData.personal_email.trim().toLowerCase(),
       whatsapp_number: clientData.whatsapp_number,
@@ -442,6 +439,63 @@ function App() {
       alert("Failed to complete onboarding");
       console.error("Onboarding failed:", insertError.message);
       return;
+    }
+
+    // Insert additional client information into clients_additional_information table
+    const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
+      id: pendingClientId, // Using the same ID to maintain foreign key relationship
+      applywizz_id: clientData.applywizz_id,
+      resume_url: clientData.resume_url,
+      resume_path: clientData.resume_path,
+      start_date: clientData.start_date,
+      end_date: clientData.end_date,
+      no_of_applications: clientData.no_of_applications,
+      is_over_18: clientData.is_over_18,
+      eligible_to_work_in_us: clientData.eligible_to_work_in_us,
+      authorized_without_visa: clientData.authorized_without_visa,
+      require_future_sponsorship: clientData.require_future_sponsorship,
+      can_perform_essential_functions: clientData.can_perform_essential_functions,
+      worked_for_company_before: clientData.worked_for_company_before,
+      discharged_for_policy_violation: clientData.discharged_for_policy_violation,
+      referred_by_agency: clientData.referred_by_agency,
+      highest_education: clientData.highest_education,
+      university_name: clientData.university_name,
+      cumulative_gpa: clientData.cumulative_gpa,
+      desired_start_date: clientData.desired_start_date,
+      willing_to_relocate: clientData.willing_to_relocate,
+      can_work_3_days_in_office: clientData.can_work_3_days_in_office,
+      role: clientData.role,
+      experience: clientData.experience,
+      work_preferences: clientData.work_preferences,
+      alternate_job_roles: clientData.alternate_job_roles,
+      exclude_companies: clientData.exclude_companies,
+      convicted_of_felony: clientData.convicted_of_felony,
+      felony_explanation: clientData.felony_explanation,
+      pending_investigation: clientData.pending_investigation,
+      willing_background_check: clientData.willing_background_check,
+      willing_drug_screen: clientData.willing_drug_screen,
+      failed_or_refused_drug_test: clientData.failed_or_refused_drug_test,
+      uses_substances_affecting_duties: clientData.uses_substances_affecting_duties,
+      substances_description: clientData.substances_description,
+      can_provide_legal_docs: clientData.can_provide_legal_docs,
+      gender: clientData.gender,
+      is_hispanic_latino: clientData.is_hispanic_latino,
+      race_ethnicity: clientData.race_ethnicity,
+      veteran_status: clientData.veteran_status,
+      disability_status: clientData.disability_status,
+      has_relatives_in_company: clientData.has_relatives_in_company,
+      relatives_details: clientData.relatives_details,
+      state_of_residence: clientData.state_of_residence,
+      zip_or_country: clientData.zip_or_country,
+      main_subject: clientData.main_subject,
+      graduation_year: clientData.graduation_year,
+      add_ons_info: clientData.add_ons_info,
+      github_url: clientData.github_url,
+      linked_in_url: clientData.linked_in_url
+    });
+
+    if (additionalInfoError) {
+      console.error("Failed to insert additional client information:", additionalInfoError.message);
     }
 
     const name = clientData.full_name?.trim();
@@ -506,8 +560,7 @@ function App() {
     })
 
     if (verror) {
-      alert("Failed to complete onboardin3g");
-      console.error("Onboarding failed :", verror);
+      alert("Failed to complete onboarding3");
       return;
     }
 
