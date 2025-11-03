@@ -444,6 +444,164 @@ function App() {
       return;
     }
 
+    // Make API call to external database after successful client insertion
+    try {
+      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+
+      // Validate required fields before sending
+      if (!clientData.company_email || !clientData.full_name) {
+        console.error('❌ Missing required fields:', {
+          email: clientData.company_email,
+          name: clientData.full_name
+        });
+        alert('Cannot sync to external database: Missing email or name');
+        return;
+      }
+
+      // Map data to match external database schema exactly
+      // Based on external schema: yearsExp (integer), willingToRelocate (boolean), servicesOpted (jsonb)
+      const payload = {
+        // Core identification
+        "email": clientData.company_email.trim().toLowerCase(),
+        "name": clientData.full_name.trim(),
+
+        // Experience and location
+        "years_experience": clientData.experience ? parseInt(String(clientData.experience)) : 0,
+        "location": clientData.state_of_residence,
+        "country": clientData.zip_or_country || "",
+
+        // Job preferences
+        "services_opted": (() => {
+          // Handle if services_opted is a string (from database)
+          if (typeof clientData.add_ons_info === 'string') {
+            try {
+              return JSON.parse(clientData.add_ons_info);
+            } catch {
+              return [];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(clientData.add_ons_info)) {
+            return clientData.add_ons_info;
+          }
+          // Default to empty array
+          return [];
+        })(),
+        "alternate_job_roles": (() => {
+          // Handle if alternate_job_roles is a string (from database)
+          if (typeof clientData.alternate_job_roles === 'string') {
+            // First try to parse as JSON
+            try {
+              return JSON.parse(clientData.alternate_job_roles);
+            } catch {
+              // If not JSON, split by comma and trim whitespace
+              return clientData.alternate_job_roles
+                .split(',')
+                .map(role => role.trim())
+                .filter(role => role.length > 0);
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(clientData.alternate_job_roles)) {
+            return clientData.alternate_job_roles;
+          }
+          // Default to empty array
+          return [];
+        })(),
+
+        // Service dates
+        "start_date": clientData.start_date,
+        // "end_date": clientData.end_date || null,
+
+        // Work preferences
+        "willing_to_relocate": Boolean(clientData.willing_to_relocate),
+        "work_auth": clientData.visa_type || "",
+        "work_preference": (() => {
+          // If location_preferences is an array
+          if (Array.isArray(clientData.location_preferences)) {
+            // If more than 1 location, send "All"
+            if (clientData.location_preferences.length > 1) {
+              return "All";
+            }
+            // If exactly 1 location, send that location
+            if (clientData.location_preferences.length === 1) {
+              return clientData.location_preferences[0];
+            }
+          }
+          // Default to "All" if empty or not an array
+          return "All";
+        })(),
+        "sponsorship": clientData.sponsorship ? "yes" : "No",
+
+        // Personal details
+        "gender": clientData.gender || "",
+
+        // Company and resume details  
+        "exclude_companies": (() => {
+          // Handle if exclude_companies is a string (from database)
+          if (typeof clientData.exclude_companies === 'string') {
+            try {
+              return JSON.parse(clientData.exclude_companies);
+            } catch {
+              return ["facebook"];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(clientData.exclude_companies)) {
+            return clientData.exclude_companies;
+          }
+          // Default to facebook
+          return ["facebook"];
+        })(),
+        "resume_s3_path": clientData.resume_url,
+        "resume_url": clientData.resume_url ? `https://applywizz-dev.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
+
+        // Salary and applications
+        "expected_salary": clientData.salary_range || "",
+        "number_of_applications": clientData.no_of_applications ? `${clientData.no_of_applications}+` : "0",
+
+        // Social profiles
+        "github_url": clientData.github_url || "",
+        "linkedin_url": clientData.linked_in_url || "",
+
+        // Status and plan
+        "status": "Active",
+        "career_associate": caEmail.email || "",
+        "apw_id": clientData.applywizz_id,
+        "target_role": Array.isArray(clientData.job_role_preferences) ? clientData.job_role_preferences[0] || "" : clientData.job_role_preferences || "",
+        "plan": "Standard",
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        let errorDetails = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          errorDetails = JSON.stringify(errorData, null, 2);
+          // console.error('❌ API Error Response (JSON):', errorData);
+        } catch {
+          errorDetails = await response.text();
+          // console.error('❌ API Error Response (Text):', errorDetails);
+        }
+
+        alert(`Failed to sync with external database: ${response.status}    Error: ${errorDetails}   Check console for full details.`);
+      } else {
+        // const successData = await response.json().catch(() => response.text());
+        // console.log('✅ Successfully added to external db:', successData);
+        // alert("Client Onboarded Successfully into karma database");
+      }
+    } catch (error) {
+      console.error('Error making external API call:', error);
+      // Handle network errors or other exceptions
+    }
+
     const name = clientData.full_name?.trim();
     const email = clientData.company_email?.trim().toLowerCase();
     const password = "Created@123";
@@ -513,6 +671,168 @@ function App() {
 
     await supabase.from('pending_clients').delete().eq('id', pendingClientId);
     await fetchData();
+  };
+
+  // Function to handle direct onboarding without role assignment
+  const handleDirectOnboard = async (client: any) => {
+    try {
+      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+
+      // Validate required fields before sending
+      if (!client.company_email || !client.full_name) {
+        console.error('❌ Missing required fields:', {
+          email: client.company_email,
+          name: client.full_name
+        });
+        alert('Cannot sync to external database: Missing email or name');
+        return;
+      }
+
+      // Map data to match external database schema exactly
+      const payload = {
+        // Core identification
+        "email": client.company_email.trim().toLowerCase(),
+        "name": client.full_name.trim(),
+
+        // Experience and location
+        "years_experience": client.experience ? parseInt(String(client.experience)) : 0,
+        "location": client.state_of_residence,
+        "country": client.zip_or_country || "",
+
+        // Job preferences
+        "services_opted": (() => {
+          // Handle if services_opted is a string (from database)
+          if (typeof client.add_ons_info === 'string') {
+            try {
+              return JSON.parse(client.add_ons_info);
+            } catch {
+              return [];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(client.add_ons_info)) {
+            return client.add_ons_info;
+          }
+          // Default to empty array
+          return [];
+        })(),
+        "alternate_job_roles": (() => {
+          // Handle if alternate_job_roles is a string (from database)
+          if (typeof client.alternate_job_roles === 'string') {
+            // First try to parse as JSON
+            try {
+              return JSON.parse(client.alternate_job_roles);
+            } catch {
+              // If not JSON, split by comma and trim whitespace
+              return client.alternate_job_roles
+                .split(',')
+                .map(role => role.trim())
+                .filter(role => role.length > 0);
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(client.alternate_job_roles)) {
+            return client.alternate_job_roles;
+          }
+          // Default to empty array
+          return [];
+        })(),
+
+        // Service dates
+        "start_date": client.start_date,
+        // "end_date": client.end_date || null,
+
+        // Work preferences
+        "willing_to_relocate": Boolean(client.willing_to_relocate),
+        "work_auth": client.visa_type || "",
+        "work_preference": (() => {
+          // If location_preferences is an array
+          if (Array.isArray(client.location_preferences)) {
+            // If more than 1 location, send "All"
+            if (client.location_preferences.length > 1) {
+              return "All";
+            }
+            // If exactly 1 location, send that location
+            if (client.location_preferences.length === 1) {
+              return client.location_preferences[0];
+            }
+          }
+          // Default to "All" if empty or not an array
+          return "All";
+        })(),
+        "sponsorship": client.sponsorship ? "yes" : "No",
+
+        // Personal details
+        "gender": client.gender || "",
+
+        // Company and resume details  
+        "exclude_companies": (() => {
+          // Handle if exclude_companies is a string (from database)
+          if (typeof client.exclude_companies === 'string') {
+            try {
+              return JSON.parse(client.exclude_companies);
+            } catch {
+              return ["facebook"];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(client.exclude_companies)) {
+            return client.exclude_companies;
+          }
+          // Default to facebook
+          return ["facebook"];
+        })(),
+        "resume_s3_path": client.resume_url,
+        "resume_url": client.resume_url ? `https://applywizz-dev.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
+
+        // Salary and applications
+        "expected_salary": client.salary_range || "",
+        "number_of_applications": client.no_of_applications ? `${client.no_of_applications}+` : "0",
+
+        // Social profiles
+        "github_url": client.github_url || "",
+        "linkedin_url": client.linked_in_url || "",
+
+        // Status and plan
+        "status": "Active",
+        "apw_id": client.applywizz_id,
+        "target_role": Array.isArray(client.job_role_preferences) ? client.job_role_preferences[0] || "" : client.job_role_preferences || "",
+        "plan": "Standard",
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        let errorDetails = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          errorDetails = JSON.stringify(errorData, null, 2);
+        } catch {
+          errorDetails = await response.text();
+        }
+
+        console.error('❌ API Error Response:', errorDetails);
+        alert(`Failed to sync with external database: ${response.status} - ${errorDetails}`);
+        return;
+      }
+
+      // Successfully onboarded, remove from pending list
+      // await supabase.from('pending_clients').delete().eq('id', client.id);
+      
+      // Refresh the pending clients list
+      await fetchData();
+      
+      alert("Client successfully onboarded to secondary database!");
+    } catch (error) {
+      console.error('Error making external API call:', error);
+      alert("Failed to onboard client to secondary database");
+    }
   };
 
   const handleUpdateTicket = async (ticketId: string, updateData: any) => {
@@ -1249,6 +1569,7 @@ function App() {
           <PendingOnboardingList
             pendingClients={pendingClients}
             onAssignRoles={handleAssignRoles}
+            onDirectOnboard={handleDirectOnboard}
           />
         );
 

@@ -36,6 +36,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     department: '',
     isActive: true,
     password: '',
+    teamLead: '',
   });
 
   // NEW: Fetch users when modal opens or tab changes to list
@@ -72,12 +73,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       department: '',
       isActive: true,
       password: '',
+      teamLead: '',
     });
   };
 
   const onCreateUser = async (userData: any) => {
     try {
-      console.log("Creating user with data:", userData);
+      // console.log("Creating user with data:", userData);
       // ✅ 1. Build verification URL with email parameter
       const redirectUrl = `https://ticketingtoolapplywizz.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
 
@@ -99,6 +101,35 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
       // ✅ 3. Store email for fallback
       localStorage.setItem("applywizz_user_email", userData.email);
+
+      // ✅ 4. If career_associate, send API request to external database
+      if (userData.role === 'career_associate') {
+        try {
+          const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/associate-create`;
+          
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: userData.name,
+              email: userData.email,
+              manager: userData.teamLead,
+              password: "Created@123",
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Failed to create associate in external database:', errorData);
+            // Don't throw error - allow user creation to succeed even if external API fails
+          }
+        } catch (apiError) {
+          console.error('Error calling external API:', apiError);
+          // Don't throw error - allow user creation to succeed even if external API fails
+        }
+      }
 
       return true;
     } catch (error: any) {
@@ -139,6 +170,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       department: user.department || '',
       isActive: user.is_active, // Fixed: use is_active from DB
       password: '',
+      teamLead: (user as any).team_lead || '',
     });
     setActiveTab('edit');
   };
@@ -236,6 +268,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     'Executive',
     'IT',
     'Quality Control'
+  ];
+
+  const teamLeadOptions = [
+    'Sarika.TL@applywizz.com',
+    'Ramadevi.TL@applywizz.com',
+    'Saisree.TL@applywizz.com',
+    'Nimsha.TL@applywizz.com',
+    'manisha.TL@applywizz.com'
   ];
 
   const renderUserList = () => (
@@ -464,6 +504,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               ))}
             </select>
           </div>
+
+          {formData.role === 'career_associate' && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Team Lead *
+              </label>
+              <select
+                value={formData.teamLead}
+                onChange={(e) => setFormData({ ...formData, teamLead: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                required={formData.role === 'career_associate'}
+                disabled={loading}
+                aria-label="Team Lead"
+              >
+                <option value="">Select Team Lead</option>
+                {teamLeadOptions.map(tl => (
+                  <option key={tl} value={tl}>{tl}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
