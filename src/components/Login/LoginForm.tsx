@@ -113,7 +113,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         {/* ... (header remains same) ... */}
-
+        <h2 className="text-lg text-center justify-center  font-semibold mb-2">Applywizz Devlopment tool</h2>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
