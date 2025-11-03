@@ -443,7 +443,7 @@ function App() {
 
     // Insert additional client information into clients_additional_information table
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: pendingClientId, // Using the same ID to maintain foreign key relationship
+      id: pendingClientId, 
       applywizz_id: clientData.applywizz_id,
       resume_url: clientData.resume_url,
       resume_path: clientData.resume_path,
