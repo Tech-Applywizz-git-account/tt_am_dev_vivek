@@ -597,6 +597,7 @@ function App() {
       console.error('Error making external API call:', error);
       // Handle network errors or other exceptions
     // Insert additional client information into clients_additional_information table
+    }
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
       id: pendingClientId, 
       applywizz_id: clientData.applywizz_id,
