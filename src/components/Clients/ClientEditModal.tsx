@@ -19,6 +19,7 @@ interface Client {
   careerassociatemanagerid: string;
   careerassociateid: string;
   scraperid: string;
+  applywizz_id?: string;
 }
 
 interface Props {
@@ -34,6 +35,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const [form, setForm] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [originalCAId, setOriginalCAId] = useState<string>("");
 
   const isReadOnly = currentUserRole === "career_associate";
 
@@ -48,7 +50,10 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   };
 
   useEffect(() => {
-    if (client) setForm({ ...client });
+    if (client) {
+      setForm({ ...client });
+      setOriginalCAId(client.careerassociateid || "");
+    }
   }, [client]);
 
   const handleChange = (field: string, value: any) => {
@@ -64,6 +69,52 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const handleSubmit = async () => {
     if (!form) return;
     setLoading(true);
+
+    // Check if Career Associate has changed
+    const caChanged = originalCAId !== form.careerassociateid;
+
+    if (caChanged && originalCAId && form.careerassociateid) {
+      try {
+        // Get old CA email
+        const oldCA = users.find(u => u.id === originalCAId);
+        // Get new CA email
+        const newCA = users.find(u => u.id === form.careerassociateid);
+
+        if (oldCA && newCA && form.applywizz_id) {
+          const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+
+          // Step 1: Delete old assignment
+          const deleteUrl = `${baseUrl}/api/associate-update?type=lead-delete`;
+          await fetch(deleteUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              "ca-email": oldCA.email,
+              "lead-id": form.applywizz_id,
+            })
+          });
+
+          // Step 2: Map new assignment
+          const mappingUrl = `${baseUrl}/api/associate-update?type=lead-mapping`;
+          await fetch(mappingUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              "ca-email": newCA.email,
+              "lead-id": form.applywizz_id,
+            })
+          });
+        }
+      } catch (apiError) {
+        console.error('Error syncing CA assignment to external API:', apiError);
+        // Continue with local update even if external API fails
+      }
+    }
+
     const { error } = await supabase
       .from("clients")
       .update({ ...form })

@@ -5,10 +5,35 @@ interface PendingClient {
   id: string;
   full_name: string;
   company_email: string;
+  personal_email?: string;
+  whatsapp_number?: string;
+  callable_phone?: string;
   job_role_preferences: string[];
   location_preferences: string[];
   salary_range: string;
+  work_auth_details?: string;
+  visa_type?: string;
+  sponsorship?: string;
+  applywizz_id?: string;
   submitted_by: string;
+  // New fields for external API sync
+  gender?: string;
+  years_experience?: number;
+  country?: string;
+  zip_or_country?: string;
+  willing_to_relocate?: boolean;
+  github_url?: string;
+  linkedin_url?: string;
+  resume_link?: string;
+  resume_s3_path?: string;
+  personal_details_s3_path?: string;
+  alternate_job_roles?: string[];
+  exclude_companies?: string[];
+  number_of_applications?: string;
+  work_preference?: string;
+  start_date?: string;
+  end_date?: string;
+  add_ons_info?: string[]; // Add this field
 }
 
 interface Props {
@@ -18,11 +43,13 @@ interface Props {
     clientData: any,
     roleAssignments: any
   ) => void;
+  onDirectOnboard?: (client: PendingClient) => void; // Make this prop optional
 }
 
 export const PendingOnboardingList: React.FC<Props> = ({
   pendingClients,
   onAssignRoles,
+  onDirectOnboard, // Destructure the prop
 }) => {
   const [selectedClient, setSelectedClient] = useState<PendingClient | null>(null);
   const [roleAssignments, setRoleAssignments] = useState({
@@ -91,6 +118,26 @@ export const PendingOnboardingList: React.FC<Props> = ({
     });
   };
 
+  // Check if client has job-links in add_ons_info
+  const hasJobLinks = (client: PendingClient): boolean => {
+    if (!client.add_ons_info) return false;
+    
+    if (typeof client.add_ons_info === 'string') {
+      try {
+        const parsed = JSON.parse(client.add_ons_info);
+        return Array.isArray(parsed) && parsed.includes('job-links');
+      } catch {
+        return false;
+      }
+    }
+    
+    if (Array.isArray(client.add_ons_info)) {
+      return client.add_ons_info.includes('job-links');
+    }
+    
+    return false;
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-6">🟡 Pending Client Onboarding</h2>
@@ -106,6 +153,11 @@ export const PendingOnboardingList: React.FC<Props> = ({
             >
               <div className="flex justify-between items-center">
                 <div>
+                  {hasJobLinks(client) && (
+                    <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                      Opted for Job Links
+                    </span>
+                  )}
                   <p className="text-lg font-semibold">{client.full_name}</p>
                   <p className="text-sm text-gray-600">{client.company_email}</p>
                   <p className="text-sm">
@@ -118,12 +170,23 @@ export const PendingOnboardingList: React.FC<Props> = ({
                     Salary: {client.salary_range}
                   </p>
                 </div>
-                <button
-                  onClick={() => setSelectedClient(client)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  Assign Roles
-                </button>
+                <div className="flex gap-2">
+                  {hasJobLinks(client) && onDirectOnboard ? (
+                    <button
+                      onClick={() => onDirectOnboard(client)} // Use the prop function
+                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    >
+                      Onboard Directly
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedClient(client)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                      Assign Roles
+                    </button>
+                  )}
+                </div>
               </div>
             </li>
           ))}

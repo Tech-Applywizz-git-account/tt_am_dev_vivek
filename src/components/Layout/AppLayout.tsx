@@ -65,12 +65,12 @@ const AppLayout: React.FC<Props> = ({
       <Navbar user={currentUser} onLogout={handleLogout} />
 
       <div className="flex">
-        <Sidebar
-          user={currentUser}
-          activeView={activeView}
-          onViewChange={setActiveView}
-          pendingClientsCount={pendingClientsCount}
-        />
+          <Sidebar
+            user={currentUser}
+            activeView={activeView}
+            onViewChange={setActiveView}
+            pendingClientsCount={pendingClientsCount}
+          />
         <main className="flex-1 p-8">
           {renderMainContent()}
         </main>

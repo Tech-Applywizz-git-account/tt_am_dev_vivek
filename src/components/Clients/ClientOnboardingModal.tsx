@@ -30,6 +30,14 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
     salaryRange: '',
     locationPreferences: [] as string[],
     workAuthDetails: '',
+    // New fields for external API sync
+    gender: '',
+    yearsExperience: '',
+    country: '',
+    willingToRelocate: false,
+    githubUrl: '',
+    linkedinUrl: '',
+    workPreference: 'All',
   });
   // const user = useUser();
 
@@ -43,7 +51,7 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
     return;
   }
 
-  const { fullName, personalEmail, whatsappNumber, callablePhone, companyEmail, jobRolePreferences, salaryRange, locationPreferences, workAuthDetails } = formData;
+  const { fullName, personalEmail, whatsappNumber, callablePhone, companyEmail, jobRolePreferences, salaryRange, locationPreferences, workAuthDetails, gender, yearsExperience, country, willingToRelocate, githubUrl, linkedinUrl, workPreference } = formData;
 
   const { error } = await supabase.from("pending_clients").insert([
     {
@@ -56,7 +64,17 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
       salary_range: salaryRange,
       location_preferences: locationPreferences,
       work_auth_details: workAuthDetails,
-      submitted_by: user.id
+      submitted_by: user.id,
+      // New fields for external API sync
+      gender: gender || null,
+      years_experience: yearsExperience ? parseInt(yearsExperience) : null,
+      country: country || null,
+      willing_to_relocate: willingToRelocate,
+      github_url: githubUrl || null,
+      linkedin_url: linkedinUrl || null,
+      work_preference: workPreference || 'All',
+      number_of_applications: '0',
+      start_date: new Date().toISOString().split('T')[0],
     },
   ]);
 
@@ -190,6 +208,90 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
                   required
                 />
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender
+                </label>
+                <select
+                  aria-label="Gender"
+                  value={formData.gender}
+                  onChange={(e) => setFormData({...formData, gender: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Years of Experience
+                </label>
+                <input
+                  type="number"
+                  value={formData.yearsExperience}
+                  onChange={(e) => setFormData({...formData, yearsExperience: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="5"
+                  min="0"
+                  max="50"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Country
+                </label>
+                <input
+                  type="text"
+                  value={formData.country}
+                  onChange={(e) => setFormData({...formData, country: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="United States"
+                />
+              </div>
+              
+              <div className="flex items-center">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.willingToRelocate}
+                    onChange={(e) => setFormData({...formData, willingToRelocate: e.target.checked})}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Willing to Relocate</span>
+                </label>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  GitHub URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.githubUrl}
+                  onChange={(e) => setFormData({...formData, githubUrl: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://github.com/username"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  LinkedIn URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.linkedinUrl}
+                  onChange={(e) => setFormData({...formData, linkedinUrl: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://linkedin.com/in/username"
+                />
+              </div>
             </div>
           </div>
 
@@ -271,6 +373,23 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
                   <option value="L1 Visa">L1 Visa</option>
                   <option value="US Citizen">US Citizen</option>
                   <option value="Other">Other</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Work Preference
+                </label>
+                <select
+                  aria-label="Work Preference"
+                  value={formData.workPreference}
+                  onChange={(e) => setFormData({...formData, workPreference: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="All">All</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Onsite">Onsite</option>
                 </select>
               </div>
             </div>
