@@ -1143,7 +1143,7 @@ function App() {
                   onTotalTicketsClick={() => {
                     setActiveView('tickets');
                     setFilterStatus('all'); // Reset status filter
-                    setFilterType('all');   // Reset type filter
+                    setFilterType('all');   
                     setFilterPriority('all');
                   }}
                   onOpenTicketsClick={() => {
