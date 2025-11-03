@@ -113,7 +113,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         {/* ... (header remains same) ... */}
-
+        <h2 className="text-lg text-center justify-center  font-semibold mb-2">Applywizz Devlopment</h2>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
@@ -179,9 +179,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-sm font-medium text-gray-900 mb-2">Login Instructions:</h3>
           <ul className="text-xs text-gray-600 space-y-1">
-            <li>• You’re now using the beta version of our internal ticketing system. 🎉
+             <li>• You’re now using the beta version of our internal ticketing system. 🎉
               We’re testing and improving how tickets are created, tracked, and resolved across teams.
-              💬 Found a bug or have feedback? Let us know — your input helps us make it better!</li>
+              💬 Found a bug or have feedback? Let us know — your input helps us make it better!</li> 
             <li>• Use the email and password provided by your administrator</li>
             <li>• Contact your system admin if you need credentials</li>
             <li>• Never share your password with anyone</li>

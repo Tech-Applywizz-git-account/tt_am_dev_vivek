@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
+
 /**
  * API endpoint to update a user's email address (Admin only)
  * This uses Supabase Admin SDK to update ANY user's email

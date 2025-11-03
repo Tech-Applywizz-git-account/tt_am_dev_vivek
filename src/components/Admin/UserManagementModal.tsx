@@ -38,6 +38,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     password: '',
     teamLead: '',
   });
+  
 
   // NEW: Fetch users when modal opens or tab changes to list
   useEffect(() => {
