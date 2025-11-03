@@ -62,7 +62,7 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ currentUser
                 throw new Error('VITE_APPLYWIZZ_API_URL is not defined in environment variables');
             }
             
-            const response = await fetch(`${apiUrl}?lead_id=${applywizzId}`);
+            const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}`);
             
             if (!response.ok) {
                 throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);

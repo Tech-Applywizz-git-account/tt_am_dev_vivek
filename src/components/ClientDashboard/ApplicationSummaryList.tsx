@@ -73,7 +73,8 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({ current
         throw new Error('VITE_APPLYWIZZ_API_URL is not defined in environment variables');
       }
       
-      const response = await fetch(`${apiUrl}?lead_id=${applywizzId}`);
+      const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}`);
+      console.log("Fetch response:", response);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
@@ -123,7 +124,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({ current
         throw new Error('VITE_APPLYWIZZ_API_URL is not defined in environment variables');
       }
       
-      const response = await fetch(`${apiUrl}?lead_id=${applywizzId}&date=${date}`);
+      const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}&date=${date}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch job data from external API: ${response.status} ${response.statusText}`);
