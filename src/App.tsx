@@ -338,6 +338,7 @@ function App() {
     // `
     //   })
     // });
+    
     await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
