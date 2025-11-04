@@ -395,7 +395,7 @@ function App() {
 
   const handleAssignRoles = async (
     pendingClientId: string,
-    clientData: any,          
+    clientData: any,
     rolesData: any
   ) => {
     const { data: caEmail, error: caEmailError } = await supabase.from('users').select('email').eq('id', rolesData.careerassociateid).single();
@@ -443,7 +443,7 @@ function App() {
 
     // Insert additional client information into clients_additional_information table
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: pendingClientId, 
+      id: pendingClientId,
       applywizz_id: clientData.applywizz_id,
       resume_url: clientData.resume_url,
       resume_path: clientData.resume_path,
@@ -535,35 +535,55 @@ function App() {
       console.error(`❌ Error inserting into users table for ${clientData.company_email} : ${userInsertError.message}`);
       console.error(userInsertError);
     }
- 
-    try {
-      const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userData.user.id, // Use the same UUID from Supabase
-          name: clientData.full_name,
-          email: clientData.company_email,
-          username: clientData.applywizz_id || clientData.company_email.split('@')[0]
-        }),
-      });
- 
-      const fermionResult = await fermionResponse.json();
- 
-      if (fermionResponse.ok) {
-        console.log('✅ Fermion user created successfully:', fermionResult);
-        alert(`Client onboarded successfully. Login details sent to ${clientData.company_email}`);
-      } else {
-        console.warn('⚠️ Fermion user creation failed (but client was created):', fermionResult);
-        // Continue anyway - this is not a critical failure
-      }
-    } catch (fermionError) {
-      console.error('❌ Error calling Fermion API (but client was created):', fermionError);
-      // Continue anyway - this is not a critical failure
-      alert(`Client onboarded, but failed to create Fermion user. Login details sent to ${clientData.company_email}`);
+
+    const { data: fetchedClientData, error: fetchedClientError } = await supabase
+      .from('pending_clients')  // Fetch from pending_clients table
+      .select('badge_value, full_name, company_email, applywizz_id') // Add other necessary fields
+      .eq('id', pendingClientId)  // Use the pending client ID
+      .single();
+
+    if (fetchedClientError) {
+      console.error("Failed to fetch client data:", fetchedClientError);
+      return;
     }
+
+    // Check if badge_value > 0 before proceeding
+    if (fetchedClientData.badge_value > 0) {
+      try {
+        // Call the Fermion API to create the user
+        const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userData.user.id, // Use the same UUID from Supabase
+            name: fetchedClientData.full_name,
+            email: fetchedClientData.company_email,
+            username: fetchedClientData.applywizz_id || fetchedClientData.company_email.split('@')[0]
+          }),
+        });
+
+        const fermionResult = await fermionResponse.json();
+
+        if (fermionResponse.ok) {
+          console.log('✅ Fermion user created successfully:', fermionResult);
+          alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
+        } else {
+          console.warn('⚠️ Fermion user creation failed (but client was created):', fermionResult);
+          // Continue anyway - this is not a critical failure
+        }
+      } catch (fermionError) {
+        console.error('❌ Error calling Fermion API (but client was created):', fermionError);
+        // Continue anyway - this is not a critical failure
+        alert(`Client onboarded, but failed to create Fermion user. Login details sent to ${fetchedClientData.company_email}`);
+      }
+    } else {
+      console.log("❌ Client badge_value is not greater than 0, skipping Fermion user creation.");
+      // Optionally, you can alert the user here or log the reason for skipping
+    }
+
+
 
     const { data: tid, error: b } = await supabase1.from('teams')
       .select('name').eq('id', cad.team_id).single();
