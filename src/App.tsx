@@ -341,6 +341,7 @@ function App() {
     // `
     //   })
     // });
+    
     await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -446,7 +447,7 @@ function App() {
     // Make API call to external database after successful client insertion
     try {
       const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
-
+      console.log("apiUrl",apiUrl);
       // Validate required fields before sending
       if (!clientData.company_email || !clientData.full_name) {
         console.error('❌ Missing required fields:', {
