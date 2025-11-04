@@ -283,6 +283,9 @@ function App() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
+    if (user.role === 'client') {
+      setActiveView('tickets');
+    }
     // console.log('Logged in user:', user.name, 'with role:', user.role, 'with email :', user.email);
   };
   // console.log('Logged in user:', currentUser?.name, currentUser?.role);
@@ -394,7 +397,7 @@ function App() {
 
   const handleAssignRoles = async (
     pendingClientId: string,
-    clientData: any,          
+    clientData: any,
     rolesData: any
   ) => {
     const { data: caEmail, error: caEmailError } = await supabase.from('users').select('email').eq('id', rolesData.careerassociateid).single();
@@ -596,10 +599,10 @@ function App() {
     } catch (error) {
       console.error('Error making external API call:', error);
       // Handle network errors or other exceptions
-    // Insert additional client information into clients_additional_information table
+      // Insert additional client information into clients_additional_information table
     }
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: pendingClientId, 
+      id: pendingClientId,
       applywizz_id: clientData.applywizz_id,
       resume_url: clientData.resume_url,
       resume_path: clientData.resume_path,
@@ -875,10 +878,10 @@ function App() {
 
       // Successfully onboarded, remove from pending list
       // await supabase.from('pending_clients').delete().eq('id', client.id);
-      
+
       // Refresh the pending clients list
       await fetchData();
-      
+
       alert("Client successfully onboarded to secondary database!");
     } catch (error) {
       console.error('Error making external API call:', error);
@@ -1127,44 +1130,34 @@ function App() {
                   )}
               </div>
             </div>
-
-            {currentUser?.role === 'client' ? (
-              <>
-                <ApplicationsOverTime currentUserEmail={currentUser?.email} />
-                <ApplicationSummaryList currentUserEmail={currentUser?.email} />
-              </>
-            )
-              :
-              (
-                <>
-                <DashboardStatsComponent
-                  stats={stats}
-                  userRole={currentUser?.role || ''}
-                  onTotalTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('all'); // Reset status filter
-                    setFilterType('all');   
-                    setFilterPriority('all');
-                  }}
-                  onOpenTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('open'); // This will filter to only open tickets
-                    setFilterType('all'); // Reset type filter
-                    setFilterPriority('all');
-                  }}
-                  onResolvedTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('resolved');
-                    setFilterType('all');
-                    setFilterPriority('all');
-                  }}
-                  onCriticalTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('all');
-                    setFilterType('all');
-                    setFilterPriority('critical');
-                  }}
-                />            
+            <DashboardStatsComponent
+              stats={stats}
+              userRole={currentUser?.role || ''}
+              onTotalTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('all'); // Reset status filter
+                setFilterType('all');
+                setFilterPriority('all');
+              }}
+              onOpenTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('open'); // This will filter to only open tickets
+                setFilterType('all'); // Reset type filter
+                setFilterPriority('all');
+              }}
+              onResolvedTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('resolved');
+                setFilterType('all');
+                setFilterPriority('all');
+              }}
+              onCriticalTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('all');
+                setFilterType('all');
+                setFilterPriority('critical');
+              }}
+            />
             {isExecutive ? (
               <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
             ) : (
@@ -1232,8 +1225,6 @@ function App() {
                   </div>
                 </div>
               </div>
-            )}
-            </>
             )}
             <FeedbackButton user={currentUser} />
           </div>

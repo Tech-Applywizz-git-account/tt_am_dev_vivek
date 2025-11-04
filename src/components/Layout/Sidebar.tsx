@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      show: true,
+      show: user.role !== 'client',
     },
     {
       id: 'tickets',
