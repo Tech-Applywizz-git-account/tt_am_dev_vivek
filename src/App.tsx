@@ -535,6 +535,35 @@ function App() {
       console.error(`❌ Error inserting into users table for ${clientData.company_email} : ${userInsertError.message}`);
       console.error(userInsertError);
     }
+ 
+    try {
+      const fermionResponse = await fetch('https://fermion-integration-ticketing-tool2.vercel.app/api/create-fermion-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userData.user.id, // Use the same UUID from Supabase
+          name: clientData.full_name,
+          email: clientData.company_email,
+          username: clientData.applywizz_id || clientData.company_email.split('@')[0]
+        }),
+      });
+ 
+      const fermionResult = await fermionResponse.json();
+ 
+      if (fermionResponse.ok) {
+        console.log('✅ Fermion user created successfully:', fermionResult);
+        alert(`Client onboarded successfully. Login details sent to ${clientData.company_email}`);
+      } else {
+        console.warn('⚠️ Fermion user creation failed (but client was created):', fermionResult);
+        // Continue anyway - this is not a critical failure
+      }
+    } catch (fermionError) {
+      console.error('❌ Error calling Fermion API (but client was created):', fermionError);
+      // Continue anyway - this is not a critical failure
+      alert(`Client onboarded, but failed to create Fermion user. Login details sent to ${clientData.company_email}`);
+    }
 
     const { data: tid, error: b } = await supabase1.from('teams')
       .select('name').eq('id', cad.team_id).single();
