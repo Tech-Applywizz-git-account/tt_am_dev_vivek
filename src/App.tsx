@@ -537,7 +537,7 @@ function App() {
     }
  
     try {
-      const fermionResponse = await fetch('https://fermion-integration-ticketing-tool2.vercel.app/api/create-fermion-user', {
+      const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
