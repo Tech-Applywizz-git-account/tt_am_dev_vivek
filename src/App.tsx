@@ -566,13 +566,21 @@ function App() {
 
         const fermionResult = await fermionResponse.json();
 
-        if (fermionResponse.ok) {
+        // if (fermionResponse.ok) {
+        //   console.log('✅ Fermion user created successfully:', fermionResult);
+        //   alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
+        // } else {
+        //   console.warn('⚠️ Fermion user creation failed (but client was created):', fermionResult);
+        //   // Continue anyway - this is not a critical failure
+        // }
+        if (fermionResponse.ok && fermionResult.success) {
           console.log('✅ Fermion user created successfully:', fermionResult);
           alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
         } else {
-          console.warn('⚠️ Fermion user creation failed (but client was created):', fermionResult);
-          // Continue anyway - this is not a critical failure
+          console.warn('⚠️ Fermion user creation failed:', fermionResult);
+          alert(`Client created but Fermion user creation failed. Check server logs.`);
         }
+
       } catch (fermionError) {
         console.error('❌ Error calling Fermion API (but client was created):', fermionError);
         // Continue anyway - this is not a critical failure
