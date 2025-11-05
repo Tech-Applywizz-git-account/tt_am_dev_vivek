@@ -85,6 +85,8 @@
 //   );
 // };
 
+//components/Layout/Navbar.tsx
+
 import React, { useEffect, useState } from 'react';
 import { LogOut, X } from 'lucide-react';
 import { User } from '../../types';
@@ -227,11 +229,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
                   const uid = encodeURIComponent(user.id ?? user.email);
                   if (codingLabUrl==="vivek") {
                     window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be1") {
+                  }else if (codingLabUrl==="be3") {
                     window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener'); //uid
                   }else if (codingLabUrl==="be2") {
                     window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be3") {
+                  }else if (codingLabUrl==="be1") {
                     window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener'); //uid
                   }else {
                     window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener'); //uid

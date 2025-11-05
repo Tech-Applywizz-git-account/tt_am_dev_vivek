@@ -7,7 +7,6 @@ const ENROLL_URL =
   'https://backend.codedamn.com/api/public/enroll-user-into-digital-product';
 
 // Hardcode the Fermion digital product ID (from your screenshot URL)
-// const FERMION_PRODUCT_ID = '68d24a8b5824ea0d74588d52';
 const FERMION_PRODUCT_ID = '68d1013f7183c17964b104c8';
 
 // Your published contest URL (from your dashboard)
@@ -18,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const apiKey = process.env.FERMION_API_KEY; // keep secret in env
     if (!apiKey) return res.status(500).send('Missing FERMION_API_KEY');
 
-    const labId = (req.query.labId as string) || process.env.DEFAULT_FERMION_LAB_ID;
+    const labId = (req.query.labId as string);
     if (!labId) return res.status(400).send('labId is required');
 
     // ⚠️ In production, derive userId from your session
@@ -72,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-store');
     return res.redirect(302, url);
   } catch (e: any) {
-    console.error('fermion-redirectbe3 error:', e);
+    console.error('fermion-redirectbe1 error:', e);
     return res.status(500).send(`Unexpected server error: ${e?.message || e}`);
   }
 }
