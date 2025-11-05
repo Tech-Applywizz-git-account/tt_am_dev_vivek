@@ -551,7 +551,7 @@ function App() {
     if (fetchedClientData.badge_value > 0) {
       try {
         // Call the Fermion API to create the user
-        const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
+        const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -566,13 +566,6 @@ function App() {
 
         const fermionResult = await fermionResponse.json();
 
-        // if (fermionResponse.ok) {
-        //   console.log('✅ Fermion user created successfully:', fermionResult);
-        //   alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
-        // } else {
-        //   console.warn('⚠️ Fermion user creation failed (but client was created):', fermionResult);
-        //   // Continue anyway - this is not a critical failure
-        // }
         if (fermionResponse.ok && fermionResult.success) {
           console.log('✅ Fermion user created successfully:', fermionResult);
           alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
