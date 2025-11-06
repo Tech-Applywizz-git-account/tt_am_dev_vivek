@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const apiKey = process.env.FERMION_API_KEY; // keep secret in env
     if (!apiKey) return res.status(500).send('Missing FERMION_API_KEY');
 
-    const labId = "68d1013f7183c17964b104c8";
+    const labId = FERMION_PRODUCT_ID;
     if (!labId) return res.status(400).send('labId is required');
 
     // ⚠️ In production, derive userId from your session
