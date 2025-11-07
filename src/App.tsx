@@ -823,27 +823,27 @@ function App() {
           // Default to empty array
           return [];
         })(),
-        "alternate_job_roles": (() => {
-          // Handle if alternate_job_roles is a string (from database)
-          if (typeof client.alternate_job_roles === 'string') {
-            // First try to parse as JSON
-            try {
-              return JSON.parse(client.alternate_job_roles);
-            } catch {
-              // If not JSON, split by comma and trim whitespace
-              return client.alternate_job_roles
-                .split(',')
-                .map(role => role.trim())
-                .filter(role => role.length > 0);
-            }
-          }
-          // If it's already an array, use it
-          if (Array.isArray(client.alternate_job_roles)) {
-            return client.alternate_job_roles;
-          }
-          // Default to empty array
-          return [];
-        })(),
+        // "alternate_job_roles": (() => {
+        //   // Handle if alternate_job_roles is a string (from database)
+        //   if (typeof client.alternate_job_roles === 'string') {
+        //     // First try to parse as JSON
+        //     try {
+        //       return JSON.parse(client.alternate_job_roles);
+        //     } catch {
+        //       // If not JSON, split by comma and trim whitespace
+        //       return client.alternate_job_roles
+        //         .split(',')
+        //         .map(role => role.trim())
+        //         .filter(role => role.length > 0);
+        //     }
+        //   }
+        //   // If it's already an array, use it
+        //   if (Array.isArray(client.alternate_job_roles)) {
+        //     return client.alternate_job_roles;
+        //   }
+        //   // Default to empty array
+        //   return [];
+        // })(),
 
         // Service dates
         "start_date": client.start_date,
