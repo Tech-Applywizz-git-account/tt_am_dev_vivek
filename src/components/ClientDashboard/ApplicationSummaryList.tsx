@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import { supabase } from '@/lib/supabaseClient';
 
 // ✅ Types
-interface TaskCount {
+export interface TaskCount {
   date: string;
   count: number;
 }
@@ -25,98 +24,31 @@ interface JobItem {
 type JobsData = Record<string, JobItem[]>;
 
 interface ApplicationSummaryListProps {
-  currentUserEmail?: string;
+  data: TaskCount[];
+  loading?: boolean;
+  error?: string;
+  applywizzId?: string;
 }
 
-const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({ currentUserEmail }) => {
-  const [data, setData] = useState<TaskCount[]>([]);
+const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({ 
+  data, 
+  loading = false, 
+  error = "", 
+  applywizzId 
+}) => {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [jobsData, setJobsData] = useState<JobsData>({});
-  const [loading, setLoading] = useState<boolean>(false);
   const [jobsLoading, setJobsLoading] = useState<Record<string, boolean>>({});
-  const [error, setError] = useState<string>("");
-
-  useEffect(() => {
-    fetchApplicationsData();
-  }, [currentUserEmail]);
-
-  const fetchApplicationsData = async () => {
-    if (!currentUserEmail) {
-      setError("User email not available");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      // First, get the applywizz_id from Supabase based on the user's email
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select('applywizz_id')
-        .eq('company_email', currentUserEmail)
-        .single();
-
-      if (clientError) {
-        throw new Error(`Failed to fetch client data: ${clientError.message}`);
-      }
-
-      if (!clientData || !clientData.applywizz_id) {
-        throw new Error("Applywizz ID not found for this user");
-      }
-
-      const applywizzId = clientData.applywizz_id;
-
-      // Now fetch the actual data from the external API
-      const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-      if (!apiUrl) {
-        throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
-      }
-      
-      const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}`);
-      console.log("Fetch response:", response);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
-      }
-
-      const apiData = await response.json();
-      
-      // Transform the API data to match our expected format
-      const formattedData: TaskCount[] = Object.entries(apiData.completed_tasks || {})
-        .map(([date, count]) => ({ date, count: Number(count) }))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      setData(formattedData);
-    } catch (err) {
-      console.error("Error fetching applications data:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchJobsForDate = async (date: string): Promise<JobItem[]> => {
+    if (!applywizzId) {
+      console.error("Applywizz ID not available");
+      return [];
+    }
+
     try {
       // Set loading state for this specific date
       setJobsLoading(prev => ({ ...prev, [date]: true }));
-      
-      // Get the applywizz_id from Supabase based on the user's email
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select('applywizz_id')
-        .eq('company_email', currentUserEmail)
-        .single();
-
-      if (clientError) {
-        throw new Error(`Failed to fetch client data: ${clientError.message}`);
-      }
-
-      if (!clientData || !clientData.applywizz_id) {
-        throw new Error("Applywizz ID not found for this user");
-      }
-
-      const applywizzId = clientData.applywizz_id;
 
       // Fetch the job data for the specific date
       const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
@@ -136,7 +68,6 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({ current
       return apiData.tasks || [];
     } catch (err) {
       console.error("Error fetching job data:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred while fetching job data");
       return [];
     } finally {
       // Reset loading state for this specific date
