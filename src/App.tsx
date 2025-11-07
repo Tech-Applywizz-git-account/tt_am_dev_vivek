@@ -772,6 +772,7 @@ function App() {
 
     if (verror) {
       alert("Failed to complete onboarding3");
+      console.log("Failed to complete onboarding in ca management", verror);
       return;
     }
 
