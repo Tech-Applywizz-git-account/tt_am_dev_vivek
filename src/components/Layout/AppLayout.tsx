@@ -33,6 +33,7 @@ interface Props {
   handleDeleteUser: (userId: string) => void;
   fetchData: () => Promise<void>;
   pendingClientsCount: number;
+  onViewLabResults?: (labId: string) => void;
 }
 
 const AppLayout: React.FC<Props> = ({
@@ -59,10 +60,11 @@ const AppLayout: React.FC<Props> = ({
   handleDeleteUser,
   fetchData,
   pendingClientsCount,
+  onViewLabResults,
 }) => {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={currentUser} onLogout={handleLogout} />
+      <Navbar user={currentUser} onLogout={handleLogout} onViewLabResults={onViewLabResults} />
 
       <div className="flex">
         {(currentUser.role !== 'client') && (

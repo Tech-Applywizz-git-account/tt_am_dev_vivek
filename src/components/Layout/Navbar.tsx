@@ -88,7 +88,7 @@
 //components/Layout/Navbar.tsx
 
 import React, { useEffect, useState } from 'react';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, X, BarChart3 } from 'lucide-react';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
 import { ProfileMenu } from "./ProfileMenu";
@@ -98,12 +98,16 @@ import { supabase } from '../../lib/supabaseClient';
 interface NavbarProps {
   user: User;
   onLogout: () => void;
+  onViewLabResults?: (labId: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
+export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults }) => {
   const [isBetaOpen, setIsBetaOpen] = useState(false);
   const [badgeValue, setBadgeValue] = useState<number | null>(null);
   const [codingLabUrl, setCodingLabUrl] = useState<string | null>(null);
+  const [labId1, setLabId1] = useState<string | null>(null);
+  const [labId2, setLabId2] = useState<string | null>(null);
+  const [showLabSelector, setShowLabSelector] = useState(false);
 
   useEffect(() => {
     const fetchBadgeValue = async () => {
@@ -111,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
 
       const { data, error } = await supabase
         .from("clients")
-        .select("badge_value,coding_lab_url,company_email")
+        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2")
         .eq("company_email", user.email)
         .single();
 
@@ -126,6 +130,12 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
       if (data?.coding_lab_url) {
         setCodingLabUrl(data.coding_lab_url);
       }
+      if (data?.lab_id_1) {
+        setLabId1(data.lab_id_1);
+      }
+      if (data?.lab_id_2) {
+        setLabId2(data.lab_id_2);
+      }
     };
 
     fetchBadgeValue();
@@ -137,6 +147,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [isBetaOpen]);
+
+  // Close lab selector when clicking outside
+  useEffect(() => {
+    if (!showLabSelector) return;
+    const handleClickOutside = () => setShowLabSelector(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showLabSelector]);
   return (
     // <nav className="bg-gradient-to-br from-blue-400 to-lime-500 border-b border-gray-200 sticky top-0 z-50">
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
@@ -222,26 +240,77 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
             </div>
           </div>
 
-          {(user.role === 'client' && badgeValue) && ( // show the button only if the user is a client and has a badgeValue
-              <button
-                className="text-sm px-2 py-1 bg-blue-100 text-blue-600 rounded-lg font-medium"
-                onClick={() => {
-                  const uid = encodeURIComponent(user.id ?? user.email);
-                  if (codingLabUrl==="vivek") {
-                    window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be3") {
-                    window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be2") {
-                    window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be1") {
-                    window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else {
-                    window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }}
-                }
-              >
-                Coding Lab
-              </button>
+          {(user.role === 'client' && badgeValue && badgeValue > 0) && ( // show buttons only if the user is a client and has a badgeValue
+              <div className="flex items-center gap-2">
+                {/* Lab Results Button with Dropdown */}
+                <div className="relative">
+                  <button
+                    className="text-sm px-3 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // If only one lab ID exists, view it directly
+                      if (labId1 && !labId2) {
+                        onViewLabResults?.(labId1);
+                      } else if (labId2 && !labId1) {
+                        onViewLabResults?.(labId2);
+                      } else if (labId1 && labId2) {
+                        // If both exist, show selector
+                        setShowLabSelector(!showLabSelector);
+                      } else {
+                        alert('No lab IDs configured for your account');
+                      }
+                    }}
+                    title="View your coding lab results"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Lab Results</span>
+                  </button>
+                  
+                  {/* Dropdown Menu for Lab Selection */}
+                  {showLabSelector && labId1 && labId2 && (
+                    <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
+                      <button
+                        onClick={() => {
+                          onViewLabResults?.(labId1);
+                          setShowLabSelector(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                      >
+                        Lab 1 Results
+                      </button>
+                      <button
+                        onClick={() => {
+                          onViewLabResults?.(labId2);
+                          setShowLabSelector(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                      >
+                        Lab 2 Results
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  className="text-sm px-3 py-2 bg-blue-100 text-blue-600 rounded-lg font-medium hover:bg-blue-200 transition-colors"
+                  onClick={() => {
+                    const uid = encodeURIComponent(user.id ?? user.email);
+                    if (codingLabUrl==="vivek") {
+                      window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="be3") {
+                      window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="be2") {
+                      window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="be1") {
+                      window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener');
+                    }else {
+                      window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener');
+                    }}
+                  }
+                >
+                  Coding Lab
+                </button>
+              </div>
             )}
 
           <ProfileMenu user={user} onLogout={onLogout} />

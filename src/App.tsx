@@ -16,6 +16,7 @@ import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModa
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
+import { LabResultsModal } from './components/LabResults/LabResultsModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
@@ -114,6 +115,12 @@ function App() {
     setAssignments(assignmentMap);
   };
 
+  // Function to handle view lab results
+  const handleViewLabResults = (labId: string) => {
+    setSelectedLabId(labId);
+    setIsLabResultsModalOpen(true);
+  };
+
   const handleTicketUpdated = async () => {
     await fetchData(); // Refreshes tickets and assignments
   };
@@ -134,6 +141,10 @@ function App() {
   const [isClientOnboardingModalOpen, setIsClientOnboardingModalOpen] = useState(false);
   // State to store whether the user management modal is open
   const [isUserManagementModalOpen, setIsUserManagementModalOpen] = useState(false);
+  // State to store whether the lab results modal is open
+  const [isLabResultsModalOpen, setIsLabResultsModalOpen] = useState(false);
+  // State to store the lab ID for viewing results
+  const [selectedLabId, setSelectedLabId] = useState<string>('');
   // State to store the selected ticket
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   // State to store the selected client
@@ -1413,6 +1424,13 @@ function App() {
                     handleDeleteUser={handleDeleteUser}
                     fetchData={fetchData}
                     pendingClientsCount={pendingClients.length}
+                    onViewLabResults={handleViewLabResults}
+                  />
+                  <LabResultsModal
+                    user={currentUser}
+                    labId={selectedLabId}
+                    isOpen={isLabResultsModalOpen}
+                    onClose={() => setIsLabResultsModalOpen(false)}
                   />
                 </ProtectedRoute>
               }

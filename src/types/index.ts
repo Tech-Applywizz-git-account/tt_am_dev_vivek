@@ -66,6 +66,9 @@ export interface Client {
   visa_type: string;
   sponsorship: string;
   applywizz_id: string;
+  badge_value?: number;
+  lab_id_1?: string;
+  lab_id_2?: string;
 }
 
 export interface Ticket {
