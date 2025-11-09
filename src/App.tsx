@@ -562,7 +562,7 @@ function App() {
     if (fetchedClientData.badge_value > 0) {
       try {
         // Call the Fermion API to create the user
-        const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
+        const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
