@@ -568,7 +568,7 @@ function App() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            userId: userData.user.id, // Use the same UUID from Supabase
+            userId: fetchedClientData.applywizz_id, // Use ApplyWizz ID for Fermion
             name: fetchedClientData.full_name,
             email: fetchedClientData.company_email,
             username: fetchedClientData.applywizz_id || fetchedClientData.company_email.split('@')[0]
