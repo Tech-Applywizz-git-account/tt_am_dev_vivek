@@ -561,6 +561,11 @@ function App() {
     // Check if badge_value > 0 before proceeding
     if (fetchedClientData.badge_value > 0) {
       try {
+        // Generate alphanumeric username (remove special characters from ApplyWizz ID)
+        const cleanUsername = fetchedClientData.applywizz_id
+          ? fetchedClientData.applywizz_id.replace(/[^a-zA-Z0-9]/g, '')
+          : fetchedClientData.company_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+        
         // Call the Fermion API to create the user
         const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
           method: 'POST',
@@ -571,7 +576,7 @@ function App() {
             userId: fetchedClientData.applywizz_id, // Use ApplyWizz ID for Fermion
             name: fetchedClientData.full_name,
             email: fetchedClientData.company_email,
-            username: fetchedClientData.applywizz_id || fetchedClientData.company_email.split('@')[0]
+            username: cleanUsername // Alphanumeric only username
           }),
         });
 
