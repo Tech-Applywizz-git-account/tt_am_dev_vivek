@@ -649,7 +649,7 @@ function App() {
           return ["facebook"];
         })(),
         "resume_s3_path": clientData.resume_url,
-        "resume_url": clientData.resume_url ? `https://applywizz-dev.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
+        "resume_url": clientData.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
 
         // Salary and applications
         "expected_salary": clientData.salary_range || "",
@@ -1052,7 +1052,7 @@ function App() {
           return ["facebook"];
         })(),
         "resume_s3_path": client.resume_url,
-        "resume_url": client.resume_url ? `https://applywizz-dev.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
+        "resume_url": client.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
 
         // Salary and applications
         "expected_salary": client.salary_range || "",
