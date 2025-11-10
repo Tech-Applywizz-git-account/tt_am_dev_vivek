@@ -444,6 +444,7 @@ function App() {
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
+      badge_value: clientData.badge_value || 0,
     });
 
     if (insertError) {
