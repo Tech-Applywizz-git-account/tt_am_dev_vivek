@@ -35,7 +35,6 @@ import ApplicationsOverTime, { ChartItem } from './components/ClientDashboard/Ap
 import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/ApplicationSummaryList';
 import JobLinksList from './components/ClientDashboard/JobLinksList';
 
-
 function App() {
   const fetchData = async () => {
     // 1. Get all tickets
