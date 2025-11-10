@@ -297,6 +297,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                     const uid = encodeURIComponent(user.id ?? user.email);
                     if (codingLabUrl==="vivek") {
                       window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="fe1") {
+                      window.open(`/api/fermion-redirectfe1?uid=${uid}`, '_blank', 'noopener');
                     }else if (codingLabUrl==="be3") {
                       window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener');
                     }else if (codingLabUrl==="be2") {
