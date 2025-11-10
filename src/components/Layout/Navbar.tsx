@@ -108,6 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
   const [labId1, setLabId1] = useState<string | null>(null);
   const [labId2, setLabId2] = useState<string | null>(null);
   const [showLabSelector, setShowLabSelector] = useState(false);
+  const [applywizzId, setApplywizzId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBadgeValue = async () => {
@@ -115,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
 
       const { data, error } = await supabase
         .from("clients")
-        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2")
+        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id")
         .eq("company_email", user.email)
         .single();
 
@@ -135,6 +136,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
       }
       if (data?.lab_id_2) {
         setLabId2(data.lab_id_2);
+      }
+      if (data?.applywizz_id) {
+        setApplywizzId(data.applywizz_id);
       }
     };
 
@@ -294,7 +298,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                 <button
                   className="text-sm px-3 py-2 bg-blue-100 text-blue-600 rounded-lg font-medium hover:bg-blue-200 transition-colors"
                   onClick={() => {
-                    const uid = encodeURIComponent(user.id ?? user.email);
+                    // Use ApplyWizz ID instead of Supabase UUID
+                    const uid = encodeURIComponent(applywizzId || user.email);
                     if (codingLabUrl==="vivek") {
                       window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener');
                     }else if (codingLabUrl==="fe1") {
