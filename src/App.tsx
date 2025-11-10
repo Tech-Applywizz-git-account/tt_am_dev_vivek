@@ -818,7 +818,7 @@ function App() {
       alert("Failed to complete onboarding3");
       return;
     }
-
+    alert("Client onboarding completed");
     await supabase.from('pending_clients').delete().eq('id', pendingClientId);
     await fetchData();
   };
@@ -843,6 +843,7 @@ function App() {
       badge_value: client.badge_value,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
+      opted_job_links:true,
     });
     if (insertError) {
       alert("Failed to complete onboarding");
