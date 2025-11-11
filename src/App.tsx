@@ -1150,6 +1150,8 @@ function App() {
       await fetchData();
       
       alert("Client successfully onboarded to secondary database!");
+      await supabase.from('pending_clients').delete().eq('id', pendingClientId);
+      await fetchData();
     } catch (error) {
       console.error('Error making external API call:', error);
       alert("Failed to onboard client to secondary database");
