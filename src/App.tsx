@@ -691,6 +691,7 @@ function App() {
         }
 
         alert(`Failed to sync with external database: ${response.status}    Error: ${errorDetails}   Check console for full details.`);
+        return;
       } else {
         // const successData = await response.json().catch(() => response.text());
         // console.log('✅ Successfully added to external db:', successData);
