@@ -81,8 +81,10 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
       }
 
       console.log('✅ ApplyWizz ID found:', data.applywizz_id);
+      console.log('📧 Using email as userId:', data.company_email);
       setApplywizzId(data.applywizz_id);
-      fetchLabResults(data.applywizz_id);
+      // Use email as userId for Fermion API
+      fetchLabResults(data.company_email);
     } catch (err) {
       console.error('❌ Unexpected error:', err);
       setError('An unexpected error occurred');
@@ -104,6 +106,11 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
 
     try {
       console.log('🔧 Fetching lab results for:', { userId, labId });
+      console.log('📋 Request details:', {
+        endpoint: '/api/get-fermion-lab-results',
+        method: 'POST',
+        body: { userId, labId }
+      });
       
       const response = await fetch('/api/get-fermion-lab-results', {
         method: 'POST',
@@ -116,6 +123,7 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
 
       const data = await response.json();
       console.log('📥 API Response:', data);
+      console.log('📊 Lab Data:', data.data);
 
       if (!data.success) {
         const errorMsg = data.message || data.error?.message || 'Failed to fetch lab results';

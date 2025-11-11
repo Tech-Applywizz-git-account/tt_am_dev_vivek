@@ -320,7 +320,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                   Coding Lab
                 </button>
               </div>
-              //small change
             )}
 
           <ProfileMenu user={user} onLogout={onLogout} />
