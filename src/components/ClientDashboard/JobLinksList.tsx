@@ -134,7 +134,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
- 
+
             // Call the backend API to update the job status
             const response = await fetch(`${apiUrl}/api/job-links/update`, {
                 method: 'POST',
