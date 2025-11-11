@@ -31,8 +31,9 @@ import FeedbackButton from './components/FeedbackButton';
 import { ClientSearchBar } from './components/ClientSearchBar';
 import { ca } from 'date-fns/locale';
 import { SupabaseAdminCreateClient } from './lib/supabaseAdminCreateClient';
-import ApplicationsOverTime from './components/ClientDashboard/ApplicationsOverTime';
-import ApplicationSummaryList from './components/ClientDashboard/ApplicationSummaryList';
+import ApplicationsOverTime, { ChartItem } from './components/ClientDashboard/ApplicationsOverTime';
+import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/ApplicationSummaryList';
+import JobLinksList from './components/ClientDashboard/JobLinksList';
 
 function App() {
   const fetchData = async () => {
@@ -152,6 +153,13 @@ function App() {
   const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
+  
+  // Client dashboard data
+  const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
+  const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
+  const [clientDashboardError, setClientDashboardError] = useState("");
+  const [applywizzId, setApplywizzId] = useState<string | undefined>();
 
   useEffect(() => {
     fetchData();
@@ -272,6 +280,96 @@ function App() {
     fetchData(); // Keep existing fetchData call
   }, []); // Empty dependency array = runs only once on mount
 
+  // Fetch opted_job_links status when user changes
+  useEffect(() => {
+    const fetchClientJobLinksStatus = async () => {
+      if (!currentUser?.email || currentUser?.role !== 'client') return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('opted_job_links')
+          .eq('company_email', currentUser.email)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching opted_job_links:', error);
+          return;
+        }
+        
+        if (data) {
+          setOptedJobLinks(data.opted_job_links || false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch client job links status:', err);
+      }
+    };
+
+    fetchClientJobLinksStatus();
+  }, [currentUser?.email, currentUser?.role]);
+
+  // Fetch client dashboard data when user changes
+  useEffect(() => {
+    const fetchClientDashboardData = async () => {
+      if (!currentUser?.email || currentUser?.role !== 'client' || optedJobLinks) {
+        setClientDashboardData([]);
+        setApplywizzId(undefined);
+        return;
+      }
+
+      setClientDashboardLoading(true);
+      setClientDashboardError("");
+
+      try {
+        // Get the applywizz_id from Supabase based on the user's email
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('applywizz_id')
+          .eq('company_email', currentUser.email)
+          .single();
+
+        if (clientError) {
+          throw new Error(`Failed to fetch client data: ${clientError.message}`);
+        }
+
+        if (!clientData || !clientData.applywizz_id) {
+          throw new Error("Applywizz ID not found for this user");
+        }
+
+        const fetchedApplywizzId = clientData.applywizz_id;
+        setApplywizzId(fetchedApplywizzId);
+
+        // Fetch the actual data from the external API
+        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+        if (!apiUrl) {
+          throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+        }
+
+        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+        }
+
+        const apiData = await response.json();
+
+        // Transform the API data to match our expected format
+        const formattedData: TaskCount[] = Object.entries(apiData.completed_tasks || {})
+          .map(([date, count]) => ({ date, count: Number(count) }))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setClientDashboardData(formattedData);
+      } catch (err) {
+        console.error("Error fetching client dashboard data:", err);
+        setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
+      } finally {
+        setClientDashboardLoading(false);
+      }
+    };
+
+    fetchClientDashboardData();
+  }, [currentUser?.email, currentUser?.role, optedJobLinks]);
+
   // Add this to save view changes
   useEffect(() => {
     if (currentUser) {
@@ -283,9 +381,6 @@ function App() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
-    if (user.role === 'client') {
-      setActiveView('tickets');
-    }
     // console.log('Logged in user:', user.name, 'with role:', user.role, 'with email :', user.email);
   };
   // console.log('Logged in user:', currentUser?.name, currentUser?.role);
@@ -341,7 +436,6 @@ function App() {
     // `
     //   })
     // });
-    
     await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -398,7 +492,7 @@ function App() {
 
   const handleAssignRoles = async (
     pendingClientId: string,
-    clientData: any,
+    clientData: any,          
     rolesData: any
   ) => {
     const { data: caEmail, error: caEmailError } = await supabase.from('users').select('email').eq('id', rolesData.careerassociateid).single();
@@ -435,6 +529,7 @@ function App() {
       sponsorship: clientData.sponsorship,
       badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
+      badge_value: clientData.badge_value,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
     });
@@ -448,7 +543,7 @@ function App() {
     // Make API call to external database after successful client insertion
     try {
       const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
-      console.log("apiUrl",apiUrl);
+
       // Validate required fields before sending
       if (!clientData.company_email || !clientData.full_name) {
         console.error('❌ Missing required fields:', {
@@ -555,7 +650,7 @@ function App() {
           return ["facebook"];
         })(),
         "resume_s3_path": clientData.resume_url,
-        "resume_url": clientData.resume_url ? `https://applywizz-dev.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
+        "resume_url": clientData.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
 
         // Salary and applications
         "expected_salary": clientData.salary_range || "",
@@ -601,10 +696,10 @@ function App() {
     } catch (error) {
       console.error('Error making external API call:', error);
       // Handle network errors or other exceptions
-      // Insert additional client information into clients_additional_information table
+    // Insert additional client information into clients_additional_information table
     }
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: pendingClientId,
+      id: pendingClientId, 
       applywizz_id: clientData.applywizz_id,
       resume_url: clientData.resume_url,
       resume_path: clientData.resume_path,
@@ -775,7 +870,7 @@ function App() {
       console.log("Failed to complete onboarding in ca management", verror);
       return;
     }
-
+    alert("Client onboarding completed");
     await supabase.from('pending_clients').delete().eq('id', pendingClientId);
     await fetchData();
   };
@@ -800,6 +895,7 @@ function App() {
       badge_value: client.badge_value,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
+      opted_job_links:true,
     });
     if (insertError) {
       alert("Failed to complete onboarding");
@@ -899,6 +995,7 @@ function App() {
       console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
       console.error(userInsertError);
     }
+
     try {
       const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
 
@@ -1007,7 +1104,7 @@ function App() {
           return ["facebook"];
         })(),
         "resume_s3_path": client.resume_url,
-        "resume_url": client.resume_url ? `https://applywizz-dev.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
+        "resume_url": client.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
 
         // Salary and applications
         "expected_salary": client.salary_range || "",
@@ -1048,10 +1145,10 @@ function App() {
 
       // Successfully onboarded, remove from pending list
       // await supabase.from('pending_clients').delete().eq('id', client.id);
-
+      
       // Refresh the pending clients list
       await fetchData();
-
+      
       alert("Client successfully onboarded to secondary database!");
     } catch (error) {
       console.error('Error making external API call:', error);
@@ -1300,34 +1397,59 @@ function App() {
                   )}
               </div>
             </div>
-            <DashboardStatsComponent
-              stats={stats}
-              userRole={currentUser?.role || ''}
-              onTotalTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('all'); // Reset status filter
-                setFilterType('all');
-                setFilterPriority('all');
-              }}
-              onOpenTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('open'); // This will filter to only open tickets
-                setFilterType('all'); // Reset type filter
-                setFilterPriority('all');
-              }}
-              onResolvedTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('resolved');
-                setFilterType('all');
-                setFilterPriority('all');
-              }}
-              onCriticalTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('all');
-                setFilterType('all');
-                setFilterPriority('critical');
-              }}
-            />
+
+            {currentUser?.role === 'client' ? (
+              <>
+                {optedJobLinks ? (
+                  <JobLinksList currentUserEmail={currentUser?.email} />
+                ) : (
+                  <>
+                    <ApplicationsOverTime 
+                      data={clientDashboardData} 
+                      loading={clientDashboardLoading} 
+                      error={clientDashboardError} 
+                    />
+                    <ApplicationSummaryList 
+                      data={clientDashboardData} 
+                      loading={clientDashboardLoading} 
+                      error={clientDashboardError}
+                      applywizzId={applywizzId}
+                    />
+                  </>
+                )}
+              </>
+            )
+              :
+              (
+                <>
+                <DashboardStatsComponent
+                  stats={stats}
+                  userRole={currentUser?.role || ''}
+                  onTotalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all'); // Reset status filter
+                    setFilterType('all');   
+                    setFilterPriority('all');
+                  }}
+                  onOpenTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('open'); // This will filter to only open tickets
+                    setFilterType('all'); // Reset type filter
+                    setFilterPriority('all');
+                  }}
+                  onResolvedTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('resolved');
+                    setFilterType('all');
+                    setFilterPriority('all');
+                  }}
+                  onCriticalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all');
+                    setFilterType('all');
+                    setFilterPriority('critical');
+                  }}
+                />            
             {isExecutive ? (
               <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
             ) : (
@@ -1395,6 +1517,8 @@ function App() {
                   </div>
                 </div>
               </div>
+            )}
+            </>
             )}
             <FeedbackButton user={currentUser} />
           </div>
@@ -1854,6 +1978,7 @@ function App() {
                     handleDeleteUser={handleDeleteUser}
                     fetchData={fetchData}
                     pendingClientsCount={pendingClients.length}
+                    optedJobLinks={optedJobLinks}
                   />
                 </ProtectedRoute>
               }

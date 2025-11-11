@@ -33,6 +33,7 @@ interface Props {
   handleDeleteUser: (userId: string) => void;
   fetchData: () => Promise<void>;
   pendingClientsCount: number;
+  optedJobLinks?: boolean;
 }
 
 const AppLayout: React.FC<Props> = ({
@@ -59,13 +60,16 @@ const AppLayout: React.FC<Props> = ({
   handleDeleteUser,
   fetchData,
   pendingClientsCount,
+  optedJobLinks = false,
 }) => {
+  // Hide sidebar for clients with opted_job_links = true
+  const showSidebar = !(currentUser.role === 'client' && optedJobLinks);
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={currentUser} onLogout={handleLogout} />
 
       <div className="flex">
-        {(currentUser.role !== 'client') && (
+        {showSidebar && (
           <Sidebar
             user={currentUser}
             activeView={activeView}
