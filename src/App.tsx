@@ -324,7 +324,7 @@ function App() {
         // Get the applywizz_id from Supabase based on the user's email
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
-          .select('applywizz_id')
+          .select('applywizz_id,opted_job_links')
           .eq('company_email', currentUser.email)
           .single();
 
@@ -334,6 +334,9 @@ function App() {
 
         if (!clientData || !clientData.applywizz_id) {
           throw new Error("Applywizz ID not found for this user");
+        }
+        if (clientData.opted_job_links) {
+          return;
         }
 
         const fetchedApplywizzId = clientData.applywizz_id;
