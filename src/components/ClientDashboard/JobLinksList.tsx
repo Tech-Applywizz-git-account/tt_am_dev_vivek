@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 // ✅ Types
 interface Job {
+    id?: string;
     score?: number;
     url?: string;
     company?: string;
@@ -119,8 +120,49 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         updatedJobs[jobIndex].status = newStatus;
         setJobs(updatedJobs);
 
-        // TODO: Make API call to update status on backend
-        // Example: await updateJobStatus(jobs[jobIndex].url, newStatus);
+        // Get the job ID from the job object (using the 'id' field)
+        const jobId = updatedJobs[jobIndex].id;
+       
+        if (!jobId) {
+            console.error("Job ID not found");
+            return;
+        }
+ 
+        try {
+            // Get the API URL from environment variables
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL as string;
+            if (!apiUrl) {
+                throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+            }
+ 
+            // Call the backend API to update the job status
+            const response = await fetch(`${apiUrl}/api/job-links/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    "job-id": jobId,
+                    "status": newStatus
+                })
+            });
+ 
+            if (!response.ok) {
+                throw new Error(`Failed to update job status: ${response.status} ${response.statusText}`);
+            }
+ 
+            const result = await response.json();
+            console.log("Job status updated successfully:", result);
+           
+            // Refresh the job list to ensure consistency
+            await fetchJobLinks();
+        } catch (error) {
+            console.error("Error updating job status:", error);
+            // Revert the local state change if the API call fails
+            const revertedJobs = [...jobs];
+            revertedJobs[jobIndex].status = jobs[jobIndex].status;
+            setJobs(revertedJobs);
+        }
     };
 
     const isOverdue = (datePosted: string | undefined | null) => {
