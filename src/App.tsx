@@ -527,6 +527,7 @@ function App() {
       scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376",
       onboarded_by: currentUser!.id,
       sponsorship: clientData.sponsorship,
+      badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
       badge_value: clientData.badge_value,
       created_at: new Date().toISOString(),
@@ -791,6 +792,56 @@ function App() {
       console.error(userInsertError);
     }
 
+    const { data: fetchedClientData, error: fetchedClientError } = await supabase
+      .from('pending_clients')  // Fetch from pending_clients table
+      .select('badge_value, full_name, company_email, applywizz_id') // Add other necessary fields
+      .eq('id', pendingClientId)  // Use the pending client ID
+      .single();
+
+    if (fetchedClientError) {
+      console.error("Failed to fetch client data:", fetchedClientError);
+      return;
+    }
+
+    // Check if badge_value > 0 before proceeding
+    if (fetchedClientData.badge_value > 0) {
+      try {
+        // Call the Fermion API to create the user
+        const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userData.user.id, // Use the same UUID from Supabase
+            name: fetchedClientData.full_name,
+            email: fetchedClientData.company_email,
+            username: fetchedClientData.applywizz_id || fetchedClientData.company_email.split('@')[0]
+          }),
+        });
+
+        const fermionResult = await fermionResponse.json();
+
+        if (fermionResponse.ok && fermionResult.success) {
+          console.log('✅ Fermion user created successfully:', fermionResult);
+          alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
+        } else {
+          console.warn('⚠️ Fermion user creation failed:', fermionResult);
+          alert(`Client created but Fermion user creation failed. Check server logs.`);
+        }
+
+      } catch (fermionError) {
+        console.error('❌ Error calling Fermion API (but client was created):', fermionError);
+        // Continue anyway - this is not a critical failure
+        alert(`Client onboarded, but failed to create Fermion user. Login details sent to ${fetchedClientData.company_email}`);
+      }
+    } else {
+      console.log("❌ Client badge_value is not greater than 0, skipping Fermion user creation.");
+      // Optionally, you can alert the user here or log the reason for skipping
+    }
+
+
+
     const { data: tid, error: b } = await supabase1.from('teams')
       .select('name').eq('id', cad.team_id).single();
     if (b) {
@@ -816,6 +867,7 @@ function App() {
 
     if (verror) {
       alert("Failed to complete onboarding3");
+      console.log("Failed to complete onboarding in ca management", verror);
       return;
     }
     alert("Client onboarding completed");
@@ -985,27 +1037,27 @@ function App() {
           // Default to empty array
           return [];
         })(),
-        "alternate_job_roles": (() => {
-          // Handle if alternate_job_roles is a string (from database)
-          if (typeof client.alternate_job_roles === 'string') {
-            // First try to parse as JSON
-            try {
-              return JSON.parse(client.alternate_job_roles);
-            } catch {
-              // If not JSON, split by comma and trim whitespace
-              return client.alternate_job_roles
-                .split(',')
-                .map(role => role.trim())
-                .filter(role => role.length > 0);
-            }
-          }
-          // If it's already an array, use it
-          if (Array.isArray(client.alternate_job_roles)) {
-            return client.alternate_job_roles;
-          }
-          // Default to empty array
-          return [];
-        })(),
+        // "alternate_job_roles": (() => {
+        //   // Handle if alternate_job_roles is a string (from database)
+        //   if (typeof client.alternate_job_roles === 'string') {
+        //     // First try to parse as JSON
+        //     try {
+        //       return JSON.parse(client.alternate_job_roles);
+        //     } catch {
+        //       // If not JSON, split by comma and trim whitespace
+        //       return client.alternate_job_roles
+        //         .split(',')
+        //         .map(role => role.trim())
+        //         .filter(role => role.length > 0);
+        //     }
+        //   }
+        //   // If it's already an array, use it
+        //   if (Array.isArray(client.alternate_job_roles)) {
+        //     return client.alternate_job_roles;
+        //   }
+        //   // Default to empty array
+        //   return [];
+        // })(),
 
         // Service dates
         "start_date": client.start_date,
