@@ -81,10 +81,9 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
       }
 
       console.log('✅ ApplyWizz ID found:', data.applywizz_id);
-      console.log('📧 Using email as userId:', data.company_email);
       setApplywizzId(data.applywizz_id);
-      // Use email as userId for Fermion API
-      fetchLabResults(data.company_email);
+      // Use ApplyWizz ID as userId for Fermion API
+      fetchLabResults(data.applywizz_id);
     } catch (err) {
       console.error('❌ Unexpected error:', err);
       setError('An unexpected error occurred');
