@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, XCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
-import { User } from '../../types';
+import { X, CheckCircle, XCircle, Clock, AlertCircle, Loader2, Award } from 'lucide-react';
+import { User, MCQResults } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
 
 interface LabResultsModalProps {
@@ -40,12 +40,50 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [labData, setLabData] = useState<LabResultData | null>(null);
   const [applywizzId, setApplywizzId] = useState<string | null>(null);
+  const [mcqData, setMcqData] = useState<MCQResults | null>(null);
+  const isMcqMode = labId === 'mcq';
 
   useEffect(() => {
     if (isOpen && labId) {
-      fetchApplywizzId();
+      if (isMcqMode) {
+        fetchMcqResults();
+      } else {
+        fetchApplywizzId();
+      }
     }
   }, [isOpen, labId]);
+
+  const fetchMcqResults = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('mcq_results')
+        .eq('company_email', user.email)
+        .single();
+
+      if (error) {
+        setError(`Unable to fetch MCQ results: ${error.message}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!data?.mcq_results) {
+        setError('No MCQ results found. You may not have attempted the test yet.');
+        setLoading(false);
+        return;
+      }
+
+      setMcqData(data.mcq_results as MCQResults);
+    } catch (err) {
+      console.error('❌ Error fetching MCQ results:', err);
+      setError('An unexpected error occurred while fetching MCQ results');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchApplywizzId = async () => {
     try {
@@ -187,8 +225,12 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-50 to-green-50">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Coding Lab Results</h2>
-            <p className="text-sm text-gray-600 mt-1">Lab ID: {labId}</p>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {isMcqMode ? 'MCQ Test Results' : 'Coding Lab Results'}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {isMcqMode ? 'Multiple Choice Questions' : `Lab ID: ${labId}`}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -204,7 +246,7 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
           {loading && (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
-              <p className="text-gray-600">Loading lab results...</p>
+              <p className="text-gray-600">Loading {isMcqMode ? 'MCQ' : 'lab'} results...</p>
             </div>
           )}
 
@@ -214,7 +256,7 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
               <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
               <p className="text-red-700">{error}</p>
               <button
-                onClick={() => fetchLabResults()}
+                onClick={() => isMcqMode ? fetchMcqResults() : fetchLabResults()}
                 className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Retry
@@ -222,7 +264,75 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
             </div>
           )}
 
-          {labData && !loading && !error && (
+          {/* MCQ Results Display */}
+          {isMcqMode && mcqData && !loading && !error && (
+            <>
+              {/* MCQ Statistics Card */}
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 mb-6 border border-purple-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <Award className="h-6 w-6 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">MCQ Summary</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Total Questions</p>
+                    <p className="text-2xl font-bold text-gray-900">{mcqData.totalQuestions}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-blue-200">
+                    <p className="text-sm text-gray-600 mb-1">Attempted</p>
+                    <p className="text-2xl font-bold text-blue-600">{mcqData.totalAttempted}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <p className="text-sm text-gray-600 mb-1">Passed</p>
+                    <p className="text-2xl font-bold text-green-600">{mcqData.passed}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-red-200">
+                    <p className="text-sm text-gray-600 mb-1">Failed</p>
+                    <p className="text-2xl font-bold text-red-600">{mcqData.failed}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-yellow-200">
+                    <p className="text-sm text-gray-600 mb-1">Not Attempted</p>
+                    <p className="text-2xl font-bold text-yellow-600">{mcqData.notAttempted}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-purple-200">
+                    <p className="text-sm text-gray-600 mb-1">Points Scored</p>
+                    <p className="text-2xl font-bold text-purple-600">{mcqData.points}</p>
+                  </div>
+                </div>
+                
+                {/* Success Rate Display */}
+                <div className="mt-4 bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Success Rate</span>
+                    <span className="text-lg font-bold text-purple-600">
+                      {mcqData.totalAttempted > 0 
+                        ? ((mcqData.passed / mcqData.totalAttempted) * 100).toFixed(1) 
+                        : 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${mcqData.totalAttempted > 0 ? (mcqData.passed / mcqData.totalAttempted) * 100 : 0}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Congratulations Message */}
+                {mcqData.passed === mcqData.totalAttempted && mcqData.totalAttempted > 0 && (
+                  <div className="mt-4 bg-green-100 border border-green-300 rounded-lg p-4 flex items-center gap-3">
+                    <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+                    <p className="text-green-800 font-medium">🎉 Perfect Score! You answered all attempted questions correctly!</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Coding Lab Results Display */}
+          {labData && !loading && !error && !isMcqMode && (
             <>
               {!labData.isLabAttempted ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
@@ -305,7 +415,7 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-          {labData && labData.isLabAttempted && !labData.isRunComplete && (
+          {!isMcqMode && labData && labData.isLabAttempted && !labData.isRunComplete && (
             <button
               onClick={() => fetchLabResults()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"

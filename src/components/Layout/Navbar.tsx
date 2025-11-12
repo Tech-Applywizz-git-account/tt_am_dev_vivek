@@ -1,90 +1,3 @@
-// import React from 'react';
-// import { LogOut, Bell, Settings } from 'lucide-react';
-// import { User } from '../../types';
-// import { roleLabels } from '../../data/mockData';
-
-// interface NavbarProps {
-//   user: User;
-//   onLogout: () => void;
-// }
-
-// export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
-//   // console.log("Navbar user:", user);
-//   return (
-//     <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
-//       <div className="flex items-center justify-between">
-//         <div className="flex items-center space-x-4">
-//           <div className="flex items-center space-x-2">
-//             {/* <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-//               <span className="text-white font-bold text-sm">AW</span>
-//             </div>
-//             <h1 className="text-xl font-bold text-gray-900">ApplyWizz</h1> */}
-//             <img className="text-xl font-bold text-gray-900 h-8 w-36" src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" alt="agg" />
-//           </div>
-//           <div className="hidden md:block h-6 w-px bg-gray-300">
-//           </div>
-//           <div className="hidden md:block">
-//             <span className="text-sm text-gray-500">Ticketing & Operations</span>
-//           </div>
-//           <div className="hidden md:block h-6 w-px bg-gray-300">
-//           </div>
-//           <div className="text-sm  text-gray-500 bg-gray-100 border border-green-200">
-//             <div className='text-center'>🚀 ApplyWizz Ticketing Tool – Beta Version Launched!</div>
-//             <div className='px-4 text-center'>
-//               <p>
-//                 You’re now using the beta version of our internal ticketing system. 🎉
-//               We’re testing and improving how tickets are created, tracked, and resolved across teams.
-//                 </p>
-//                 <p>
-//               💬 Found a bug or have feedback? Let us know  — your input helps us make it better!
-//               — ApplyWizz Ops & Tech Team
-//                 </p>
-//             </div>
-//           </div>
-//           <div></div>
-//         </div>
-
-//         <div className="flex items-center space-x-4">
-//           {/* <button
-//             className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-//             title="Notifications"
-//             aria-label="Notifications"
-//           >
-//             <Bell className="h-5 w-5" />
-//           </button>
-
-//           <button
-//             className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-//             title="Settings"
-//             aria-label="Settings"
-//           >
-//             <Settings className="h-5 w-5" />
-//           </button> */}
-
-//           <div className="flex items-center space-x-3">
-//             <div className="text-right">
-//               <div className="text-sm font-medium text-gray-900">{user.name}{user.role !== "client" && (`  ( ${roleLabels[user.role]} )`)}</div>
-//               <div className="text-sm font-medium text-gray-900">{user.email}</div>
-//               {/* <div className="text-xs text-gray-500">{}</div> */}
-//             </div>
-//             <button
-//               onClick={onLogout}
-//               className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-//               title="Log out"
-//               aria-label="Log out"
-//             >
-//               <div className="flex flex-col items-center">
-//                 <LogOut className="h-6 w-6" />
-//                 <p className='text-xs'>Log Out</p>
-//               </div>
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//     </nav>
-//   );
-// };
-
 //components/Layout/Navbar.tsx
 
 import React, { useEffect, useState } from 'react';
@@ -109,6 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
   const [labId2, setLabId2] = useState<string | null>(null);
   const [showLabSelector, setShowLabSelector] = useState(false);
   const [applywizzId, setApplywizzId] = useState<string | null>(null);
+  const [hasMcqResults, setHasMcqResults] = useState(false);
 
   useEffect(() => {
     const fetchBadgeValue = async () => {
@@ -116,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
 
       const { data, error } = await supabase
         .from("clients")
-        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id")
+        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id,mcq_results")
         .eq("company_email", user.email)
         .single();
 
@@ -139,6 +53,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
       }
       if (data?.applywizz_id) {
         setApplywizzId(data.applywizz_id);
+      }
+      if (data?.mcq_results) {
+        setHasMcqResults(true);
       }
     };
 
@@ -175,11 +92,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                 alt="ApplyWizz"
               />
             </div>
-
-            {/* Section label (md+) */}
-            {/* <div className="hidden md:block">
-              <span className="text-sm text-gray-900">Ticketing &amp; Operations</span>
-            </div> */}
 
             {/* Small/Medium: open modal instead of details */}
             <button
@@ -252,45 +164,71 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                     className="text-sm px-3 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-2"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // If only one lab ID exists, view it directly
-                      if (labId1 && !labId2) {
-                        onViewLabResults?.(labId1);
-                      } else if (labId2 && !labId1) {
-                        onViewLabResults?.(labId2);
-                      } else if (labId1 && labId2) {
-                        // If both exist, show selector
+                      
+                      // Count available result types
+                      const hasLab1 = !!labId1;
+                      const hasLab2 = !!labId2;
+                      const hasMcq = hasMcqResults;
+                      const totalOptions = (hasLab1 ? 1 : 0) + (hasLab2 ? 1 : 0) + (hasMcq ? 1 : 0);
+                      
+                      // If only one option, open it directly
+                      if (totalOptions === 1) {
+                        if (hasMcq) {
+                          onViewLabResults?.('mcq');
+                        } else if (hasLab1) {
+                          onViewLabResults?.(labId1);
+                        } else if (hasLab2) {
+                          onViewLabResults?.(labId2);
+                        }
+                      } else if (totalOptions > 1) {
+                        // Show selector if multiple options
                         setShowLabSelector(!showLabSelector);
                       } else {
-                        alert('No lab IDs configured for your account');
+                        alert('No test results configured for your account');
                       }
                     }}
-                    title="View your coding lab results"
+                    title="View your test results"
                   >
                     <BarChart3 className="h-4 w-4" />
-                    <span>Lab Results</span>
+                    <span>Test Results</span>
                   </button>
                   
-                  {/* Dropdown Menu for Lab Selection */}
-                  {showLabSelector && labId1 && labId2 && (
+                  {/* Dropdown Menu for Result Selection */}
+                  {showLabSelector && (hasMcqResults || labId1 || labId2) && (
                     <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
-                      <button
-                        onClick={() => {
-                          onViewLabResults?.(labId1);
-                          setShowLabSelector(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                      >
-                        Lab 1 Results
-                      </button>
-                      <button
-                        onClick={() => {
-                          onViewLabResults?.(labId2);
-                          setShowLabSelector(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                      >
-                        Lab 2 Results
-                      </button>
+                      {hasMcqResults && (
+                        <button
+                          onClick={() => {
+                            onViewLabResults?.('mcq');
+                            setShowLabSelector(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                        >
+                          MCQ Results
+                        </button>
+                      )}
+                      {labId1 && (
+                        <button
+                          onClick={() => {
+                            onViewLabResults?.(labId1);
+                            setShowLabSelector(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                        >
+                          Coding Lab 1 Results
+                        </button>
+                      )}
+                      {labId2 && (
+                        <button
+                          onClick={() => {
+                            onViewLabResults?.(labId2);
+                            setShowLabSelector(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                        >
+                          Coding Lab 2 Results
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

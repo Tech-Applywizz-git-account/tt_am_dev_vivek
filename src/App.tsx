@@ -568,7 +568,7 @@ function App() {
           : fetchedClientData.company_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
         
         // Call the Fermion API to create the user
-        const fermionResponse = await fetch('https://ticketing-tool-fermion.vercel.app/api/create-fermion-user', {
+        const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -584,21 +584,17 @@ function App() {
         const fermionResult = await fermionResponse.json();
 
         if (fermionResponse.ok && fermionResult.success) {
-          console.log('✅ Fermion user created successfully:', fermionResult);
           alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
         } else {
-          console.warn('⚠️ Fermion user creation failed:', fermionResult);
           alert(`Client created but Fermion user creation failed. Check server logs.`);
         }
 
       } catch (fermionError) {
         console.error('❌ Error calling Fermion API (but client was created):', fermionError);
-        // Continue anyway - this is not a critical failure
         alert(`Client onboarded, but failed to create Fermion user. Login details sent to ${fetchedClientData.company_email}`);
       }
     } else {
       console.log("❌ Client badge_value is not greater than 0, skipping Fermion user creation.");
-      // Optionally, you can alert the user here or log the reason for skipping
     }
 
 

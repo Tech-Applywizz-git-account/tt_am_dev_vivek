@@ -46,6 +46,15 @@ export interface User {
   is_active: boolean;
 }
 
+export interface MCQResults {
+  totalAttempted: number;
+  passed: number;
+  failed: number;
+  notAttempted: number;
+  points: number;
+  totalQuestions: number;
+}
+
 export interface Client {
   id: string;
   full_name: string;
@@ -69,6 +78,7 @@ export interface Client {
   badge_value?: number;
   lab_id_1?: string;
   lab_id_2?: string;
+  mcq_results?: MCQResults | null;
 }
 
 export interface Ticket {
