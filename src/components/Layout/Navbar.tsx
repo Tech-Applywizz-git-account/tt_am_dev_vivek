@@ -54,11 +54,25 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
       if (data?.test_results && Array.isArray(data.test_results) && data.test_results.length > 0) {
         setTestResults(data.test_results);
         
-        // Parse first contest for backward compatibility
-        const firstTest = data.test_results[0];
-        if (firstTest.lab_id_1) setLabId1(firstTest.lab_id_1);
-        if (firstTest.lab_id_2) setLabId2(firstTest.lab_id_2);
-        if (firstTest.mcq_results) setHasMcqResults(true);
+        // For backward compatibility, set first lab IDs found
+        let foundLab1 = false;
+        let foundLab2 = false;
+        let foundMcq = false;
+        
+        for (const test of data.test_results) {
+          if (test.lab_id_1 && !foundLab1) {
+            setLabId1(test.lab_id_1);
+            foundLab1 = true;
+          }
+          if (test.lab_id_2 && !foundLab2) {
+            setLabId2(test.lab_id_2);
+            foundLab2 = true;
+          }
+          if (test.mcq_results && !foundMcq) {
+            setHasMcqResults(true);
+            foundMcq = true;
+          }
+        }
       } else {
         // Legacy support: use old columns
         if (data?.lab_id_1) setLabId1(data.lab_id_1);
@@ -173,26 +187,57 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                     onClick={(e) => {
                       e.stopPropagation();
                       
-                      // Count available result types
-                      const hasLab1 = !!labId1;
-                      const hasLab2 = !!labId2;
-                      const hasMcq = hasMcqResults;
-                      const totalOptions = (hasLab1 ? 1 : 0) + (hasLab2 ? 1 : 0) + (hasMcq ? 1 : 0);
-                      
-                      // If only one option, open it directly
-                      if (totalOptions === 1) {
-                        if (hasMcq) {
-                          onViewLabResults?.('mcq');
-                        } else if (hasLab1) {
-                          onViewLabResults?.(labId1);
-                        } else if (hasLab2) {
-                          onViewLabResults?.(labId2);
+                      // Use new test_results array if available
+                      if (testResults.length > 0) {
+                        // Count all available result types across all tests
+                        const allResults = testResults.flatMap((test: any, testIndex: number) => {
+                          const results = [];
+                          if (test.mcq_results) {
+                            results.push({ type: 'mcq', contestId: test.contestId, contestName: test.contestName, testIndex });
+                          }
+                          if (test.lab_id_1) {
+                            results.push({ type: 'lab1', labId: test.lab_id_1, contestName: test.contestName, testIndex });
+                          }
+                          if (test.lab_id_2) {
+                            results.push({ type: 'lab2', labId: test.lab_id_2, contestName: test.contestName, testIndex });
+                          }
+                          return results;
+                        });
+                        
+                        if (allResults.length === 1) {
+                          // Single result - open directly
+                          const result = allResults[0];
+                          if (result.type === 'mcq') {
+                            onViewLabResults?.(`mcq:${result.contestId}`);
+                          } else {
+                            onViewLabResults?.(result.labId);
+                          }
+                        } else if (allResults.length > 1) {
+                          // Multiple results - show dropdown
+                          setShowLabSelector(!showLabSelector);
+                        } else {
+                          alert('No test results configured for your account');
                         }
-                      } else if (totalOptions > 1) {
-                        // Show selector if multiple options
-                        setShowLabSelector(!showLabSelector);
                       } else {
-                        alert('No test results configured for your account');
+                        // Legacy: Count available result types
+                        const hasLab1 = !!labId1;
+                        const hasLab2 = !!labId2;
+                        const hasMcq = hasMcqResults;
+                        const totalOptions = (hasLab1 ? 1 : 0) + (hasLab2 ? 1 : 0) + (hasMcq ? 1 : 0);
+                        
+                        if (totalOptions === 1) {
+                          if (hasMcq) {
+                            onViewLabResults?.('mcq');
+                          } else if (hasLab1) {
+                            onViewLabResults?.(labId1);
+                          } else if (hasLab2) {
+                            onViewLabResults?.(labId2);
+                          }
+                        } else if (totalOptions > 1) {
+                          setShowLabSelector(!showLabSelector);
+                        } else {
+                          alert('No test results configured for your account');
+                        }
                       }
                     }}
                     title="View your test results"
@@ -202,40 +247,92 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                   </button>
                   
                   {/* Dropdown Menu for Result Selection */}
-                  {showLabSelector && (hasMcqResults || labId1 || labId2) && (
+                  {showLabSelector && (
                     <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
-                      {hasMcqResults && (
-                        <button
-                          onClick={() => {
-                            onViewLabResults?.('mcq');
-                            setShowLabSelector(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                        >
-                          MCQ Results
-                        </button>
-                      )}
-                      {labId1 && (
-                        <button
-                          onClick={() => {
-                            onViewLabResults?.(labId1);
-                            setShowLabSelector(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                        >
-                          Coding Lab 1 Results
-                        </button>
-                      )}
-                      {labId2 && (
-                        <button
-                          onClick={() => {
-                            onViewLabResults?.(labId2);
-                            setShowLabSelector(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                        >
-                          Coding Lab 2 Results
-                        </button>
+                      {testResults.length > 0 ? (
+                        // New test_results array structure
+                        testResults.map((test: any, testIndex: number) => (
+                          <div key={testIndex}>
+                            {test.contestName && testResults.length > 1 && (
+                              <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                                {test.contestName}
+                              </div>
+                            )}
+                            {test.mcq_results && (
+                              <button
+                                onClick={() => {
+                                  onViewLabResults?.(`mcq:${test.contestId}`);
+                                  setShowLabSelector(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                              >
+                                📝 MCQ Results{testResults.length > 1 ? '' : ''}
+                              </button>
+                            )}
+                            {test.lab_id_1 && (
+                              <button
+                                onClick={() => {
+                                  onViewLabResults?.(test.lab_id_1);
+                                  setShowLabSelector(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                              >
+                                💻 Coding Lab 1
+                              </button>
+                            )}
+                            {test.lab_id_2 && (
+                              <button
+                                onClick={() => {
+                                  onViewLabResults?.(test.lab_id_2);
+                                  setShowLabSelector(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                              >
+                                💻 Coding Lab 2
+                              </button>
+                            )}
+                            {testIndex < testResults.length - 1 && (
+                              <div className="border-b border-gray-200 my-1" />
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        // Legacy columns fallback
+                        <>
+                          {hasMcqResults && (
+                            <button
+                              onClick={() => {
+                                onViewLabResults?.('mcq');
+                                setShowLabSelector(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                            >
+                              📝 MCQ Results
+                            </button>
+                          )}
+                          {labId1 && (
+                            <button
+                              onClick={() => {
+                                onViewLabResults?.(labId1);
+                                setShowLabSelector(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                            >
+                              💻 Coding Lab 1 Results
+                            </button>
+                          )}
+                          {labId2 && (
+                            <button
+                              onClick={() => {
+                                onViewLabResults?.(labId2);
+                                setShowLabSelector(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                            >
+                              💻 Coding Lab 2 Results
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

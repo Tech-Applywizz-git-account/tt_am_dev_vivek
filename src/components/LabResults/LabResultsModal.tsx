@@ -41,7 +41,9 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
   const [labData, setLabData] = useState<LabResultData | null>(null);
   const [applywizzId, setApplywizzId] = useState<string | null>(null);
   const [mcqData, setMcqData] = useState<MCQResults | null>(null);
-  const isMcqMode = labId === 'mcq';
+  const [contestName, setContestName] = useState<string>('');
+  const isMcqMode = labId.startsWith('mcq');
+  const contestId = isMcqMode ? labId.split(':')[1] : null;
 
   useEffect(() => {
     if (isOpen && labId) {
@@ -72,11 +74,24 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
 
       // Check new test_results array first
       if (data?.test_results && Array.isArray(data.test_results)) {
-        const firstTest = data.test_results[0];
-        if (firstTest?.mcq_results) {
-          setMcqData(firstTest.mcq_results as MCQResults);
-          setLoading(false);
-          return;
+        if (contestId) {
+          // Find specific contest by ID
+          const contest = data.test_results.find((t: any) => t.contestId === contestId);
+          if (contest?.mcq_results) {
+            setMcqData(contest.mcq_results as MCQResults);
+            setContestName(contest.contestName || '');
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Legacy: use first contest with MCQ results
+          const firstTest = data.test_results.find((t: any) => t.mcq_results);
+          if (firstTest?.mcq_results) {
+            setMcqData(firstTest.mcq_results as MCQResults);
+            setContestName(firstTest.contestName || '');
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -240,7 +255,9 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
               {isMcqMode ? 'MCQ Test Results' : 'Coding Lab Results'}
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              {isMcqMode ? 'Multiple Choice Questions' : `Lab ID: ${labId}`}
+              {isMcqMode 
+                ? (contestName || 'Multiple Choice Questions') 
+                : `Lab ID: ${labId}`}
             </p>
           </div>
           <button
