@@ -532,7 +532,6 @@ function App() {
       sponsorship: clientData.sponsorship,
       badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
-      badge_value: clientData.badge_value,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
     });
