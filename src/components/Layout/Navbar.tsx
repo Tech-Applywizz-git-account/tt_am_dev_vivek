@@ -23,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
   const [showLabSelector, setShowLabSelector] = useState(false);
   const [applywizzId, setApplywizzId] = useState<string | null>(null);
   const [hasMcqResults, setHasMcqResults] = useState(false);
+  const [testResults, setTestResults] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchBadgeValue = async () => {
@@ -30,7 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
 
       const { data, error } = await supabase
         .from("clients")
-        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id,mcq_results")
+        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id,mcq_results,test_results")
         .eq("company_email", user.email)
         .single();
 
@@ -45,17 +46,24 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
       if (data?.coding_lab_url) {
         setCodingLabUrl(data.coding_lab_url);
       }
-      if (data?.lab_id_1) {
-        setLabId1(data.lab_id_1);
-      }
-      if (data?.lab_id_2) {
-        setLabId2(data.lab_id_2);
-      }
       if (data?.applywizz_id) {
         setApplywizzId(data.applywizz_id);
       }
-      if (data?.mcq_results) {
-        setHasMcqResults(true);
+
+      // Check for new test_results array first, fallback to legacy columns
+      if (data?.test_results && Array.isArray(data.test_results) && data.test_results.length > 0) {
+        setTestResults(data.test_results);
+        
+        // Parse first contest for backward compatibility
+        const firstTest = data.test_results[0];
+        if (firstTest.lab_id_1) setLabId1(firstTest.lab_id_1);
+        if (firstTest.lab_id_2) setLabId2(firstTest.lab_id_2);
+        if (firstTest.mcq_results) setHasMcqResults(true);
+      } else {
+        // Legacy support: use old columns
+        if (data?.lab_id_1) setLabId1(data.lab_id_1);
+        if (data?.lab_id_2) setLabId2(data.lab_id_2);
+        if (data?.mcq_results) setHasMcqResults(true);
       }
     };
 

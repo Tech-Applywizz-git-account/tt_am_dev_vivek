@@ -60,7 +60,7 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
     try {
       const { data, error } = await supabase
         .from('clients')
-        .select('mcq_results')
+        .select('mcq_results, test_results')
         .eq('company_email', user.email)
         .single();
 
@@ -70,17 +70,28 @@ export const LabResultsModal: React.FC<LabResultsModalProps> = ({
         return;
       }
 
-      if (!data?.mcq_results) {
-        setError('No MCQ results found. You may not have attempted the test yet.');
+      // Check new test_results array first
+      if (data?.test_results && Array.isArray(data.test_results)) {
+        const firstTest = data.test_results[0];
+        if (firstTest?.mcq_results) {
+          setMcqData(firstTest.mcq_results as MCQResults);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fallback to legacy mcq_results column
+      if (data?.mcq_results) {
+        setMcqData(data.mcq_results as MCQResults);
         setLoading(false);
         return;
       }
 
-      setMcqData(data.mcq_results as MCQResults);
+      setError('No MCQ results found. You may not have attempted the test yet.');
+      setLoading(false);
     } catch (err) {
       console.error('❌ Error fetching MCQ results:', err);
       setError('An unexpected error occurred while fetching MCQ results');
-    } finally {
       setLoading(false);
     }
   };

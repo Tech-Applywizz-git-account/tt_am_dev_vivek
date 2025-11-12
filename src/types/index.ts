@@ -55,6 +55,14 @@ export interface MCQResults {
   totalQuestions: number;
 }
 
+export interface TestResult {
+  contestId: string;
+  contestName: string;
+  lab_id_1?: string | null;
+  lab_id_2?: string | null;
+  mcq_results?: MCQResults | null;
+}
+
 export interface Client {
   id: string;
   full_name: string;
@@ -76,9 +84,12 @@ export interface Client {
   sponsorship: string;
   applywizz_id: string;
   badge_value?: number;
+  // Legacy columns (for backward compatibility during migration)
   lab_id_1?: string;
   lab_id_2?: string;
   mcq_results?: MCQResults | null;
+  // New consolidated column
+  test_results?: TestResult[] | null;
 }
 
 export interface Ticket {
