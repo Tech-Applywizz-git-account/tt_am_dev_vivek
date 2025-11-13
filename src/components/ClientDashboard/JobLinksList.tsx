@@ -33,10 +33,40 @@ const statusOptions = [
     { value: "job_not_found", label: "Job Not Found" },
 ];
 
-const getStatusBadgeColor = (status: string | undefined | null) => {
-    if (!status) return "bg-gray-100 text-gray-800";
+// Status mapping functions
+const frontendToBackendStatusMap: Record<string, string> = {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "already_applied": "Already Applied",
+    "not_relevant": "Not Relevant",
+    "job_not_found": "Job Not Found"
+};
 
-    switch (status.toLowerCase()) {
+const backendToFrontendStatusMap: Record<string, string> = {
+    "Pending": "pending",
+    "In Progress": "in_progress",
+    "Completed": "completed",
+    "Already Applied": "already_applied",
+    "Not Relevant": "not_relevant",
+    "Job Not Found": "job_not_found"
+};
+
+const convertBackendStatusToFrontend = (backendStatus: string): string => {
+    return backendToFrontendStatusMap[backendStatus] || backendStatus.toLowerCase().replace(/\s+/g, '_');
+};
+
+const convertFrontendStatusToBackend = (frontendStatus: string): string => {
+    return frontendToBackendStatusMap[frontendStatus] || frontendStatus.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+};
+
+const getStatusBadgeColor = (status: string | undefined | null) => {
+    // Convert backend status to frontend format for color mapping
+    const frontendStatus = status ? convertBackendStatusToFrontend(status) : status;
+    
+    if (!frontendStatus) return "bg-gray-100 text-gray-800";
+
+    switch (frontendStatus.toLowerCase()) {
         case "pending":
             return "bg-yellow-100 text-yellow-800";
         case "in_progress":
@@ -104,8 +134,14 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             }
 
             const apiData: JobLinksResponse = await response.json();
+            
+            // Convert backend statuses to frontend format
+            const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
+                ...job,
+                status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
+            }));
 
-            setJobs(apiData.jobs || []);
+            setJobs(jobsWithConvertedStatuses);
         } catch (err) {
             console.error("Error fetching job links:", err);
             setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -120,6 +156,9 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         updatedJobs[jobIndex].status = newStatus;
         setJobs(updatedJobs);
 
+        // Map frontend status values to backend expected values
+        const backendStatus = convertFrontendStatusToBackend(newStatus);
+
         // Get the job ID from the job object (using the 'id' field)
         const jobId = updatedJobs[jobIndex].id;
        
@@ -127,7 +166,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             console.error("Job ID not found");
             return;
         }
- 
+
         try {
             // Get the API URL from environment variables
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1 as string;
@@ -143,14 +182,14 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                 },
                 body: JSON.stringify({
                     "job-id": jobId,
-                    "status": newStatus
+                    "status": backendStatus
                 })
             });
- 
+
             if (!response.ok) {
                 throw new Error(`Failed to update job status: ${response.status} ${response.statusText}`);
             }
- 
+
             const result = await response.json();
             console.log("Job status updated successfully:", result);
            
