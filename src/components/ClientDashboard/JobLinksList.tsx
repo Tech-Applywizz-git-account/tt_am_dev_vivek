@@ -88,20 +88,17 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
-
-    useEffect(() => {
-        fetchJobLinks();
-    }, [currentUserEmail]);
-
+    const [selectedDate, setSelectedDate] = useState<string>("");
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+    
+    // Extract the data fetching logic into a separate function
     const fetchJobLinks = async () => {
-        if (!currentUserEmail) {
-            setError("User email not available");
-            return;
-        }
-
+        if (!currentUserEmail) return;
+        
         setLoading(true);
         setError("");
-
+        
         try {
             // First, get the applywizz_id from Supabase based on the user's email
             const { data: clientData, error: clientError } = await supabase
@@ -127,7 +124,6 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             }
 
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}`);
-            console.log("Fetch response:", response);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
@@ -143,12 +139,58 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
             setJobs(jobsWithConvertedStatuses);
         } catch (err) {
-            console.error("Error fetching job links:", err);
             setError(err instanceof Error ? err.message : "An unknown error occurred");
         } finally {
             setLoading(false);
         }
     };
+    
+    // Fetch job links when currentUserEmail changes
+    useEffect(() => {
+        fetchJobLinks();
+    }, [currentUserEmail]);
+    
+    // Log when currentUserEmail changes
+    useEffect(() => {
+        console.log("JobLinksList: currentUserEmail dependency changed to:", currentUserEmail);
+    }, [currentUserEmail]);
+
+    useEffect(() => {
+        console.log("JobLinksList: Filter/sort useEffect running with jobs:", jobs.length, "selectedDate:", selectedDate, "sortOrder:", sortOrder);
+        let result = [...jobs];
+        
+        // Filter by selected date if provided
+        if (selectedDate) {
+            result = result.filter(job => {
+                if (!job.date_posted) return false;
+                try {
+                    const jobDate = new Date(job.date_posted);
+                    // Format both dates as DD/MM/YYYY for comparison
+                    const jobDateFormatted = formatDateForFilter(jobDate);
+                    
+                    // Convert selectedDate (YYYY-MM-DD) to DD/MM/YYYY
+                    const [year, month, day] = selectedDate.split('-');
+                    const selectedDateFormatted = `${day}/${month}/${year}`;
+                    
+                    return jobDateFormatted === selectedDateFormatted;
+                } catch {
+                    return false;
+                }
+            });
+        }
+        
+        // Sort by date
+        result.sort((a, b) => {
+            if (!a.date_posted || !b.date_posted) return 0;
+            const dateA = new Date(a.date_posted).getTime();
+            const dateB = new Date(b.date_posted).getTime();
+            
+            return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+        
+        setFilteredJobs(result);
+        console.log("JobLinksList: Filter/sort complete, filtered jobs:", result.length);
+    }, [jobs, selectedDate, sortOrder]);
 
     const handleStatusChange = async (jobIndex: number, newStatus: string) => {
         // Update the local state immediately for better UX
@@ -204,16 +246,53 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         }
     };
 
+    const formatDateForFilter = (date: Date) => {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
     const isOverdue = (datePosted: string | undefined | null) => {
         if (!datePosted) return false;
         try {
             const postedDate = new Date(datePosted);
             const today = new Date();
             const diffTime = today.getTime() - postedDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             return diffDays > 7; // Consider overdue if posted more than 7 days ago
         } catch {
             return false;
+        }
+    };
+
+    const formatDateInfo = (datePosted: string | undefined | null) => {
+        if (!datePosted) return { formattedDate: "N/A", daysAgo: "" };
+        
+        try {
+            const postedDate = new Date(datePosted);
+            const today = new Date();
+            const diffTime = today.getTime() - postedDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Format date as DD/MM/YYYY
+            const day = String(postedDate.getDate()).padStart(2, '0');
+            const month = String(postedDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+            const year = postedDate.getFullYear();
+            const formattedDate = `${day}/${month}/${year}`;
+            
+            let daysAgo = "";
+            if (diffDays === 0) {
+                daysAgo = " (Today)";
+            } else if (diffDays === 1) {
+                daysAgo = " (1 day ago)";
+            } else {
+                daysAgo = ` (${diffDays} days ago)`;
+            }
+            
+            return { formattedDate, daysAgo };
+        } catch {
+            return { formattedDate: "Invalid Date", daysAgo: "" };
         }
     };
 
@@ -244,20 +323,61 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         );
     }
 
-    // Calculate status counts
+    // Calculate status counts based on filtered jobs
     const statusCounts = {
-        total: jobs.length,
-        pending: jobs.filter(job => job.status === 'pending').length,
-        in_progress: jobs.filter(job => job.status === 'in_progress').length,
-        completed: jobs.filter(job => job.status === 'completed').length,
-        already_applied: jobs.filter(job => job.status === 'already_applied').length,
-        not_relevant: jobs.filter(job => job.status === 'not_relevant').length,
-        job_not_found: jobs.filter(job => job.status === 'job_not_found').length,
+        total: filteredJobs.length,
+        pending: filteredJobs.filter(job => job.status === 'pending').length,
+        in_progress: filteredJobs.filter(job => job.status === 'in_progress').length,
+        completed: filteredJobs.filter(job => job.status === 'completed').length,
+        already_applied: filteredJobs.filter(job => job.status === 'already_applied').length,
+        not_relevant: filteredJobs.filter(job => job.status === 'not_relevant').length,
+        job_not_found: filteredJobs.filter(job => job.status === 'job_not_found').length,
     };
 
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
-            <h2 className="text-lg font-semibold mb-4">Job Applications</h2>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
+                <h2 className="text-lg font-semibold">Job Applications</h2>
+                
+                {/* Date Filter and Sort Controls */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="date-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                            Filter by Date:
+                        </label>
+                        <input
+                            type="date"
+                            id="date-filter"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {selectedDate && (
+                            <button
+                                onClick={() => setSelectedDate("")}
+                                className="text-sm text-red-600 hover:text-red-800"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="sort-order" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                            Sort:
+                        </label>
+                        <select
+                            id="sort-order"
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="desc">Newest First</option>
+                            <option value="asc">Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
             {/* Task Summary Section */}
             <div className="mb-6">
@@ -308,23 +428,9 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             </div>
 
             <div className="space-y-4">
-                {jobs.map((job, index) => {
-                    let formattedDate = "N/A";
-                    let overdue = false;
-
-                    if (job.date_posted) {
-                        try {
-                            const datePosted = new Date(job.date_posted);
-                            formattedDate = datePosted.toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                            });
-                            overdue = isOverdue(job.date_posted);
-                        } catch {
-                            formattedDate = "Invalid Date";
-                        }
-                    }
+                {filteredJobs.map((job, index) => {
+                    const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
+                    const overdue = isOverdue(job.date_posted);
 
                     return (
                         <div
@@ -364,10 +470,13 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                             <MapPin size={14} />
                                             <span>{job.location || "Location not specified"}</span>
                                         </div>
+                                        <div className="flex items-center gap-1">
+                                            <Calendar size={14} />
+                                            <span>Posted: {formattedDate}{daysAgo}</span>
+                                        </div>
                                         {overdue && (
                                             <div className="flex items-center gap-1 text-red-600">
-                                                <Calendar size={14} />
-                                                <span className="font-medium">Overdue {formattedDate}</span>
+                                                <span className="font-medium">(Overdue)</span>
                                             </div>
                                         )}
                                     </div>
