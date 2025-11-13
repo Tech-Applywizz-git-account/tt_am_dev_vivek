@@ -614,7 +614,19 @@ function App() {
 
         // Work preferences
         "willing_to_relocate": Boolean(clientData.willing_to_relocate),
-        "work_auth": clientData.visa_type || "",
+        "work_auth": (() => {
+          const visaType = clientData.visa_type || "";
+          // Map visa types to work auth values
+          switch (visaType) {
+            case "OPT":
+            case "CPT":
+              return "F1";
+            case "H4 EAD":
+              return "H4EAD";
+            default:
+              return visaType;
+          }
+        })(),
         "work_preference": (() => {
           // If location_preferences is an array
           if (Array.isArray(clientData.location_preferences)) {
