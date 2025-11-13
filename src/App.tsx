@@ -160,6 +160,11 @@ function App() {
   const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
   const [clientDashboardError, setClientDashboardError] = useState("");
   const [applywizzId, setApplywizzId] = useState<string | undefined>();
+  const [isSendMailModalOpen, setIsSendMailModalOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState('vivek@applywizz.com');
+  const [emailSubject, setEmailSubject] = useState('Subject');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [isEmailSent, setIsEmailSent] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -410,41 +415,15 @@ function App() {
     });
   };
 
-  const handleSendEmail = async () => {
-    // await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     to: 'vivek@applywizz.com',
-    //     subject: "Ticket Created Successfully in ApplyWizz Ticketing Tool",
-    //     htmlBody: `
-    //   <html>
-    //     <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
-    //             <div style="text-align:center; margin-bottom:20px;">
-    //               <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
-    //                    alt="ApplyWizz Logo" 
-    //                    style="width:150px;"/>
-    //             </div>
-    //             <h2 style="color:#1E90FF;">Hi Vivek (vivke),</h2>
-    //             <p>Our team has responded to your ApplyWizz ticket.</p>
-    //             <p>please review the update and close the ticket if your issue is resolved.</p>
-    //             <p>You can manage your ticket here: <a href="https://ticketingtoolapplywizz.vercel.app/" target="_blank">ApplyWizz Ticketing Tool</a></p>
-    //             <p style="background-color:#FFF3CD;padding:10px;border-left:4px solid #FFC107;">Kindly note that this ticket is now in the system for tracking and resolution. <br/>Updates will be shared as progress is made.</p>     
-    //             <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
-    //             <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
-    //             <hr style="border:none;border-top:1px solid #eee;" />
-    //             <p style="font-size:12px;color:#777;">This is an automated message. Please do not reply to this email.</p>
-    //           </body>
-    //   </html>
-    // `
-    //   })
-    // });
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        to: 'vivek@applywizz.com',
-        subject: "Response form Applywizz Ticketing Tool",
+        to: emailTo,
+        subject: emailSubject,
         htmlBody: `
             <html>
               <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
@@ -454,10 +433,7 @@ function App() {
                        style="width:150px;"/>
                 </div>
                 <h2 style="color:#1E90FF;">Hi Saketh Narla (saketh.tech01@gmail.com),</h2>
-                <p>Our team has responded to your ApplyWizz ticket TKT-15/09/2025-0002 — Saketh Narla Resume.</p>
-                <p>We've updated your resume. Review it and if you're satisfied, conform it. If not, click on need some more changes.</p>
-                <p>You can manage your ticket here: <a href="https://ticketingtoolapplywizz.vercel.app/" target="_blank">ApplyWizz Ticketing Tool</a></p>
-                <p style="background-color:#FFF3CD;padding:10px;border-left:4px solid #FFC107;">Kindly note that this ticket is now in the system for tracking and resolution. <br/>Updates will be shared as progress is made.</p>     
+                <p>${emailMessage}</p>
                 <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
                 <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
                 <hr style="border:none;border-top:1px solid #eee;" />
@@ -467,7 +443,19 @@ function App() {
           `
       })
     });
-  }
+    
+    setIsEmailSent(true);
+    // Reset form after submission
+    setEmailTo('vivek@applywizz.com');
+    setEmailSubject('Response form Applywizz Ticketing Tool');
+    setEmailMessage('');
+    
+    // Close modal after 2 seconds
+    setTimeout(() => {
+      setIsSendMailModalOpen(false);
+      setIsEmailSent(false);
+    }, 2000);
+  };
 
   const handleCreateTicket = async (ticketData: any) => {
     const newTicket = {
@@ -532,10 +520,10 @@ function App() {
       sponsorship: clientData.sponsorship,
       badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
-      badge_value: clientData.badge_value,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
     });
+
 
     if (insertError) {
       alert("Failed to complete onboarding");
@@ -1367,13 +1355,96 @@ function App() {
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
                 {currentUser?.role === 'system_admin' && (
-                  <button
-                    onClick={() => handleSendEmail()}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Mail className="h-5 w-5" />
-                    <span>Send mail</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setIsSendMailModalOpen(true)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Mail className="h-5 w-5" />
+                      <span>Send mail</span>
+                    </button>
+                    
+                    {/* Send Mail Modal */}
+                    {isSendMailModalOpen && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                          <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">Send Email</h2>
+                            <button 
+                              onClick={() => setIsSendMailModalOpen(false)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          
+                          {isEmailSent ? (
+                            <div className="text-center py-4">
+                              <p className="text-green-600 font-medium">Email sent successfully!</p>
+                            </div>
+                          ) : (
+                            <form onSubmit={handleSendEmail}>
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  To
+                                </label>
+                                <input
+                                  type="email"
+                                  value={emailTo}
+                                  onChange={(e) => setEmailTo(e.target.value)}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Subject
+                                </label>
+                                <input
+                                  type="text"
+                                  value={emailSubject}
+                                  onChange={(e) => setEmailSubject(e.target.value)}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Message
+                                </label>
+                                <textarea
+                                  value={emailMessage}
+                                  onChange={(e) => setEmailMessage(e.target.value)}
+                                  rows={4}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Enter your message here..."
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="flex justify-end space-x-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsSendMailModalOpen(false)}
+                                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                                >
+                                  Send Email
+                                </button>
+                              </div>
+                            </form>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
                 {currentUser?.role === 'sales' && (
                   <button
