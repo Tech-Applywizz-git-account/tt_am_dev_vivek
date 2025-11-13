@@ -91,7 +91,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             const applywizzId = clientData.applywizz_id;
 
             // Now fetch the job links from the external API
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
@@ -130,11 +130,11 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
  
         try {
             // Get the API URL from environment variables
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL as string;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1 as string;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
- 
+
             // Call the backend API to update the job status
             const response = await fetch(`${apiUrl}/api/job-links/update`, {
                 method: 'POST',
