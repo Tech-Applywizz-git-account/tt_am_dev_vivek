@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, X, BarChart3 } from 'lucide-react';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
 import { ProfileMenu } from "./ProfileMenu";
@@ -9,12 +9,19 @@ import { supabase } from '../../lib/supabaseClient';
 interface NavbarProps {
   user: User;
   onLogout: () => void;
+  onViewLabResults?: (labId: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
+export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults }) => {
   const [isBetaOpen, setIsBetaOpen] = useState(false);
   const [badgeValue, setBadgeValue] = useState<number | null>(null);
   const [codingLabUrl, setCodingLabUrl] = useState<string | null>(null);
+  const [labId1, setLabId1] = useState<string | null>(null);
+  const [labId2, setLabId2] = useState<string | null>(null);
+  const [showLabSelector, setShowLabSelector] = useState(false);
+  const [applywizzId, setApplywizzId] = useState<string | null>(null);
+  const [hasMcqResults, setHasMcqResults] = useState(false);
+  const [testResults, setTestResults] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchBadgeValue = async () => {
@@ -22,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
 
       const { data, error } = await supabase
         .from("clients")
-        .select("badge_value,coding_lab_url,company_email")
+        .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id,mcq_results,test_results")
         .eq("company_email", user.email)
         .single();
 
@@ -37,6 +44,39 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
       if (data?.coding_lab_url) {
         setCodingLabUrl(data.coding_lab_url);
       }
+      if (data?.applywizz_id) {
+        setApplywizzId(data.applywizz_id);
+      }
+
+      // Check for new test_results array first, fallback to legacy columns
+      if (data?.test_results && Array.isArray(data.test_results) && data.test_results.length > 0) {
+        setTestResults(data.test_results);
+        
+        // For backward compatibility, set first lab IDs found
+        let foundLab1 = false;
+        let foundLab2 = false;
+        let foundMcq = false;
+        
+        for (const test of data.test_results) {
+          if (test.lab_id_1 && !foundLab1) {
+            setLabId1(test.lab_id_1);
+            foundLab1 = true;
+          }
+          if (test.lab_id_2 && !foundLab2) {
+            setLabId2(test.lab_id_2);
+            foundLab2 = true;
+          }
+          if (test.mcq_results && !foundMcq) {
+            setHasMcqResults(true);
+            foundMcq = true;
+          }
+        }
+      } else {
+        // Legacy support: use old columns
+        if (data?.lab_id_1) setLabId1(data.lab_id_1);
+        if (data?.lab_id_2) setLabId2(data.lab_id_2);
+        if (data?.mcq_results) setHasMcqResults(true);
+      }
     };
 
     fetchBadgeValue();
@@ -48,6 +88,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [isBetaOpen]);
+
+  // Close lab selector when clicking outside
+  useEffect(() => {
+    if (!showLabSelector) return;
+    const handleClickOutside = () => setShowLabSelector(false);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showLabSelector]);
   return (
     // <nav className="bg-gradient-to-br from-blue-400 to-lime-500 border-b border-gray-200 sticky top-0 z-50">
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
@@ -126,26 +174,191 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
             </div>  */}
           </div>
 
-          {(user.role === 'client' && badgeValue) && ( // show the button only if the user is a client and has a badgeValue
-              <button
-                className="text-sm px-2 py-1 bg-blue-100 text-blue-600 rounded-lg font-medium"
-                onClick={() => {
-                  const uid = encodeURIComponent(user.id ?? user.email);
-                  if (codingLabUrl==="vivek") {
-                    window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be1") {
-                    window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be2") {
-                    window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else if (codingLabUrl==="be3") {
-                    window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }else {
-                    window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener'); //uid
-                  }}
-                }
-              >
-                Coding Lab
-              </button>
+          {(user.role === 'client' && badgeValue && badgeValue > 0) && ( // show buttons only if the user is a client and has a badgeValue
+              <div className="flex items-center gap-2">
+                {/* Lab Results Button with Dropdown */}
+                <div className="relative">
+                  <button
+                    className="text-sm px-3 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      
+                      // Use new test_results array if available
+                      if (testResults.length > 0) {
+                        // Count all available result types across all tests
+                        const allResults = testResults.flatMap((test: any, testIndex: number) => {
+                          const results = [];
+                          if (test.mcq_results) {
+                            results.push({ type: 'mcq', contestId: test.contestId, contestName: test.contestName, testIndex });
+                          }
+                          if (test.lab_id_1) {
+                            results.push({ type: 'lab1', labId: test.lab_id_1, contestName: test.contestName, testIndex });
+                          }
+                          if (test.lab_id_2) {
+                            results.push({ type: 'lab2', labId: test.lab_id_2, contestName: test.contestName, testIndex });
+                          }
+                          return results;
+                        });
+                        
+                        if (allResults.length === 1) {
+                          // Single result - open directly
+                          const result = allResults[0];
+                          if (result.type === 'mcq') {
+                            onViewLabResults?.(`mcq:${result.contestId}`);
+                          } else {
+                            onViewLabResults?.(result.labId);
+                          }
+                        } else if (allResults.length > 1) {
+                          // Multiple results - show dropdown
+                          setShowLabSelector(!showLabSelector);
+                        } else {
+                          alert('No test results configured for your account');
+                        }
+                      } else {
+                        // Legacy: Count available result types
+                        const hasLab1 = !!labId1;
+                        const hasLab2 = !!labId2;
+                        const hasMcq = hasMcqResults;
+                        const totalOptions = (hasLab1 ? 1 : 0) + (hasLab2 ? 1 : 0) + (hasMcq ? 1 : 0);
+                        
+                        if (totalOptions === 1) {
+                          if (hasMcq) {
+                            onViewLabResults?.('mcq');
+                          } else if (hasLab1) {
+                            onViewLabResults?.(labId1);
+                          } else if (hasLab2) {
+                            onViewLabResults?.(labId2);
+                          }
+                        } else if (totalOptions > 1) {
+                          setShowLabSelector(!showLabSelector);
+                        } else {
+                          alert('No test results configured for your account');
+                        }
+                      }
+                    }}
+                    title="View your test results"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Test Results</span>
+                  </button>
+                  
+                  {/* Dropdown Menu for Result Selection */}
+                  {showLabSelector && (
+                    <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50 min-w-[200px]">
+                      {testResults.length > 0 ? (
+                        // New test_results array structure
+                        testResults.map((test: any, testIndex: number) => (
+                          <div key={testIndex}>
+                            {test.contestName && testResults.length > 1 && (
+                              <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                                {test.contestName}
+                              </div>
+                            )}
+                            {test.mcq_results && (
+                              <button
+                                onClick={() => {
+                                  onViewLabResults?.(`mcq:${test.contestId}`);
+                                  setShowLabSelector(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                              >
+                                📝 MCQ Results{testResults.length > 1 ? '' : ''}
+                              </button>
+                            )}
+                            {test.lab_id_1 && (
+                              <button
+                                onClick={() => {
+                                  onViewLabResults?.(test.lab_id_1);
+                                  setShowLabSelector(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                              >
+                                💻 Coding Lab 1
+                              </button>
+                            )}
+                            {test.lab_id_2 && (
+                              <button
+                                onClick={() => {
+                                  onViewLabResults?.(test.lab_id_2);
+                                  setShowLabSelector(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                              >
+                                💻 Coding Lab 2
+                              </button>
+                            )}
+                            {testIndex < testResults.length - 1 && (
+                              <div className="border-b border-gray-200 my-1" />
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        // Legacy columns fallback
+                        <>
+                          {hasMcqResults && (
+                            <button
+                              onClick={() => {
+                                onViewLabResults?.('mcq');
+                                setShowLabSelector(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                            >
+                              📝 MCQ Results
+                            </button>
+                          )}
+                          {labId1 && (
+                            <button
+                              onClick={() => {
+                                onViewLabResults?.(labId1);
+                                setShowLabSelector(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                            >
+                              💻 Coding Lab 1 Results
+                            </button>
+                          )}
+                          {labId2 && (
+                            <button
+                              onClick={() => {
+                                onViewLabResults?.(labId2);
+                                setShowLabSelector(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                            >
+                              💻 Coding Lab 2 Results
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  className="text-sm px-3 py-2 bg-blue-100 text-blue-600 rounded-lg font-medium hover:bg-blue-200 transition-colors"
+                  onClick={() => {
+                    // Use ApplyWizz ID instead of Supabase UUID
+                    const uid = encodeURIComponent(applywizzId || user.email);
+                    if (codingLabUrl==="vivek") {
+                      window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="fe1") {
+                      window.open(`/api/fermion-redirectfe1?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="fe2") {
+                      window.open(`/api/fermion-redirectfe2?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="be3") {
+                      window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="be2") {
+                      window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="be1") {
+                      window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener');
+                    }else {
+                      window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener');
+                    }}
+                  }
+                >
+                  Coding Lab
+                </button>
+              </div>
             )}
 
           <ProfileMenu user={user} onLogout={onLogout} />

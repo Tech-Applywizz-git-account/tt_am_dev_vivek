@@ -16,6 +16,7 @@ import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModa
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
+import { LabResultsModal } from './components/LabResults/LabResultsModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
@@ -117,6 +118,12 @@ function App() {
     setAssignments(assignmentMap);
   };
 
+  // Function to handle view lab results
+  const handleViewLabResults = (labId: string) => {
+    setSelectedLabId(labId);
+    setIsLabResultsModalOpen(true);
+  };
+
   const handleTicketUpdated = async () => {
     await fetchData(); // Refreshes tickets and assignments
   };
@@ -137,6 +144,10 @@ function App() {
   const [isClientOnboardingModalOpen, setIsClientOnboardingModalOpen] = useState(false);
   // State to store whether the user management modal is open
   const [isUserManagementModalOpen, setIsUserManagementModalOpen] = useState(false);
+  // State to store whether the lab results modal is open
+  const [isLabResultsModalOpen, setIsLabResultsModalOpen] = useState(false);
+  // State to store the lab ID for viewing results
+  const [selectedLabId, setSelectedLabId] = useState<string>('');
   // State to store the selected ticket
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   // State to store the selected client
@@ -534,6 +545,7 @@ function App() {
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
+      badge_value: clientData.badge_value || 0,
     });
 
     if (insertError) {
@@ -809,6 +821,11 @@ function App() {
     // Check if badge_value > 0 before proceeding
     if (fetchedClientData.badge_value > 0) {
       try {
+        // Generate alphanumeric username (remove special characters from ApplyWizz ID)
+        const cleanUsername = fetchedClientData.applywizz_id
+          ? fetchedClientData.applywizz_id.replace(/[^a-zA-Z0-9]/g, '')
+          : fetchedClientData.company_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+        
         // Call the Fermion API to create the user
         const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
           method: 'POST',
@@ -816,31 +833,27 @@ function App() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            userId: userData.user.id, // Use the same UUID from Supabase
+            userId: fetchedClientData.applywizz_id, // Use ApplyWizz ID for Fermion
             name: fetchedClientData.full_name,
             email: fetchedClientData.company_email,
-            username: fetchedClientData.applywizz_id || fetchedClientData.company_email.split('@')[0]
+            username: cleanUsername // Alphanumeric only username
           }),
         });
 
         const fermionResult = await fermionResponse.json();
 
         if (fermionResponse.ok && fermionResult.success) {
-          console.log('✅ Fermion user created successfully:', fermionResult);
           alert(`Client onboarded successfully. Login details sent to ${fetchedClientData.company_email}`);
         } else {
-          console.warn('⚠️ Fermion user creation failed:', fermionResult);
           alert(`Client created but Fermion user creation failed. Check server logs.`);
         }
 
       } catch (fermionError) {
         console.error('❌ Error calling Fermion API (but client was created):', fermionError);
-        // Continue anyway - this is not a critical failure
         alert(`Client onboarded, but failed to create Fermion user. Login details sent to ${fetchedClientData.company_email}`);
       }
     } else {
       console.log("❌ Client badge_value is not greater than 0, skipping Fermion user creation.");
-      // Optionally, you can alert the user here or log the reason for skipping
     }
 
 
@@ -1984,6 +1997,13 @@ function App() {
                     fetchData={fetchData}
                     pendingClientsCount={pendingClients.length}
                     optedJobLinks={optedJobLinks}
+                    onViewLabResults={handleViewLabResults}
+                  />
+                  <LabResultsModal
+                    user={currentUser}
+                    labId={selectedLabId}
+                    isOpen={isLabResultsModalOpen}
+                    onClose={() => setIsLabResultsModalOpen(false)}        
                   />
                 </ProtectedRoute>
               }
