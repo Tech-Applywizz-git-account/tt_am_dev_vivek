@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { User } from "@/types";
-import { Building, FileText, Phone, X } from 'lucide-react';
+import { Building, FileText, Phone, X, Plus, Trash2 } from 'lucide-react';
 import {toast} from 'react-toastify';
 
 interface Client {
@@ -19,6 +19,8 @@ interface Client {
   careerassociatemanagerid: string;
   careerassociateid: string;
   scraperid: string;
+  coding_lab_url?: string;
+  test_results?: any;
 }
 
 interface Props {
@@ -34,8 +36,10 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const [form, setForm] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [testResultsForm, setTestResultsForm] = useState<any[]>([]);
 
   const isReadOnly = currentUserRole === "career_associate";
+  const canEditCodingLab = currentUserRole === "ca_team_lead" || currentUserRole === "cro";
 
   useEffect(() => {
     fetchUsers();
@@ -48,7 +52,15 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   };
 
   useEffect(() => {
-    if (client) setForm({ ...client });
+    if (client) {
+      setForm({ ...client });
+      // Parse test_results if it exists
+      if (client.test_results && Array.isArray(client.test_results)) {
+        setTestResultsForm(client.test_results);
+      } else {
+        setTestResultsForm([]);
+      }
+    }
   }, [client]);
 
   const handleChange = (field: string, value: any) => {
@@ -64,15 +76,21 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const handleSubmit = async () => {
     if (!form) return;
     setLoading(true);
+    
+    // Convert test results form to JSON before saving
+    const updatedForm = {
+      ...form,
+      test_results: testResultsForm.length > 0 ? testResultsForm : null
+    };
+    
     const { error } = await supabase
       .from("clients")
-      .update({ ...form })
+      .update(updatedForm)
       .eq("id", client.id);
     setLoading(false);
     if (error) {
       alert('Error updating client: ' + error.message);
     } else {
-      // alert('Client updated successfully!');
       toast("Client updated successfully!", {
         position: "top-center",
         autoClose: 4000,
@@ -83,7 +101,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
         progress: undefined,
         theme: "dark",
       });
-      onSubmit(form);
+      onSubmit(updatedForm);
       onClose();
     }
   };
@@ -320,6 +338,273 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
             {renderDropdown("Scraper", "scraperid", "scraping_team")}
           </div>
         </div>
+
+        {/* Coding Lab Configuration - Only for CA Team Lead & CRO */}
+        {canEditCodingLab && (
+          <div className="bg-yellow-50 p-4 rounded border border-yellow-200">
+            <h2 className="text-yellow-700 font-semibold text-lg mb-3">🧪 Coding Lab Configuration</h2>
+            <p className="text-sm text-yellow-600 mb-4">Configure coding lab environment and test results for this client</p>
+            
+            {/* Coding Lab URL Dropdown */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Coding Lab Environment *
+              </label>
+              <select
+                value={form.coding_lab_url || ""}
+                onChange={(e) => handleChange("coding_lab_url", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                title="Coding Lab Environment"
+              >
+                <option value="">Select Environment</option>
+                <option value="vivek">Vivek Environment</option>
+                <option value="fe1">Frontend Lab 1 (FE1)</option>
+                <option value="fe2">Frontend Lab 2 (FE2)</option>
+                <option value="be1">Backend Lab 1 (BE1)</option>
+                <option value="be2">Backend Lab 2 (BE2)</option>
+                <option value="be3">Backend Lab 3 (BE3)</option>
+                <option value="default">Default Environment</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {form.coding_lab_url 
+                  ? `Currently assigned: ${form.coding_lab_url.toUpperCase()}`
+                  : "No environment assigned"}
+              </p>
+            </div>
+
+            {/* Test Results Form Builder */}
+            <div className="border-t border-yellow-300 pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-md font-semibold text-gray-800">Test/Contest Configuration</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTestResultsForm([...testResultsForm, {
+                      contestId: '',
+                      contestName: '',
+                      lab_id_1: null,
+                      lab_id_2: null,
+                      mcq_results: null
+                    }]);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Contest/Test
+                </button>
+              </div>
+
+              {testResultsForm.length === 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                  <p className="text-gray-500">No test results configured. Click "Add Contest/Test" to create one.</p>
+                </div>
+              )}
+
+              {/* Render each contest */}
+              {testResultsForm.map((contest, contestIndex) => (
+                <div key={contestIndex} className="bg-white border border-gray-300 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-700">Contest {contestIndex + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = testResultsForm.filter((_, i) => i !== contestIndex);
+                        setTestResultsForm(updated);
+                      }}
+                      className="text-red-600 hover:text-red-800 p-1"
+                      title="Remove Contest"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Contest ID */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contest ID *</label>
+                      <input
+                        type="text"
+                        value={contest.contestId || ''}
+                        onChange={(e) => {
+                          const updated = [...testResultsForm];
+                          updated[contestIndex].contestId = e.target.value;
+                          setTestResultsForm(updated);
+                        }}
+                        placeholder="e.g., contest-fe-2024"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+
+                    {/* Contest Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contest Name *</label>
+                      <input
+                        type="text"
+                        value={contest.contestName || ''}
+                        onChange={(e) => {
+                          const updated = [...testResultsForm];
+                          updated[contestIndex].contestName = e.target.value;
+                          setTestResultsForm(updated);
+                        }}
+                        placeholder="e.g., Frontend Developer Assessment"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+
+                    {/* Lab ID 1 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Coding Lab 1 ID</label>
+                      <input
+                        type="text"
+                        value={contest.lab_id_1 || ''}
+                        onChange={(e) => {
+                          const updated = [...testResultsForm];
+                          updated[contestIndex].lab_id_1 = e.target.value || null;
+                          setTestResultsForm(updated);
+                        }}
+                        placeholder="e.g., 68d24a4a1295f90e0e22a041"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+
+                    {/* Lab ID 2 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Coding Lab 2 ID</label>
+                      <input
+                        type="text"
+                        value={contest.lab_id_2 || ''}
+                        onChange={(e) => {
+                          const updated = [...testResultsForm];
+                          updated[contestIndex].lab_id_2 = e.target.value || null;
+                          setTestResultsForm(updated);
+                        }}
+                        placeholder="e.g., 67890abcdef1234567890abc"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* MCQ Results Section */}
+                  <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h5 className="text-sm font-semibold text-purple-700 mb-3">MCQ Test Results (Optional)</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Total Questions</label>
+                        <input
+                          type="number"
+                          value={contest.mcq_results?.totalQuestions || ''}
+                          onChange={(e) => {
+                            const updated = [...testResultsForm];
+                            if (!updated[contestIndex].mcq_results) {
+                              updated[contestIndex].mcq_results = {};
+                            }
+                            updated[contestIndex].mcq_results.totalQuestions = parseInt(e.target.value) || 0;
+                            setTestResultsForm(updated);
+                          }}
+                          placeholder="20"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Total Attempted</label>
+                        <input
+                          type="number"
+                          value={contest.mcq_results?.totalAttempted || ''}
+                          onChange={(e) => {
+                            const updated = [...testResultsForm];
+                            if (!updated[contestIndex].mcq_results) {
+                              updated[contestIndex].mcq_results = {};
+                            }
+                            updated[contestIndex].mcq_results.totalAttempted = parseInt(e.target.value) || 0;
+                            setTestResultsForm(updated);
+                          }}
+                          placeholder="18"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Passed</label>
+                        <input
+                          type="number"
+                          value={contest.mcq_results?.passed || ''}
+                          onChange={(e) => {
+                            const updated = [...testResultsForm];
+                            if (!updated[contestIndex].mcq_results) {
+                              updated[contestIndex].mcq_results = {};
+                            }
+                            updated[contestIndex].mcq_results.passed = parseInt(e.target.value) || 0;
+                            setTestResultsForm(updated);
+                          }}
+                          placeholder="15"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Failed</label>
+                        <input
+                          type="number"
+                          value={contest.mcq_results?.failed || ''}
+                          onChange={(e) => {
+                            const updated = [...testResultsForm];
+                            if (!updated[contestIndex].mcq_results) {
+                              updated[contestIndex].mcq_results = {};
+                            }
+                            updated[contestIndex].mcq_results.failed = parseInt(e.target.value) || 0;
+                            setTestResultsForm(updated);
+                          }}
+                          placeholder="3"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Not Attempted</label>
+                        <input
+                          type="number"
+                          value={contest.mcq_results?.notAttempted || ''}
+                          onChange={(e) => {
+                            const updated = [...testResultsForm];
+                            if (!updated[contestIndex].mcq_results) {
+                              updated[contestIndex].mcq_results = {};
+                            }
+                            updated[contestIndex].mcq_results.notAttempted = parseInt(e.target.value) || 0;
+                            setTestResultsForm(updated);
+                          }}
+                          placeholder="2"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Points</label>
+                        <input
+                          type="number"
+                          value={contest.mcq_results?.points || ''}
+                          onChange={(e) => {
+                            const updated = [...testResultsForm];
+                            if (!updated[contestIndex].mcq_results) {
+                              updated[contestIndex].mcq_results = {};
+                            }
+                            updated[contestIndex].mcq_results.points = parseInt(e.target.value) || 0;
+                            setTestResultsForm(updated);
+                          }}
+                          placeholder="75"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Info Box */}
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                <strong>Note:</strong> Changes to coding lab configuration will affect which lab environment 
+                the client is redirected to when clicking the "Coding Lab" button.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Buttons */}
         <div className="mt-6 flex justify-end gap-4">
