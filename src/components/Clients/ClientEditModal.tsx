@@ -363,6 +363,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                 <option value="be1">Backend Lab 1 (BE1)</option>
                 <option value="be2">Backend Lab 2 (BE2)</option>
                 <option value="be3">Backend Lab 3 (BE3)</option>
+                <option value="aml1">AML Analyst Lab 1 (AML1)</option>
                 <option value="default">Default Environment</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">

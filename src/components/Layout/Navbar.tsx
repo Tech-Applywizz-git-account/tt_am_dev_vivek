@@ -355,6 +355,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                       window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener');
                     }else if (codingLabUrl==="be1") {
                       window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener');
+                    }else if (codingLabUrl==="aml1") {
+                      window.open(`/api/fermion-redirectaml1?uid=${uid}`, '_blank', 'noopener');
                     }else {
                       window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener');
                     }}

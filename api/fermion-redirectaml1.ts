@@ -1,4 +1,4 @@
-// api/fermion-redirectfe1.ts
+// api/fermion-redirectaml1.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
 
@@ -6,11 +6,11 @@ import jwt from 'jsonwebtoken';
 const ENROLL_URL =
   'https://backend.codedamn.com/api/public/enroll-user-into-digital-product';
 
-// Hardcode the Fermion digital product ID
-const FERMION_PRODUCT_ID = '68d24a57d03833130b007f2c';
+// Hardcode the Fermion digital product ID for AML Analyst
+const FERMION_PRODUCT_ID = '68df98d58c6253ef47a720c3';
 
-// Your published contest URL
-const CONTEST_URL = 'weak-practice';
+// Your published contest URL for AML Analyst
+const CONTEST_URL = 'https://careerbadge.apply-wizz.com/contest/pond-pound';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', 'no-store');
     return res.redirect(302, url);
   } catch (e: any) {
-    console.error('fermion-redirectfe1 error:', e);
+    console.error('fermion-redirectaml1 error:', e);
     return res.status(500).send(`Unexpected server error: ${e?.message || e}`);
   }
 }
