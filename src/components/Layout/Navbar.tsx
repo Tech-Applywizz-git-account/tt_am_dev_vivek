@@ -343,24 +343,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                   onClick={() => {
                     // Use ApplyWizz ID instead of Supabase UUID
                     const uid = encodeURIComponent(applywizzId || user.email);
-                    if (codingLabUrl==="vivek") {
-                      window.open(`/api/fermion-redirectvivek?uid=${uid}`, '_blank', 'noopener');
-                    }else if (codingLabUrl==="fe1") {
-                      window.open(`/api/fermion-redirectfe1?uid=${uid}`, '_blank', 'noopener');
-                    }else if (codingLabUrl==="fe2") {
-                      window.open(`/api/fermion-redirectfe2?uid=${uid}`, '_blank', 'noopener');
-                    }else if (codingLabUrl==="be3") {
-                      window.open(`/api/fermion-redirectbe3?uid=${uid}`, '_blank', 'noopener');
-                    }else if (codingLabUrl==="be2") {
-                      window.open(`/api/fermion-redirectbe2?uid=${uid}`, '_blank', 'noopener');
-                    }else if (codingLabUrl==="be1") {
-                      window.open(`/api/fermion-redirectbe1?uid=${uid}`, '_blank', 'noopener');
-                    }else if (codingLabUrl==="aml1") {
-                      window.open(`/api/fermion-redirectaml1?uid=${uid}`, '_blank', 'noopener');
-                    }else {
-                      window.open(`/api/fermion-redirect?uid=${uid}`, '_blank', 'noopener');
-                    }}
-                  }
+                    const env = codingLabUrl || 'default';
+                    window.open(`/api/fermion-redirect?env=${env}&uid=${uid}`, '_blank', 'noopener');
+                  }}
                 >
                   Coding Lab
                 </button>
