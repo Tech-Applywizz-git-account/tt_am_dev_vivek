@@ -552,7 +552,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                 className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'already_applied' ? 'ring-2 ring-purple-500 ring-offset-2 scale-105 bg-purple-100' : 'bg-purple-50 hover:bg-purple-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-purple-700">{originalStatusCounts.already_applied}</div>
-                                <div className="text-xs text-purple-700 mt-1">Applied</div>
+                                <div className="text-xs text-purple-700 mt-1">Already Applied</div>
                             </button>
 
                             {/* Not Relevant */}
@@ -570,7 +570,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                 className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'job_not_found' ? 'ring-2 ring-orange-500 ring-offset-2 scale-105 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-orange-700">{originalStatusCounts.job_not_found}</div>
-                                <div className="text-xs text-orange-700 mt-1">Not Found</div>
+                                <div className="text-xs text-orange-700 mt-1">Job Not Found</div>
                             </button>
                         </div>
                     </div>
