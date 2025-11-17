@@ -77,6 +77,7 @@ export interface Client {
   account_manager_id: string;
   onboarded_by: string;
   created_at: Date;
+  update_at?: Date;
   careerassociatemanagerid: string;
   careerassociateid: string;
   scraperid: string;
@@ -84,12 +85,14 @@ export interface Client {
   sponsorship: string;
   applywizz_id: string;
   badge_value?: number;
+  onboardingdate?: string;
   // Legacy columns (for backward compatibility during migration)
   lab_id_1?: string;
   lab_id_2?: string;
   mcq_results?: MCQResults | null;
   // New consolidated column
   test_results?: TestResult[] | null;
+  coding_lab_url?: string;
 }
 
 export interface Ticket {
