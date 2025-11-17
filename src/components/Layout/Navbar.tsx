@@ -339,7 +339,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                   onClick={() => {
                     // Use ApplyWizz ID instead of Supabase UUID
                     const uid = encodeURIComponent(applywizzId || user.email);
-                    const env = codingLabUrl || 'default';
+                    const env = codingLabUrl;
                     window.open(`/api/fermion-redirect?env=${env}&uid=${uid}`, '_blank', 'noopener');
                   }}
                 >
