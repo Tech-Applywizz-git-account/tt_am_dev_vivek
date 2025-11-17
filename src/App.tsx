@@ -529,7 +529,6 @@ function App() {
       scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376",
       onboarded_by: currentUser!.id,
       sponsorship: clientData.sponsorship,
-      badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
@@ -1167,7 +1166,7 @@ function App() {
       await fetchData();
       
       alert("Client successfully onboarded to secondary database!");
-      await supabase.from('pending_clients').delete().eq('id', pendingClientId);
+      await supabase.from('pending_clients').delete().eq('id', client.id);
       await fetchData();
     } catch (error) {
       console.error('Error making external API call:', error);
