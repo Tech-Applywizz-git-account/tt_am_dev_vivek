@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Calendar, MapPin, ExternalLink, Loader2, ChevronDown, ChevronUp, Briefcase } from "lucide-react";
 import { supabase } from '@/lib/supabaseClient';
 
+
 // ✅ Types
 interface Job {
     id?: string;
