@@ -32,6 +32,9 @@ import FeedbackButton from './components/FeedbackButton';
 import { ClientSearchBar } from './components/ClientSearchBar';
 import { ca } from 'date-fns/locale';
 import { SupabaseAdminCreateClient } from './lib/supabaseAdminCreateClient';
+import ApplicationsOverTime, { ChartItem } from './components/ClientDashboard/ApplicationsOverTime';
+import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/ApplicationSummaryList';
+import JobLinksList from './components/ClientDashboard/JobLinksList';
 
 function App() {
   const fetchData = async () => {
@@ -161,6 +164,13 @@ function App() {
   const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
+  
+  // Client dashboard data
+  const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
+  const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
+  const [clientDashboardError, setClientDashboardError] = useState("");
+  const [applywizzId, setApplywizzId] = useState<string | undefined>();
 
   useEffect(() => {
     fetchData();
@@ -281,6 +291,99 @@ function App() {
     fetchData(); // Keep existing fetchData call
   }, []); // Empty dependency array = runs only once on mount
 
+  // Fetch opted_job_links status when user changes
+  useEffect(() => {
+    const fetchClientJobLinksStatus = async () => {
+      if (!currentUser?.email || currentUser?.role !== 'client') return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('opted_job_links')
+          .eq('company_email', currentUser.email)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching opted_job_links:', error);
+          return;
+        }
+        
+        if (data) {
+          setOptedJobLinks(data.opted_job_links || false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch client job links status:', err);
+      }
+    };
+
+    fetchClientJobLinksStatus();
+  }, [currentUser?.email, currentUser?.role]);
+
+  // Fetch client dashboard data when user changes
+  useEffect(() => {
+    const fetchClientDashboardData = async () => {
+      if (!currentUser?.email || currentUser?.role !== 'client' || optedJobLinks) {
+        setClientDashboardData([]);
+        setApplywizzId(undefined);
+        return;
+      }
+
+      setClientDashboardLoading(true);
+      setClientDashboardError("");
+
+      try {
+        // Get the applywizz_id from Supabase based on the user's email
+        const { data: clientData, error: clientError } = await supabase
+          .from('clients')
+          .select('applywizz_id,opted_job_links')
+          .eq('company_email', currentUser.email)
+          .single();
+
+        if (clientError) {
+          throw new Error(`Failed to fetch client data: ${clientError.message}`);
+        }
+
+        if (!clientData || !clientData.applywizz_id) {
+          throw new Error("Applywizz ID not found for this user");
+        }
+        if (clientData.opted_job_links) {
+          return;
+        }
+
+        const fetchedApplywizzId = clientData.applywizz_id;
+        setApplywizzId(fetchedApplywizzId);
+
+        // Fetch the actual data from the external API
+        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+        if (!apiUrl) {
+          throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+        }
+
+        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+        }
+
+        const apiData = await response.json();
+
+        // Transform the API data to match our expected format
+        const formattedData: TaskCount[] = Object.entries(apiData.completed_tasks || {})
+          .map(([date, count]) => ({ date, count: Number(count) }))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setClientDashboardData(formattedData);
+      } catch (err) {
+        console.error("Error fetching client dashboard data:", err);
+        setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
+      } finally {
+        setClientDashboardLoading(false);
+      }
+    };
+
+    fetchClientDashboardData();
+  }, [currentUser?.email, currentUser?.role, optedJobLinks]);
+
   // Add this to save view changes
   useEffect(() => {
     if (currentUser) {
@@ -292,10 +395,7 @@ function App() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
-    if (user.role === 'client') {
-      setActiveView('tickets');
-    }
-    // console.log('Logged in user:', user.name, 'with role:', user.role);
+    // console.log('Logged in user:', user.name, 'with role:', user.role, 'with email :', user.email);
   };
   // console.log('Logged in user:', currentUser?.name, currentUser?.role);
 
@@ -406,7 +506,7 @@ function App() {
 
   const handleAssignRoles = async (
     pendingClientId: string,
-    clientData: any,
+    clientData: any,          
     rolesData: any
   ) => {
     const { data: caEmail, error: caEmailError } = await supabase.from('users').select('email').eq('id', rolesData.careerassociateid).single();
@@ -426,10 +526,10 @@ function App() {
     const { error: insertError } = await supabase.from('clients').insert({
       id: pendingClientId,
       full_name: clientData.full_name,
-      personal_email: clientData.personal_email?.trim().toLowerCase() || '',
+      personal_email: clientData.personal_email.trim().toLowerCase(),
       whatsapp_number: clientData.whatsapp_number,
       callable_phone: clientData.callable_phone,
-      company_email: clientData.company_email?.trim().toLowerCase() || '',
+      company_email: clientData.company_email.trim().toLowerCase(),
       job_role_preferences: clientData.job_role_preferences,
       salary_range: clientData.salary_range,
       location_preferences: clientData.location_preferences,
@@ -441,6 +541,7 @@ function App() {
       scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376",
       onboarded_by: currentUser!.id,
       sponsorship: clientData.sponsorship,
+      badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
@@ -453,9 +554,167 @@ function App() {
       return;
     }
 
+    // Make API call to external database after successful client insertion
+    try {
+      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+
+      // Validate required fields before sending
+      if (!clientData.company_email || !clientData.full_name) {
+        console.error('❌ Missing required fields:', {
+          email: clientData.company_email,
+          name: clientData.full_name
+        });
+        alert('Cannot sync to external database: Missing email or name');
+        return;
+      }
+
+      // Map data to match external database schema exactly
+      // Based on external schema: yearsExp (integer), willingToRelocate (boolean), servicesOpted (jsonb)
+      const payload = {
+        // Core identification
+        "email": clientData.company_email.trim().toLowerCase(),
+        "name": clientData.full_name.trim(),
+
+        // Experience and location
+        "years_experience": clientData.experience ? parseInt(String(clientData.experience)) : 0,
+        "location": clientData.state_of_residence,
+        "country": clientData.zip_or_country || "",
+
+        // Job preferences
+        "services_opted": (() => {
+          // Handle if services_opted is a string (from database)
+          if (typeof clientData.add_ons_info === 'string') {
+            try {
+              return JSON.parse(clientData.add_ons_info);
+            } catch {
+              return [];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(clientData.add_ons_info)) {
+            return clientData.add_ons_info;
+          }
+          // Default to empty array
+          return [];
+        })(),
+        "alternate_job_roles": (() => {
+          // Handle if alternate_job_roles is a string (from database)
+          if (typeof clientData.alternate_job_roles === 'string') {
+            // First try to parse as JSON
+            try {
+              return JSON.parse(clientData.alternate_job_roles);
+            } catch {
+              // If not JSON, split by comma and trim whitespace
+              return clientData.alternate_job_roles
+                .split(',')
+                .map(role => role.trim())
+                .filter(role => role.length > 0);
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(clientData.alternate_job_roles)) {
+            return clientData.alternate_job_roles;
+          }
+          // Default to empty array
+          return [];
+        })(),
+
+        // Service dates
+        "start_date": clientData.start_date,
+        // "end_date": clientData.end_date || null,
+
+        // Work preferences
+        "willing_to_relocate": Boolean(clientData.willing_to_relocate),
+        "work_auth": clientData.visa_type || "",
+        "work_preference": (() => {
+          // If location_preferences is an array
+          if (Array.isArray(clientData.location_preferences)) {
+            // If more than 1 location, send "All"
+            if (clientData.location_preferences.length > 1) {
+              return "All";
+            }
+            // If exactly 1 location, send that location
+            if (clientData.location_preferences.length === 1) {
+              return clientData.location_preferences[0];
+            }
+          }
+          // Default to "All" if empty or not an array
+          return "All";
+        })(),
+        "sponsorship": clientData.sponsorship ? "yes" : "No",
+
+        // Personal details
+        "gender": clientData.gender || "",
+
+        // Company and resume details  
+        "exclude_companies": (() => {
+          // Handle if exclude_companies is a string (from database)
+          if (typeof clientData.exclude_companies === 'string') {
+            try {
+              return JSON.parse(clientData.exclude_companies);
+            } catch {
+              return ["facebook"];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(clientData.exclude_companies)) {
+            return clientData.exclude_companies;
+          }
+          // Default to facebook
+          return ["facebook"];
+        })(),
+        "resume_s3_path": clientData.resume_url,
+        "resume_url": clientData.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
+
+        // Salary and applications
+        "expected_salary": clientData.salary_range || "",
+        "number_of_applications": clientData.no_of_applications ? `${clientData.no_of_applications}+` : "0",
+
+        // Social profiles
+        "github_url": clientData.github_url || "",
+        "linkedin_url": clientData.linked_in_url || "",
+
+        // Status and plan
+        "status": "Active",
+        "career_associate": caEmail.email || "",
+        "apw_id": clientData.applywizz_id,
+        "target_role": Array.isArray(clientData.job_role_preferences) ? clientData.job_role_preferences[0] || "" : clientData.job_role_preferences || "",
+        "plan": "Standard",
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        let errorDetails = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          errorDetails = JSON.stringify(errorData, null, 2);
+          // console.error('❌ API Error Response (JSON):', errorData);
+        } catch {
+          errorDetails = await response.text();
+          // console.error('❌ API Error Response (Text):', errorDetails);
+        }
+
+        alert(`Failed to sync with external database: ${response.status}    Error: ${errorDetails}   Check console for full details.`);
+        return;
+      } else {
+        // const successData = await response.json().catch(() => response.text());
+        // console.log('✅ Successfully added to external db:', successData);
+        // alert("Client Onboarded Successfully into karma database");
+      }
+    } catch (error) {
+      console.error('Error making external API call:', error);
+      // Handle network errors or other exceptions
     // Insert additional client information into clients_additional_information table
+    }
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: pendingClientId,
+      id: pendingClientId, 
       applywizz_id: clientData.applywizz_id,
       resume_url: clientData.resume_url,
       resume_path: clientData.resume_path,
@@ -624,11 +883,295 @@ function App() {
 
     if (verror) {
       alert("Failed to complete onboarding3");
+      console.log("Failed to complete onboarding in ca management", verror);
       return;
     }
-
+    alert("Client onboarding completed");
     await supabase.from('pending_clients').delete().eq('id', pendingClientId);
     await fetchData();
+  };
+
+  // Function to handle direct onboarding without role assignment
+  const handleDirectOnboard = async (client: any) => {
+    const { error: insertError } = await supabase.from('clients').insert({
+      id: client.id,
+      full_name: client.full_name,
+      personal_email: client.personal_email.trim().toLowerCase(),
+      whatsapp_number: client.whatsapp_number,
+      callable_phone: client.callable_phone,
+      company_email: client.company_email.trim().toLowerCase(),
+      job_role_preferences: client.job_role_preferences,
+      salary_range: client.salary_range,
+      location_preferences: client.location_preferences,
+      work_auth_details: client.work_auth_details,
+      visa_type: client.visa_type,
+      onboarded_by: currentUser!.id,
+      sponsorship: client.sponsorship,
+      applywizz_id: client.applywizz_id,
+      badge_value: client.badge_value,
+      created_at: new Date().toISOString(),
+      update_at: new Date().toISOString(),
+      opted_job_links:true,
+    });
+    if (insertError) {
+      alert("Failed to complete onboarding");
+      console.error("Onboarding failed:", insertError.message);
+      return;
+    }
+        const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
+      id: client.id, 
+      applywizz_id: client.applywizz_id,
+      resume_url: client.resume_url,
+      resume_path: client.resume_path,
+      start_date: client.start_date,
+      end_date: client.end_date,
+      no_of_applications: client.no_of_applications,
+      is_over_18: client.is_over_18,
+      eligible_to_work_in_us: client.eligible_to_work_in_us,
+      authorized_without_visa: client.authorized_without_visa,
+      require_future_sponsorship: client.require_future_sponsorship,
+      can_perform_essential_functions: client.can_perform_essential_functions,
+      worked_for_company_before: client.worked_for_company_before,
+      discharged_for_policy_violation: client.discharged_for_policy_violation,
+      referred_by_agency: client.referred_by_agency,
+      highest_education: client.highest_education,
+      university_name: client.university_name,
+      cumulative_gpa: client.cumulative_gpa,
+      desired_start_date: client.desired_start_date,
+      willing_to_relocate: client.willing_to_relocate,
+      can_work_3_days_in_office: client.can_work_3_days_in_office,
+      role: client.role,
+      experience: client.experience,
+      work_preferences: client.work_preferences,
+      alternate_job_roles: client.alternate_job_roles,
+      exclude_companies: client.exclude_companies,
+      convicted_of_felony: client.convicted_of_felony,
+      felony_explanation: client.felony_explanation,
+      pending_investigation: client.pending_investigation,
+      willing_background_check: client.willing_background_check,
+      willing_drug_screen: client.willing_drug_screen,
+      failed_or_refused_drug_test: client.failed_or_refused_drug_test,
+      uses_substances_affecting_duties: client.uses_substances_affecting_duties,
+      substances_description: client.substances_description,
+      can_provide_legal_docs: client.can_provide_legal_docs,
+      gender: client.gender,
+      is_hispanic_latino: client.is_hispanic_latino,
+      race_ethnicity: client.race_ethnicity,
+      veteran_status: client.veteran_status,
+      disability_status: client.disability_status,
+      has_relatives_in_company: client.has_relatives_in_company,
+      relatives_details: client.relatives_details,
+      state_of_residence: client.state_of_residence,
+      zip_or_country: client.zip_or_country,
+      main_subject: client.main_subject,
+      graduation_year: client.graduation_year,
+      add_ons_info: client.add_ons_info,
+      github_url: client.github_url,
+      linked_in_url: client.linked_in_url
+    });
+
+    if (additionalInfoError) {
+      console.error("Failed to insert additional client information:", additionalInfoError.message);
+    }
+
+    const name = client.full_name?.trim();
+    const email = client.company_email?.trim().toLowerCase();
+    const password = "Created@123";
+    const role = 'client';
+    const department = 'Client Services';
+
+
+    const { data: userData, error } = await SupabaseAdminCreateClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // User can login immediately
+    });
+    if (userData) console.log("Created user:", userData.user);
+
+    if (error) {
+      if (error.message.includes('already been registered')) {
+        console.log("Error", error)
+        console.error(`❌ Error creating ${client.company_email} : Already registered`);
+      } else {
+        console.log("Error", error)
+        console.error(`❌ Error creating ${client.company_email} : ${error.message}`);
+      }
+    }
+
+    const { error: userInsertError } = await supabase.from('users').insert({
+      id: userData.user.id, // must match auth.users.id
+      name: name,
+      email: email,
+      role: 'client',
+      department: 'Client Services',
+      is_active: true,
+    });
+
+    if (userInsertError) {
+      console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
+      console.error(userInsertError);
+    }
+
+    try {
+      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+
+      // Validate required fields before sending
+      if (!client.company_email || !client.full_name) {
+        console.error('❌ Missing required fields:', {
+          email: client.company_email,
+          name: client.full_name
+        });
+        alert('Cannot sync to external database: Missing email or name');
+        return;
+      }
+
+      // Map data to match external database schema exactly
+      const payload = {
+        // Core identification
+        "email": client.company_email.trim().toLowerCase(),
+        "name": client.full_name.trim(),
+
+        // Experience and location
+        "years_experience": client.experience ? parseInt(String(client.experience)) : 0,
+        "location": client.state_of_residence,
+        "country": client.zip_or_country || "",
+
+        // Job preferences
+        "services_opted": (() => {
+          // Handle if services_opted is a string (from database)
+          if (typeof client.add_ons_info === 'string') {
+            try {
+              return JSON.parse(client.add_ons_info);
+            } catch {
+              return [];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(client.add_ons_info)) {
+            return client.add_ons_info;
+          }
+          // Default to empty array
+          return [];
+        })(),
+        // "alternate_job_roles": (() => {
+        //   // Handle if alternate_job_roles is a string (from database)
+        //   if (typeof client.alternate_job_roles === 'string') {
+        //     // First try to parse as JSON
+        //     try {
+        //       return JSON.parse(client.alternate_job_roles);
+        //     } catch {
+        //       // If not JSON, split by comma and trim whitespace
+        //       return client.alternate_job_roles
+        //         .split(',')
+        //         .map(role => role.trim())
+        //         .filter(role => role.length > 0);
+        //     }
+        //   }
+        //   // If it's already an array, use it
+        //   if (Array.isArray(client.alternate_job_roles)) {
+        //     return client.alternate_job_roles;
+        //   }
+        //   // Default to empty array
+        //   return [];
+        // })(),
+
+        // Service dates
+        "start_date": client.start_date,
+        // "end_date": client.end_date || null,
+
+        // Work preferences
+        "willing_to_relocate": Boolean(client.willing_to_relocate),
+        "work_auth": client.visa_type || "",
+        "work_preference": (() => {
+          // If location_preferences is an array
+          if (Array.isArray(client.location_preferences)) {
+            // If more than 1 location, send "All"
+            if (client.location_preferences.length > 1) {
+              return "All";
+            }
+            // If exactly 1 location, send that location
+            if (client.location_preferences.length === 1) {
+              return client.location_preferences[0];
+            }
+          }
+          // Default to "All" if empty or not an array
+          return "All";
+        })(),
+        "sponsorship": client.sponsorship ? "yes" : "No",
+
+        // Personal details
+        "gender": client.gender || "",
+
+        // Company and resume details  
+        "exclude_companies": (() => {
+          // Handle if exclude_companies is a string (from database)
+          if (typeof client.exclude_companies === 'string') {
+            try {
+              return JSON.parse(client.exclude_companies);
+            } catch {
+              return ["facebook"];
+            }
+          }
+          // If it's already an array, use it
+          if (Array.isArray(client.exclude_companies)) {
+            return client.exclude_companies;
+          }
+          // Default to facebook
+          return ["facebook"];
+        })(),
+        "resume_s3_path": client.resume_url,
+        "resume_url": client.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
+
+        // Salary and applications
+        "expected_salary": client.salary_range || "",
+        "number_of_applications": client.no_of_applications ? `${client.no_of_applications}+` : "0",
+
+        // Social profiles
+        "github_url": client.github_url || "",
+        "linkedin_url": client.linked_in_url || "",
+
+        // Status and plan
+        "status": "Active",
+        "apw_id": client.applywizz_id,
+        "target_role": Array.isArray(client.job_role_preferences) ? client.job_role_preferences[0] || "" : client.job_role_preferences || "",
+        "plan": "Standard",
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        let errorDetails = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          errorDetails = JSON.stringify(errorData, null, 2);
+        } catch {
+          errorDetails = await response.text();
+        }
+
+        console.error('❌ API Error Response:', errorDetails);
+        alert(`Failed to sync with external database: ${response.status} - ${errorDetails}`);
+        return;
+      }
+
+      // Successfully onboarded, remove from pending list
+      // await supabase.from('pending_clients').delete().eq('id', client.id);
+      
+      // Refresh the pending clients list
+      await fetchData();
+      
+      alert("Client successfully onboarded to secondary database!");
+      await supabase.from('pending_clients').delete().eq('id', pendingClientId);
+      await fetchData();
+    } catch (error) {
+      console.error('Error making external API call:', error);
+      alert("Failed to onboard client to secondary database");
+    }
   };
 
   const handleUpdateTicket = async (ticketId: string, updateData: any) => {
@@ -873,34 +1416,58 @@ function App() {
               </div>
             </div>
 
-            <DashboardStatsComponent
-              stats={stats}
-              userRole={currentUser?.role || ''}
-              onTotalTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('all'); // Reset status filter
-                setFilterType('all');   // Reset type filter
-                setFilterPriority('all');
-              }}
-              onOpenTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('open'); // This will filter to only open tickets
-                setFilterType('all'); // Reset type filter
-                setFilterPriority('all');
-              }}
-              onResolvedTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('resolved');
-                setFilterType('all');
-                setFilterPriority('all');
-              }}
-              onCriticalTicketsClick={() => {
-                setActiveView('tickets');
-                setFilterStatus('all');
-                setFilterType('all');
-                setFilterPriority('critical');
-              }}
-            />
+            {currentUser?.role === 'client' ? (
+              <>
+                {optedJobLinks ? (
+                  <JobLinksList currentUserEmail={currentUser?.email} />
+                ) : (
+                  <>
+                    <ApplicationsOverTime 
+                      data={clientDashboardData} 
+                      loading={clientDashboardLoading} 
+                      error={clientDashboardError} 
+                    />
+                    <ApplicationSummaryList 
+                      data={clientDashboardData} 
+                      loading={clientDashboardLoading} 
+                      error={clientDashboardError}
+                      applywizzId={applywizzId}
+                    />
+                  </>
+                )}
+              </>
+            )
+              :
+              (
+                <>
+                <DashboardStatsComponent
+                  stats={stats}
+                  userRole={currentUser?.role || ''}
+                  onTotalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all'); // Reset status filter
+                    setFilterType('all');   
+                    setFilterPriority('all');
+                  }}
+                  onOpenTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('open'); // This will filter to only open tickets
+                    setFilterType('all'); // Reset type filter
+                    setFilterPriority('all');
+                  }}
+                  onResolvedTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('resolved');
+                    setFilterType('all');
+                    setFilterPriority('all');
+                  }}
+                  onCriticalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all');
+                    setFilterType('all');
+                    setFilterPriority('critical');
+                  }}
+                />            
             {isExecutive ? (
               <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
             ) : (
@@ -968,6 +1535,8 @@ function App() {
                   </div>
                 </div>
               </div>
+            )}
+            </>
             )}
             <FeedbackButton user={currentUser} />
           </div>
@@ -1362,6 +1931,7 @@ function App() {
           <PendingOnboardingList
             pendingClients={pendingClients}
             onAssignRoles={handleAssignRoles}
+            onDirectOnboard={handleDirectOnboard}
           />
         );
 
@@ -1426,13 +1996,14 @@ function App() {
                     handleDeleteUser={handleDeleteUser}
                     fetchData={fetchData}
                     pendingClientsCount={pendingClients.length}
+                    optedJobLinks={optedJobLinks}
                     onViewLabResults={handleViewLabResults}
                   />
                   <LabResultsModal
                     user={currentUser}
                     labId={selectedLabId}
                     isOpen={isLabResultsModalOpen}
-                    onClose={() => setIsLabResultsModalOpen(false)}
+                    onClose={() => setIsLabResultsModalOpen(false)}        
                   />
                 </ProtectedRoute>
               }

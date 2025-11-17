@@ -82,7 +82,6 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
       ...form,
       test_results: testResultsForm.length > 0 ? testResultsForm : null
     };
-    
     const { error } = await supabase
       .from("clients")
       .update(updatedForm)

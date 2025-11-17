@@ -34,6 +34,7 @@ interface Props {
   fetchData: () => Promise<void>;
   pendingClientsCount: number;
   onViewLabResults?: (labId: string) => void;
+  optedJobLinks?: boolean;
 }
 
 const AppLayout: React.FC<Props> = ({
@@ -61,13 +62,16 @@ const AppLayout: React.FC<Props> = ({
   fetchData,
   pendingClientsCount,
   onViewLabResults,
+  optedJobLinks = false,
 }) => {
+  // Hide sidebar for clients with opted_job_links = true
+  const showSidebar = !(currentUser.role === 'client' && optedJobLinks);
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={currentUser} onLogout={handleLogout} onViewLabResults={onViewLabResults} />
 
       <div className="flex">
-        {(currentUser.role !== 'client') && (
+        {showSidebar && (
           <Sidebar
             user={currentUser}
             activeView={activeView}
