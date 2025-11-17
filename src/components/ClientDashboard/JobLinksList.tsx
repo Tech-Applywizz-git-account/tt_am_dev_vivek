@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Calendar, MapPin, ExternalLink, Loader2 } from "lucide-react";
 import { supabase } from '@/lib/supabaseClient';
 
@@ -91,6 +91,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+    const hasFetchedData = useRef(false);
     
     // Extract the data fetching logic into a separate function
     const fetchJobLinks = async () => {
@@ -134,6 +135,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             // Convert backend statuses to frontend format
             const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
                 ...job,
+                // Only convert status if it's not null, otherwise keep it as null
                 status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
             }));
 
@@ -145,9 +147,19 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         }
     };
     
-    // Fetch job links when currentUserEmail changes
+    // Use a more robust approach to prevent double fetching
     useEffect(() => {
+        // Prevent double fetching in development due to React StrictMode
+        if (hasFetchedData.current || !currentUserEmail) {
+            return;
+        }
+        
+        hasFetchedData.current = true;
         fetchJobLinks();
+        
+        return () => {
+            // Cleanup if needed
+        };
     }, [currentUserEmail]);
     
     // Log when currentUserEmail changes
@@ -340,41 +352,43 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                 <h2 className="text-lg font-semibold">Job Applications</h2>
                 
                 {/* Date Filter and Sort Controls */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex items-center gap-2">
-                        <label htmlFor="date-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                            Filter by Date:
-                        </label>
-                        <input
-                            type="date"
-                            id="date-filter"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {selectedDate && (
-                            <button
-                                onClick={() => setSelectedDate("")}
-                                className="text-sm text-red-600 hover:text-red-800"
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <label htmlFor="date-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                                Filter by Date:
+                            </label>
+                            <input
+                                type="date"
+                                id="date-filter"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                            />
+                            {selectedDate && (
+                                <button
+                                    onClick={() => setSelectedDate("")}
+                                    className="text-sm text-red-600 hover:text-red-800 whitespace-nowrap"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <label htmlFor="sort-order" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                                Sort:
+                            </label>
+                            <select
+                                id="sort-order"
+                                value={sortOrder}
+                                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                             >
-                                Clear
-                            </button>
-                        )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                        <label htmlFor="sort-order" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                            Sort:
-                        </label>
-                        <select
-                            id="sort-order"
-                            value={sortOrder}
-                            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="desc">Newest First</option>
-                            <option value="asc">Oldest First</option>
-                        </select>
+                                <option value="desc">Newest First</option>
+                                <option value="asc">Oldest First</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -382,46 +396,46 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             {/* Task Summary Section */}
             <div className="mb-6">
                 <h3 className="text-base font-semibold mb-3">Task Summary</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
                     {/* Total Tasks */}
-                    <div className="bg-gray-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-gray-900">{statusCounts.total}</div>
+                    <div className="bg-gray-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900">{statusCounts.total}</div>
                         <div className="text-xs text-gray-600 mt-1">Total Tasks</div>
                     </div>
 
                     {/* Pending */}
-                    <div className="bg-yellow-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-yellow-700">{statusCounts.pending}</div>
+                    <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-yellow-700">{statusCounts.pending}</div>
                         <div className="text-xs text-yellow-700 mt-1">Pending</div>
                     </div>
 
                     {/* In Progress */}
-                    <div className="bg-blue-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-700">{statusCounts.in_progress}</div>
+                    <div className="bg-blue-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-blue-700">{statusCounts.in_progress}</div>
                         <div className="text-xs text-blue-700 mt-1">In Progress</div>
                     </div>
 
                     {/* Completed */}
-                    <div className="bg-green-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-green-700">{statusCounts.completed}</div>
+                    <div className="bg-green-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-green-700">{statusCounts.completed}</div>
                         <div className="text-xs text-green-700 mt-1">Completed</div>
                     </div>
 
                     {/* Already Applied */}
-                    <div className="bg-purple-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-purple-700">{statusCounts.already_applied}</div>
+                    <div className="bg-purple-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-purple-700">{statusCounts.already_applied}</div>
                         <div className="text-xs text-purple-700 mt-1">Already Applied</div>
                     </div>
 
                     {/* Not Relevant */}
-                    <div className="bg-red-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-red-700">{statusCounts.not_relevant}</div>
+                    <div className="bg-red-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-red-700">{statusCounts.not_relevant}</div>
                         <div className="text-xs text-red-700 mt-1">Not Relevant</div>
                     </div>
 
                     {/* Job Not Found */}
-                    <div className="bg-orange-50 rounded-lg p-4 text-center">
-                        <div className="text-2xl font-bold text-orange-700">{statusCounts.job_not_found}</div>
+                    <div className="bg-orange-50 rounded-lg p-3 text-center">
+                        <div className="text-xl sm:text-2xl font-bold text-orange-700">{statusCounts.job_not_found}</div>
                         <div className="text-xs text-orange-700 mt-1">Job Not Found</div>
                     </div>
                 </div>
@@ -431,6 +445,8 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                 {filteredJobs.map((job, index) => {
                     const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
                     const overdue = isOverdue(job.date_posted);
+                    // Use 'pending' as default status only when status is null or undefined
+                    const displayStatus = job.status || 'pending';
 
                     return (
                         <div
@@ -442,7 +458,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                 <div className="flex-1">
                                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                         <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-900 text-base">
+                                            <h3 className="font-semibold text-gray-900 text-base break-words">
                                                 {job.title || "Untitled Job"} ({job.url ? job.url.split('/').pop() : 'N/A'})
                                             </h3>
                                             <p className="text-sm text-blue-600 font-medium">{job.role_name || "N/A"}</p>
@@ -450,25 +466,25 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                         <div className="sm:ml-4">
                                             <span
                                                 className={`inline-block px-3 py-1 rounded-md text-xs font-semibold uppercase ${getStatusBadgeColor(
-                                                    job.status
+                                                    displayStatus
                                                 )}`}
                                             >
-                                                {job.status ? job.status.replace(/_/g, " ") : "N/A"}
+                                                {displayStatus ? displayStatus.replace(/_/g, " ") : "N/A"}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Match Score */}
-                                    <div className="mt-2 flex items-center gap-2">
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <span className="text-sm font-medium text-gray-700">Match Score: {job.score ?? 0}</span>
                                         <button className="text-blue-600 text-xs underline">Score Details</button>
                                     </div>
 
                                     {/* Location & Date Info */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
+                                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
                                         <div className="flex items-center gap-1">
                                             <MapPin size={14} />
-                                            <span>{job.location || "Location not specified"}</span>
+                                            <span className="break-words">{job.location || "Location not specified"}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <Calendar size={14} />
@@ -483,9 +499,9 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                 </div>
 
                                 {/* Status Dropdown & Action Button */}
-                                <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:min-w-[180px]">
+                                <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full sm:w-auto md:w-48">
                                     <select
-                                        value={job.status || "pending"}
+                                        value={displayStatus}
                                         onChange={(e) => handleStatusChange(index, e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                     >
@@ -503,7 +519,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                         }`}
                                     >
                                         <ExternalLink size={14} />
-                                        View Job
+                                        <span className="whitespace-nowrap">View Job</span>
                                     </button>
                                 </div>
                             </div>
