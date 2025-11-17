@@ -56,13 +56,19 @@ function App() {
     const { data: clientData, error: clientError } = await supabase
       .from('clients')
       .select('*')
-      .order('full_name', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (clientError) {
       console.error("Error loading clients:", clientError.message);
     } else {
+      // Convert string dates to Date objects
+      const processedClientData = (clientData || []).map(client => ({
+        ...client,
+        created_at: client.created_at ? new Date(client.created_at) : undefined,
+        update_at: client.update_at ? new Date(client.update_at) : undefined
+      }));
       // console.log("Clients:", clientData);
-      setClients(clientData || []);
+      setClients(processedClientData);
     }
 
     // 3. Get all ticket assignments
@@ -532,8 +538,7 @@ function App() {
       badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
-      update_at: new Date().toISOString(),
-      badge_value: clientData.badge_value || 0,
+      update_at: new Date().toISOString()
     });
 
 
@@ -1161,13 +1166,13 @@ function App() {
       }
 
       // Successfully onboarded, remove from pending list
-      // await supabase.from('pending_clients').delete().eq('id', client.id);
+      await supabase.from('pending_clients').delete().eq('id', client.id);
       
       // Refresh the pending clients list
       await fetchData();
       
       alert("Client successfully onboarded to secondary database!");
-      await supabase.from('pending_clients').delete().eq('id', pendingClientId);
+      await supabase.from('pending_clients').delete().eq('id', client.id);
       await fetchData();
     } catch (error) {
       console.error('Error making external API call:', error);
@@ -1301,9 +1306,16 @@ function App() {
 
   // Function to update a client
   const handleUpdateClient = async (updatedClient: Client) => {
+    // Convert string dates to Date objects in the updated client
+    const processedUpdatedClient = {
+      ...updatedClient,
+      created_at: updatedClient.created_at ? new Date(updatedClient.created_at as any) : undefined,
+      update_at: updatedClient.update_at ? new Date(updatedClient.update_at as any) : undefined
+    };
+    
     // Map through the clients array and update the client with the matching id
     setClients(clients.map(client =>
-      client.id === updatedClient.id ? updatedClient : client
+      client.id === updatedClient.id ? processedUpdatedClient : client
     ));
 
     await fetchData();
