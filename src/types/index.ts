@@ -92,6 +92,7 @@ export interface Client {
   mcq_results?: MCQResults | null;
   // New consolidated column
   test_results?: TestResult[] | null;
+  coding_lab_url?: string;
 }
 
 export interface Ticket {

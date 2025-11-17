@@ -1166,7 +1166,7 @@ function App() {
       }
 
       // Successfully onboarded, remove from pending list
-      // await supabase.from('pending_clients').delete().eq('id', client.id);
+      await supabase.from('pending_clients').delete().eq('id', client.id);
       
       // Refresh the pending clients list
       await fetchData();

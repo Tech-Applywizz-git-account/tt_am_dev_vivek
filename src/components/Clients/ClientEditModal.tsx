@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { User, Client } from "@/types";
-import { Building, FileText, Phone, X, User as UserIcon, Mail, Shield, Calendar, CreditCard, Book, MapPin, GraduationCap, Link } from 'lucide-react';
+import { User, Client, TestResult, MCQResults } from "@/types";
+import { Building, FileText, Phone, X, User as UserIcon, Mail, Shield, Calendar, CreditCard, Book, MapPin, GraduationCap, Link, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 
@@ -73,7 +73,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const [users, setUsers] = useState<User[]>([]);
   const [originalCAId, setOriginalCAId] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<'details' | 'assignments' | 'education' | 'employment' | 'background'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'assignments' | 'education' | 'employment' | 'background' | 'codinglab'>('details');
+  const [testResultsForm, setTestResultsForm] = useState<TestResult[]>([]);
 
   const isReadOnly = currentUserRole === "career_associate";
 
@@ -92,17 +93,24 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
       // Convert string dates to Date objects
       const processedClient = {
         ...client,
-        created_at: client.created_at && typeof client.created_at === 'string' 
-          ? new Date(client.created_at) 
+        created_at: client.created_at && typeof client.created_at === 'string'
+          ? new Date(client.created_at)
           : client.created_at,
-        update_at: client.update_at && typeof client.update_at === 'string' 
-          ? new Date(client.update_at) 
+        update_at: client.update_at && typeof client.update_at === 'string'
+          ? new Date(client.update_at)
           : client.update_at
       };
-      
+
       setForm(processedClient);
       setOriginalCAId(client.careerassociateid || "");
-      
+
+      // Load test results if available
+      if (client.test_results && Array.isArray(client.test_results)) {
+        setTestResultsForm(client.test_results);
+      } else {
+        setTestResultsForm([]);
+      }
+
       // Fetch additional client information
       fetchAdditionalClientInfo(client.id);
     }
@@ -114,7 +122,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
       .select("*")
       .eq("id", clientId)
       .single();
-      
+
     if (error) {
       console.error("Failed to fetch additional client information", error);
     } else {
@@ -124,13 +132,13 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!form?.full_name?.trim()) newErrors.full_name = "Full name is required";
-    if (!form?.personal_email?.trim()) newErrors.personal_email = "Personal email is required";
+    if (!form?.company_email?.trim()) newErrors.company_email = "Company email is required";
     if (!form?.whatsapp_number?.trim()) newErrors.whatsapp_number = "WhatsApp number is required";
     if (!form?.work_auth_details) newErrors.work_auth_details = "Work authorization is required";
     if (!form?.salary_range) newErrors.salary_range = "Salary range is required";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -138,7 +146,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const handleChange = (field: string, value: any) => {
     if (!form) return;
     setForm((prev: any) => ({ ...prev, [field]: value }));
-    
+
     // Clear error when field is updated
     if (errors[field]) {
       setErrors(prev => {
@@ -156,12 +164,12 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
 
   const handleSubmit = async () => {
     if (!form) return;
-    
+
     if (!validateForm()) {
       toast.error("Please fix validation errors before submitting");
       return;
     }
-    
+
     setLoading(true);
 
     // Check if Career Associate has changed
@@ -209,24 +217,27 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
       }
     }
 
-    // Update client information
+    // Update client information with test results
     const { error: clientError } = await supabase
       .from("clients")
-      .update({ ...form })
+      .update({ 
+        ...form,
+        test_results: testResultsForm.length > 0 ? testResultsForm : null
+      })
       .eq("id", client.id);
-      
+
     // Update additional client information
     let additionalInfoError = null;
     if (additionalInfo) {
       const { error } = await supabase
         .from("clients_additional_information")
-        .update({ ...additionalInfo, update_at: new Date().toISOString() })
+        .update({ ...additionalInfo, updated_at: new Date().toISOString() })
         .eq("id", client.id);
       additionalInfoError = error;
     }
 
     setLoading(false);
-    
+
     if (clientError || additionalInfoError) {
       toast.error('Error updating client: ' + (clientError?.message || additionalInfoError?.message));
     } else {
@@ -260,9 +271,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
           type={type}
           value={form[field] || ""}
           onChange={(e) => handleChange(field, e.target.value)}
-          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${
-            errors[field] ? 'border-red-500' : 'border-gray-300'
-          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${errors[field] ? 'border-red-500' : 'border-gray-300'
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
           disabled={isReadOnly}
           placeholder={`Enter ${label.toLowerCase()}`}
         />
@@ -304,9 +314,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
         <textarea
           value={form[field] || ""}
           onChange={(e) => handleChange(field, e.target.value)}
-          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${
-            errors[field] ? 'border-red-500' : 'border-gray-300'
-          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${errors[field] ? 'border-red-500' : 'border-gray-300'
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
           disabled={isReadOnly}
           placeholder={`Enter ${label.toLowerCase()}`}
           rows={3}
@@ -349,9 +358,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
         <select
           value={form[field] || ""}
           onChange={(e) => handleChange(field, e.target.value)}
-          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${
-            errors[field] ? 'border-red-500' : 'border-gray-300'
-          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white`}
+          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${errors[field] ? 'border-red-500' : 'border-gray-300'
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white`}
           disabled={isReadOnly}
         >
           <option value="">Select {label.toLowerCase()}</option>
@@ -378,8 +386,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
         {items && items.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {items.map((item, index) => (
-              <span 
-                key={index} 
+              <span
+                key={index}
                 className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
               >
                 {item}
@@ -407,9 +415,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
           type="date"
           value={form[field] ? form[field].split('T')[0] : ""}
           onChange={(e) => handleChange(field, e.target.value)}
-          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${
-            errors[field] ? 'border-red-500' : 'border-gray-300'
-          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          className={`w-full ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border ${errors[field] ? 'border-red-500' : 'border-gray-300'
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
           disabled={isReadOnly}
         />
       </div>
@@ -504,15 +511,15 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        
+
         {/* Modal Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Edit Client Profile</h2>
             <p className="text-sm text-gray-500 mt-1">Update client information and preferences</p>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             title="Close"
             aria-label="Close"
@@ -525,55 +532,61 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px overflow-x-auto">
             <button
-              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'details'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'details'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               onClick={() => setActiveTab('details')}
             >
               Personal Details
             </button>
             <button
-              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'assignments'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'assignments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               onClick={() => setActiveTab('assignments')}
             >
               Assigned Persons
             </button>
             <button
-              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'education'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'education'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               onClick={() => setActiveTab('education')}
             >
               Education & Skills
             </button>
             <button
-              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'employment'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'employment'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               onClick={() => setActiveTab('employment')}
             >
               Employment Info
             </button>
             <button
-              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'background'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'background'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               onClick={() => setActiveTab('background')}
             >
               Background Check
             </button>
+            {(currentUserRole === "ca_team_lead" || currentUserRole === "cro") && (
+              <button
+                className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'codinglab'
+                  ? 'border-yellow-500 text-yellow-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                onClick={() => setActiveTab('codinglab')}
+              >
+                Coding Lab
+              </button>
+            )}
           </nav>
         </div>
 
@@ -634,7 +647,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                 </div>
                 <div className="space-y-6">
                   {renderInput("Company Email", "company_email", "email", <Mail className="h-4 w-4 text-gray-400" />)}
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Work Authorization Details <Shield className="inline h-4 w-4 text-gray-400" />
@@ -648,9 +661,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                         value={form.work_auth_details}
                         onChange={(e) => handleChange("work_auth_details", e.target.value)}
                         disabled={isReadOnly}
-                        className={`w-full pl-10 pr-3 py-2 border ${
-                          errors.work_auth_details ? 'border-red-500' : 'border-gray-300'
-                        } rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors appearance-none bg-white`}
+                        className={`w-full pl-10 pr-3 py-2 border ${errors.work_auth_details ? 'border-red-500' : 'border-gray-300'
+                          } rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors appearance-none bg-white`}
                       >
                         <option value="">Select work authorization</option>
                         <option value="H1B Visa">H1B Visa</option>
@@ -672,14 +684,14 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                   <FileText className="h-5 w-5 text-orange-600" />
                   <h2 className="text-orange-800 font-semibold text-lg">Job & Location Preferences</h2>
                 </div>
-                
+
                 <div className="space-y-6">
                   {renderListDisplay(
-                    "Target Job Roles", 
-                    form.job_role_preferences, 
+                    "Target Job Roles",
+                    form.job_role_preferences,
                     <FileText className="h-4 w-4 text-gray-400 inline" />
                   )}
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Expected Salary Range *
@@ -689,9 +701,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                       value={form.salary_range}
                       onChange={(e) => handleChange("salary_range", e.target.value)}
                       disabled={isReadOnly}
-                      className={`w-full px-3 py-2 border ${
-                        errors.salary_range ? 'border-red-500' : 'border-gray-300'
-                      } rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors appearance-none bg-white`}
+                      className={`w-full px-3 py-2 border ${errors.salary_range ? 'border-red-500' : 'border-gray-300'
+                        } rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors appearance-none bg-white`}
                     >
                       <option value="">Select salary range</option>
                       <option value="$50,000 - $70,000">$50,000 - $70,000</option>
@@ -703,10 +714,10 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                     </select>
                     {errors.salary_range && <p className="mt-1 text-sm text-red-600">{errors.salary_range}</p>}
                   </div>
-                  
+
                   {renderListDisplay(
-                    "Preferred Locations", 
-                    form.location_preferences, 
+                    "Preferred Locations",
+                    form.location_preferences,
                     <Building className="h-4 w-4 text-gray-400 inline" />
                   )}
                 </div>
@@ -718,7 +729,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                   <Calendar className="h-5 w-5 text-gray-600" />
                   <h2 className="text-gray-800 font-semibold text-lg">Additional Details</h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {renderDateInput("Onboarding Date", "onboardingdate", <Calendar className="h-4 w-4 text-gray-400" />)}
                   {renderBooleanInput("Sponsorship Required", "sponsorship", <CreditCard className="h-4 w-4 text-gray-400" />)}
@@ -754,7 +765,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                   {renderDropdown("Scraper", "scraperid", "scraping_team", <UserIcon className="h-4 w-4 text-gray-400" />)}
                 </div>
               </div>
-              
+
               {/* Client Information Summary */}
               <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Client Information Summary</h3>
@@ -871,8 +882,8 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                       {additionalInfo?.add_ons_info && additionalInfo.add_ons_info.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {additionalInfo.add_ons_info.map((item, index) => (
-                            <span 
-                              key={index} 
+                            <span
+                              key={index}
                               className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
                             >
                               {item}
@@ -928,6 +939,385 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
           )}
         </div>
 
+        {/* Coding Lab Tab */}
+        {activeTab === "codinglab" &&
+          (currentUserRole === "ca_team_lead" ||
+            currentUserRole === "cro") && (
+            <div className="space-y-8">
+              {/* ================== START CODING LAB BLOCK ================== */}
+
+              <div className="bg-yellow-50 p-4 rounded border border-yellow-200">
+                <h2 className="text-yellow-700 font-semibold text-lg mb-3">
+                  🧪 Coding Lab Configuration
+                </h2>
+                <p className="text-sm text-yellow-600 mb-4">
+                  Configure coding lab environment and test results for this client
+                </p>
+
+                {/* Coding Lab URL Dropdown */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Coding Lab Environment *
+                  </label>
+
+                  <select
+                    value={form.coding_lab_url || ""}
+                    onChange={(e) => handleChange("coding_lab_url", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                    title="Coding Lab Environment"
+                  >
+                    <option value="">Select Environment</option>
+                    <option value="vivek">Vivek Environment</option>
+                    <option value="fe1">Frontend Lab 1 (FE1)</option>
+                    <option value="fe2">Frontend Lab 2 (FE2)</option>
+                    <option value="be1">Backend Lab 1 (BE1)</option>
+                    <option value="be2">Backend Lab 2 (BE2)</option>
+                    <option value="be3">Backend Lab 3 (BE3)</option>
+                    <option value="aml1">AML Analyst Lab 1 (AML1)</option>
+                    <option value="default">Default Environment</option>
+                  </select>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    {form.coding_lab_url
+                      ? `Currently assigned: ${form.coding_lab_url.toUpperCase()}`
+                      : "No environment assigned"}
+                  </p>
+                </div>
+
+                {/* ============= Test Results Form Builder ============= */}
+                <div className="border-t border-yellow-300 pt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-md font-semibold text-gray-800">
+                      Test/Contest Configuration
+                    </h3>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTestResultsForm([
+                          ...testResultsForm,
+                          {
+                            contestId: "",
+                            contestName: "",
+                            lab_id_1: null,
+                            lab_id_2: null,
+                            mcq_results: null,
+                          },
+                        ]);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Contest/Test
+                    </button>
+                  </div>
+
+                  {testResultsForm.length === 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                      <p className="text-gray-500">
+                        No test results configured. Click "Add Contest/Test" to create
+                        one.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Render each contest */}
+                  {testResultsForm.map((contest, contestIndex) => (
+                    <div
+                      key={contestIndex}
+                      className="bg-white border border-gray-300 rounded-lg p-4 mb-4"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-700">
+                          Contest {contestIndex + 1}
+                        </h4>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = testResultsForm.filter(
+                              (_, i) => i !== contestIndex
+                            );
+                            setTestResultsForm(updated);
+                          }}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Remove Contest"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Contest ID / Name / Lab IDs */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Contest ID */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Contest ID *
+                          </label>
+                          <input
+                            type="text"
+                            value={contest.contestId || ""}
+                            onChange={(e) => {
+                              const updated = [...testResultsForm];
+                              updated[contestIndex].contestId = e.target.value;
+                              setTestResultsForm(updated);
+                            }}
+                            placeholder="e.g., contest-fe-2024"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        {/* Contest Name */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Contest Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={contest.contestName || ""}
+                            onChange={(e) => {
+                              const updated = [...testResultsForm];
+                              updated[contestIndex].contestName = e.target.value;
+                              setTestResultsForm(updated);
+                            }}
+                            placeholder="e.g., Frontend Developer Assessment"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        {/* Lab ID 1 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Coding Lab 1 ID
+                          </label>
+                          <input
+                            type="text"
+                            value={contest.lab_id_1 || ""}
+                            onChange={(e) => {
+                              const updated = [...testResultsForm];
+                              updated[contestIndex].lab_id_1 = e.target.value || null;
+                              setTestResultsForm(updated);
+                            }}
+                            placeholder="e.g., 68d24a4a1295f90e0e22a041"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        {/* Lab ID 2 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Coding Lab 2 ID
+                          </label>
+                          <input
+                            type="text"
+                            value={contest.lab_id_2 || ""}
+                            onChange={(e) => {
+                              const updated = [...testResultsForm];
+                              updated[contestIndex].lab_id_2 = e.target.value || null;
+                              setTestResultsForm(updated);
+                            }}
+                            placeholder="e.g., 67890abcdef1234567890abc"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* MCQ RESULTS */}
+                      <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h5 className="text-sm font-semibold text-purple-700 mb-3">
+                          MCQ Test Results (Optional)
+                        </h5>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {/* Total Questions */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Total Questions
+                            </label>
+                            <input
+                              type="number"
+                              value={contest.mcq_results?.totalQuestions || ""}
+                              onChange={(e) => {
+                                const updated = [...testResultsForm];
+                                if (!updated[contestIndex].mcq_results)
+                                  updated[contestIndex].mcq_results = {
+                                    totalAttempted: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    notAttempted: 0,
+                                    points: 0,
+                                    totalQuestions: 0
+                                  };
+                                updated[contestIndex].mcq_results.totalQuestions =
+                                  parseInt(e.target.value) || 0;
+                                setTestResultsForm(updated);
+                              }}
+                              placeholder="20"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+
+                          {/* Total Attempted */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Total Attempted
+                            </label>
+                            <input
+                              type="number"
+                              value={contest.mcq_results?.totalAttempted || ""}
+                              onChange={(e) => {
+                                const updated = [...testResultsForm];
+                                if (!updated[contestIndex].mcq_results)
+                                  updated[contestIndex].mcq_results = {
+                                    totalAttempted: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    notAttempted: 0,
+                                    points: 0,
+                                    totalQuestions: 0
+                                  };
+                                updated[contestIndex].mcq_results.totalAttempted =
+                                  parseInt(e.target.value) || 0;
+                                setTestResultsForm(updated);
+                              }}
+                              placeholder="18"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+
+                          {/* Passed */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Passed
+                            </label>
+                            <input
+                              type="number"
+                              value={contest.mcq_results?.passed || ""}
+                              onChange={(e) => {
+                                const updated = [...testResultsForm];
+                                if (!updated[contestIndex].mcq_results)
+                                  updated[contestIndex].mcq_results = {
+                                    totalAttempted: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    notAttempted: 0,
+                                    points: 0,
+                                    totalQuestions: 0
+                                  };
+                                updated[contestIndex].mcq_results.passed =
+                                  parseInt(e.target.value) || 0;
+                                setTestResultsForm(updated);
+                              }}
+                              placeholder="15"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+
+                          {/* Failed */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Failed
+                            </label>
+                            <input
+                              type="number"
+                              value={contest.mcq_results?.failed || ""}
+                              onChange={(e) => {
+                                const updated = [...testResultsForm];
+                                if (!updated[contestIndex].mcq_results)
+                                  updated[contestIndex].mcq_results = {
+                                    totalAttempted: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    notAttempted: 0,
+                                    points: 0,
+                                    totalQuestions: 0
+                                  };
+                                updated[contestIndex].mcq_results.failed =
+                                  parseInt(e.target.value) || 0;
+                                setTestResultsForm(updated);
+                              }}
+                              placeholder="3"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+
+                          {/* Not Attempted */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Not Attempted
+                            </label>
+                            <input
+                              type="number"
+                              value={contest.mcq_results?.notAttempted || ""}
+
+                              onChange={(e) => {
+                                const updated = [...testResultsForm];
+                                if (!updated[contestIndex].mcq_results)
+                                  updated[contestIndex].mcq_results = {
+                                    totalAttempted: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    notAttempted: 0,
+                                    points: 0,
+                                    totalQuestions: 0
+                                  };
+                                updated[contestIndex].mcq_results.notAttempted =
+                                  parseInt(e.target.value) || 0;
+                                setTestResultsForm(updated);
+                              }}
+                              placeholder="2"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+
+                          {/* Points */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Points
+                            </label>
+                            <input
+                              type="number"
+                              value={contest.mcq_results?.points || ""}
+                              onChange={(e) => {
+                                const updated = [...testResultsForm];
+                                if (!updated[contestIndex].mcq_results)
+                                  updated[contestIndex].mcq_results = {
+                                    totalAttempted: 0,
+                                    passed: 0,
+                                    failed: 0,
+                                    notAttempted: 0,
+                                    points: 0,
+                                    totalQuestions: 0
+                                  };
+                                updated[contestIndex].mcq_results.points =
+                                  parseInt(e.target.value) || 0;
+                                setTestResultsForm(updated);
+                              }}
+                              placeholder="75"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Info Box */}
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-700">
+                    <strong>Note:</strong> Changes to coding lab configuration will
+                    affect which lab environment the client is redirected to when
+                    clicking the "Coding Lab" button.
+                  </p>
+                </div>
+              </div>
+
+              {/* ================== END CODING LAB BLOCK ================== */}
+            </div>
+          )}
+
+
         {/* Action Buttons */}
         <div className="p-6 border-t border-gray-200 sticky bottom-0 bg-white">
           <div className="flex justify-between items-center">
@@ -940,6 +1330,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                     else if (activeTab === 'education') setActiveTab('assignments');
                     else if (activeTab === 'employment') setActiveTab('education');
                     else if (activeTab === 'background') setActiveTab('employment');
+                    else if (activeTab === 'codinglab') setActiveTab('background');
                   }}
                 >
                   ← Back
