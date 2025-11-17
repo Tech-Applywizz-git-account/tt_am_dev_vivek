@@ -545,7 +545,6 @@ function App() {
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
-      badge_value: clientData.badge_value || 0,
     });
 
     if (insertError) {
@@ -1160,14 +1159,12 @@ function App() {
       }
 
       // Successfully onboarded, remove from pending list
-      // await supabase.from('pending_clients').delete().eq('id', client.id);
+      await supabase.from('pending_clients').delete().eq('id', client.id);
       
       // Refresh the pending clients list
       await fetchData();
       
       alert("Client successfully onboarded to secondary database!");
-      await supabase.from('pending_clients').delete().eq('id', pendingClientId);
-      await fetchData();
     } catch (error) {
       console.error('Error making external API call:', error);
       alert("Failed to onboard client to secondary database");
