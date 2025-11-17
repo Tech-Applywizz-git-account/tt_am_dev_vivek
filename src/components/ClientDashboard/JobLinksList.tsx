@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Calendar, MapPin, ExternalLink, Loader2, ChevronDown, ChevronUp, Briefcase } from "lucide-react";
 import { supabase } from '@/lib/supabaseClient';
+
 // ✅ Types
 interface Job {
     id?: string;
@@ -128,7 +129,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             const applywizzId = clientData.applywizz_id;
 
             // Now fetch the job links from the external API
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
@@ -271,7 +272,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
         try {
             // Get the API URL from environment variables
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL as string;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1 as string;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
@@ -405,7 +406,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow mt-6 overflow-x-hidden">
+        <div className="bg-white p-4 rounded-lg shadow mt-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
                 <h2 className="text-lg font-semibold">Job Applications</h2>
 
@@ -434,61 +435,57 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                     </div>
 
                     {viewMode === 'list' && (
-                        <div className="flex flex-col sm:flex-row gap-2 w-full flex-wrap">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <label htmlFor="date-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
                                     Filter by Date:
                                 </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="date"
-                                        id="date-filter"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
-                                    />
-                                    {selectedDate && (
-                                        <button
-                                            onClick={() => setSelectedDate("")}
-                                            className="text-sm text-red-600 hover:text-red-800 whitespace-nowrap"
-                                        >
-                                            Clear
-                                        </button>
-                                    )}
-                                </div>
+                                <input
+                                    type="date"
+                                    id="date-filter"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                                />
+                                {selectedDate && (
+                                    <button
+                                        onClick={() => setSelectedDate("")}
+                                        className="text-sm text-red-600 hover:text-red-800 whitespace-nowrap"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
                                     Filter by Status:
                                 </label>
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        id="status-filter"
-                                        value={selectedStatus}
-                                        onChange={(e) => setSelectedStatus(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                                <select
+                                    id="status-filter"
+                                    value={selectedStatus}
+                                    onChange={(e) => setSelectedStatus(e.target.value)}
+                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                                >
+                                    <option value="">All Statuses</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="already_applied">Already Applied</option>
+                                    <option value="not_relevant">Not Relevant</option>
+                                    <option value="job_not_found">Job Not Found</option>
+                                </select>
+                                {selectedStatus && (
+                                    <button
+                                        onClick={() => setSelectedStatus("")}
+                                        className="text-sm text-red-600 hover:text-red-800 whitespace-nowrap"
                                     >
-                                        <option value="">All Statuses</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
-                                        <option value="already_applied">Already Applied</option>
-                                        <option value="not_relevant">Not Relevant</option>
-                                        <option value="job_not_found">Job Not Found</option>
-                                    </select>
-                                    {selectedStatus && (
-                                        <button
-                                            onClick={() => setSelectedStatus("")}
-                                            className="text-sm text-red-600 hover:text-red-800 whitespace-nowrap"
-                                        >
-                                            Clear
-                                        </button>
-                                    )}
-                                </div>
+                                        Clear
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <label htmlFor="sort-order" className="text-sm font-medium text-gray-700 whitespace-nowrap">
                                     Sort:
                                 </label>
@@ -513,11 +510,11 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                 <div className="space-y-6">
                     <div className="mb-2">
                         <h3 className="text-base font-semibold mb-3">Task Summary</h3>
-                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2 overflow-x-auto pb-2">
+                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
                             {/* Total Tasks */}
                             <button
                                 onClick={() => setSelectedStatus('')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${!selectedStatus ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${!selectedStatus ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' : 'bg-gray-50 hover:bg-gray-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">{originalStatusCounts.total}</div>
                                 <div className="text-xs text-gray-600 mt-1">Total Tasks</div>
@@ -526,7 +523,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             {/* Pending */}
                             <button
                                 onClick={() => setSelectedStatus('pending')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${selectedStatus === 'pending' ? 'ring-2 ring-yellow-500 ring-offset-2 scale-105 bg-yellow-100' : 'bg-yellow-50 hover:bg-yellow-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'pending' ? 'ring-2 ring-yellow-500 ring-offset-2 scale-105 bg-yellow-100' : 'bg-yellow-50 hover:bg-yellow-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-yellow-700">{originalStatusCounts.pending}</div>
                                 <div className="text-xs text-yellow-700 mt-1">Pending</div>
@@ -535,7 +532,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             {/* In Progress */}
                             <button
                                 onClick={() => setSelectedStatus('in_progress')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${selectedStatus === 'in_progress' ? 'ring-2 ring-blue-500 ring-offset-2 scale-105 bg-blue-100' : 'bg-blue-50 hover:bg-blue-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'in_progress' ? 'ring-2 ring-blue-500 ring-offset-2 scale-105 bg-blue-100' : 'bg-blue-50 hover:bg-blue-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-blue-700">{originalStatusCounts.in_progress}</div>
                                 <div className="text-xs text-blue-700 mt-1">In Progress</div>
@@ -544,7 +541,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             {/* Completed */}
                             <button
                                 onClick={() => setSelectedStatus('completed')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${selectedStatus === 'completed' ? 'ring-2 ring-green-500 ring-offset-2 scale-105 bg-green-100' : 'bg-green-50 hover:bg-green-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'completed' ? 'ring-2 ring-green-500 ring-offset-2 scale-105 bg-green-100' : 'bg-green-50 hover:bg-green-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-green-700">{originalStatusCounts.completed}</div>
                                 <div className="text-xs text-green-700 mt-1">Completed</div>
@@ -553,16 +550,16 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             {/* Already Applied */}
                             <button
                                 onClick={() => setSelectedStatus('already_applied')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${selectedStatus === 'already_applied' ? 'ring-2 ring-purple-500 ring-offset-2 scale-105 bg-purple-100' : 'bg-purple-50 hover:bg-purple-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'already_applied' ? 'ring-2 ring-purple-500 ring-offset-2 scale-105 bg-purple-100' : 'bg-purple-50 hover:bg-purple-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-purple-700">{originalStatusCounts.already_applied}</div>
-                                <div className="text-xs text-purple-700 mt-1">Already Applied</div>
+                                <div className="text-xs text-purple-700 mt-1">Applied</div>
                             </button>
 
                             {/* Not Relevant */}
                             <button
                                 onClick={() => setSelectedStatus('not_relevant')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${selectedStatus === 'not_relevant' ? 'ring-2 ring-red-500 ring-offset-2 scale-105 bg-red-100' : 'bg-red-50 hover:bg-red-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'not_relevant' ? 'ring-2 ring-red-500 ring-offset-2 scale-105 bg-red-100' : 'bg-red-50 hover:bg-red-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-red-700">{originalStatusCounts.not_relevant}</div>
                                 <div className="text-xs text-red-700 mt-1">Not Relevant</div>
@@ -571,10 +568,10 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             {/* Job Not Found */}
                             <button
                                 onClick={() => setSelectedStatus('job_not_found')}
-                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 min-w-[100px] ${selectedStatus === 'job_not_found' ? 'ring-2 ring-orange-500 ring-offset-2 scale-105 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'job_not_found' ? 'ring-2 ring-orange-500 ring-offset-2 scale-105 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'}`}
                             >
                                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-orange-700">{originalStatusCounts.job_not_found}</div>
-                                <div className="text-xs text-orange-700 mt-1">Job Not Found</div>
+                                <div className="text-xs text-orange-700 mt-1">Not Found</div>
                             </button>
                         </div>
                     </div>
@@ -591,18 +588,19 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             return (
                                 <div
                                     key={`${job.url}-${index}`}
-                                    className="bg-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-start shadow-sm hover:shadow transition w-full overflow-hidden"
+                                    className="bg-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-start shadow-sm hover:shadow transition"
                                 >
                                     {/* Serial Number */}
                                     <div className="flex items-center justify-center bg-gray-100 rounded-full w-6 h-6 flex-shrink-0 mr-3 mb-2 md:mb-0">
                                         <span className="text-gray-700 font-medium text-xs">{serialNumber}</span>
                                     </div>
 
-                                    <div className="flex-1 mb-3 md:mb-0 min-w-0">
-                                        <h3 className="font-semibold text-gray-800 truncate">
-                                            {job.title || "Untitled Job"} ({job.url ? job.url.split('/').pop() : 'N/A'})
+                                    <div className="flex-1 mb-3 md:mb-0">
+                                        <h3 className="font-semibold text-gray-800">
+                                            {job.title || "Untitled Job"}
+                                             {/* ({job.url ? job.url.split('/').pop() : 'N/A'}) */}
                                         </h3>
-                                        <p className="text-sm text-blue-600 font-medium mt-1 truncate">{job.role_name || "N/A"}</p>
+                                        <p className="text-sm text-blue-600 font-medium mt-1">{job.role_name || "N/A"}</p>
                                         
                                         {/* Match Score */}
                                         <div className="flex flex-wrap gap-2 mt-2">
@@ -629,7 +627,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-auto">
+                                    <div className="flex flex-col sm:flex-row md:flex-col gap-2 min-w-[180px]">
                                         <div className="flex items-center justify-between md:justify-start gap-2">
                                             <span className="text-sm font-medium">Status:</span>
                                             <span
@@ -644,7 +642,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                             <select
                                                 value={displayStatus}
                                                 onChange={(e) => job.id && handleStatusChange(job.id, e.target.value)}
-                                                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full sm:w-auto"
+                                                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                                 disabled={!job.id}
                                             >
                                                 {statusOptions.map((option) => (
@@ -656,7 +654,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                             <button
                                                 onClick={() => job.url && window.open(job.url, '_blank')}
                                                 disabled={!job.url}
-                                                className={`flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} w-full sm:w-auto`}
+                                                className={`flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} w-full md:w-auto`}
                                             >
                                                 <ExternalLink size={14} />
                                                 <span className="whitespace-nowrap">View Job</span>
