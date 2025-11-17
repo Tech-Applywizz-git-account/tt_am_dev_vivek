@@ -533,9 +533,9 @@ function App() {
       careerassociatemanagerid: rolesData.careerassociatemanagerid,
       careerassociateid: rolesData.careerassociateid,
       scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376",
+      badge_value: clientData.badge_value,
       onboarded_by: currentUser!.id,
       sponsorship: clientData.sponsorship,
-      badge_value: clientData.badge_value,
       applywizz_id: clientData.applywizz_id,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString()
