@@ -510,68 +510,68 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                 <>
                     <div className="mb-6">
                         <h3 className="text-base font-semibold mb-3">Task Summary</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
+                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
                             {/* Total Tasks */}
                             <button
                                 onClick={() => setSelectedStatus('')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${!selectedStatus ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${!selectedStatus ? 'ring-2 ring-blue-500 ring-offset-2 scale-105' : 'bg-gray-50 hover:bg-gray-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-gray-900">{originalStatusCounts.total}</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">{originalStatusCounts.total}</div>
                                 <div className="text-xs text-gray-600 mt-1">Total Tasks</div>
                             </button>
 
                             {/* Pending */}
                             <button
                                 onClick={() => setSelectedStatus('pending')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${selectedStatus === 'pending' ? 'ring-2 ring-yellow-500 ring-offset-2 scale-105 bg-yellow-100' : 'bg-yellow-50 hover:bg-yellow-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'pending' ? 'ring-2 ring-yellow-500 ring-offset-2 scale-105 bg-yellow-100' : 'bg-yellow-50 hover:bg-yellow-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-yellow-700">{originalStatusCounts.pending}</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-yellow-700">{originalStatusCounts.pending}</div>
                                 <div className="text-xs text-yellow-700 mt-1">Pending</div>
                             </button>
 
                             {/* In Progress */}
                             <button
                                 onClick={() => setSelectedStatus('in_progress')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${selectedStatus === 'in_progress' ? 'ring-2 ring-blue-500 ring-offset-2 scale-105 bg-blue-100' : 'bg-blue-50 hover:bg-blue-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'in_progress' ? 'ring-2 ring-blue-500 ring-offset-2 scale-105 bg-blue-100' : 'bg-blue-50 hover:bg-blue-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-blue-700">{originalStatusCounts.in_progress}</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-blue-700">{originalStatusCounts.in_progress}</div>
                                 <div className="text-xs text-blue-700 mt-1">In Progress</div>
                             </button>
 
                             {/* Completed */}
                             <button
                                 onClick={() => setSelectedStatus('completed')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${selectedStatus === 'completed' ? 'ring-2 ring-green-500 ring-offset-2 scale-105 bg-green-100' : 'bg-green-50 hover:bg-green-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'completed' ? 'ring-2 ring-green-500 ring-offset-2 scale-105 bg-green-100' : 'bg-green-50 hover:bg-green-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-green-700">{originalStatusCounts.completed}</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-green-700">{originalStatusCounts.completed}</div>
                                 <div className="text-xs text-green-700 mt-1">Completed</div>
                             </button>
 
                             {/* Already Applied */}
                             <button
                                 onClick={() => setSelectedStatus('already_applied')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${selectedStatus === 'already_applied' ? 'ring-2 ring-purple-500 ring-offset-2 scale-105 bg-purple-100' : 'bg-purple-50 hover:bg-purple-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'already_applied' ? 'ring-2 ring-purple-500 ring-offset-2 scale-105 bg-purple-100' : 'bg-purple-50 hover:bg-purple-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-purple-700">{originalStatusCounts.already_applied}</div>
-                                <div className="text-xs text-purple-700 mt-1">Already Applied</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-purple-700">{originalStatusCounts.already_applied}</div>
+                                <div className="text-xs text-purple-700 mt-1">Applied</div>
                             </button>
 
                             {/* Not Relevant */}
                             <button
                                 onClick={() => setSelectedStatus('not_relevant')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${selectedStatus === 'not_relevant' ? 'ring-2 ring-red-500 ring-offset-2 scale-105 bg-red-100' : 'bg-red-50 hover:bg-red-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'not_relevant' ? 'ring-2 ring-red-500 ring-offset-2 scale-105 bg-red-100' : 'bg-red-50 hover:bg-red-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-red-700">{originalStatusCounts.not_relevant}</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-red-700">{originalStatusCounts.not_relevant}</div>
                                 <div className="text-xs text-red-700 mt-1">Not Relevant</div>
                             </button>
 
                             {/* Job Not Found */}
                             <button
                                 onClick={() => setSelectedStatus('job_not_found')}
-                                className={`rounded-lg p-3 text-center transition-all duration-200 ${selectedStatus === 'job_not_found' ? 'ring-2 ring-orange-500 ring-offset-2 scale-105 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'}`}
+                                className={`rounded-lg p-2 xs:p-3 text-center transition-all duration-200 ${selectedStatus === 'job_not_found' ? 'ring-2 ring-orange-500 ring-offset-2 scale-105 bg-orange-100' : 'bg-orange-50 hover:bg-orange-100'}`}
                             >
-                                <div className="text-xl sm:text-2xl font-bold text-orange-700">{originalStatusCounts.job_not_found}</div>
-                                <div className="text-xs text-orange-700 mt-1">Job Not Found</div>
+                                <div className="text-lg xs:text-xl sm:text-2xl font-bold text-orange-700">{originalStatusCounts.job_not_found}</div>
+                                <div className="text-xs text-orange-700 mt-1">Not Found</div>
                             </button>
                         </div>
                     </div>
@@ -587,10 +587,10 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             return (
                                 <div
                                     key={`${job.url}-${index}`}
-                                    className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+                                    className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition"
                                 >
                                     {/* Header Section with Serial Number */}
-                                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                                    <div className="flex flex-col md:flex-row md:items-start gap-4">
                                         {/* Serial Number */}
                                         <div className="flex items-center justify-center bg-gray-100 rounded-full w-8 h-8 flex-shrink-0">
                                             <span className="text-gray-700 font-medium text-sm">{serialNumber}</span>
@@ -602,11 +602,11 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                                     <h3 className="font-semibold text-gray-900 text-base break-words">
                                                         {job.title || "Untitled Job"} ({job.url ? job.url.split('/').pop() : 'N/A'})
                                                     </h3>
-                                                    <p className="text-sm text-blue-600 font-medium">{job.role_name || "N/A"}</p>
+                                                    <p className="text-sm text-blue-600 font-medium mt-1">{job.role_name || "N/A"}</p>
                                                 </div>
-                                                <div className="sm:ml-4">
+                                                <div className="mt-2 sm:mt-0">
                                                     <span
-                                                        className={`inline-block px-3 py-1 rounded-md text-xs font-semibold uppercase ${getStatusBadgeColor(
+                                                        className={`inline-block px-2 py-1 sm:px-3 sm:py-1 rounded-md text-xs font-semibold uppercase ${getStatusBadgeColor(
                                                             displayStatus
                                                         )}`}
                                                     >
@@ -644,7 +644,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                             <select
                                                 value={displayStatus}
                                                 onChange={(e) => job.id && handleStatusChange(job.id, e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                                className="w-full px-2 py-1 sm:px-3 sm:py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                                                 disabled={!job.id}
                                             >
                                                 {statusOptions.map((option) => (
@@ -656,7 +656,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                             <button
                                                 onClick={() => job.url && window.open(job.url, '_blank')}
                                                 disabled={!job.url}
-                                                className={`w-full flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                className={`w-full flex items-center justify-center gap-1 px-2 py-1 sm:px-3 sm:py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                     }`}
                                             >
                                                 <ExternalLink size={14} />
