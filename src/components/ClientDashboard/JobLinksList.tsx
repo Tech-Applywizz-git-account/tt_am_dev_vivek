@@ -129,7 +129,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             const applywizzId = clientData.applywizz_id;
 
             // Now fetch the job links from the external API
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
@@ -272,7 +272,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
         try {
             // Get the API URL from environment variables
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL as string;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1 as string;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
@@ -503,8 +503,11 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                     )}
                 </div>
             </div>
-            {/* Task Summary Section */}
+
+
+            {/* View Content Based on View Mode */}
             {viewMode === 'list' ? (
+                <>
                     <div className="mb-6">
                         <h3 className="text-base font-semibold mb-3">Task Summary</h3>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
@@ -571,110 +574,105 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                 <div className="text-xs text-orange-700 mt-1">Job Not Found</div>
                             </button>
                         </div>
-                    </div> ):(<></>
-            )
-        }
+                    </div>
+                    <div className="space-y-4">
+                        {filteredJobs.map((job, index) => {
+                            const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
+                            const overdue = isOverdue(job.date_posted);
+                            // Use 'pending' as default status only when status is null or undefined
+                            const displayStatus = job.status || 'pending';
+                            // Calculate serial number (1-based index)
+                            const serialNumber = index + 1;
 
-            {/* View Content Based on View Mode */}
-            {viewMode === 'list' ? (
-                // List View (Original UI) with Serial Numbers
-                <div className="space-y-4">
-                    {filteredJobs.map((job, index) => {
-                        const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
-                        const overdue = isOverdue(job.date_posted);
-                        // Use 'pending' as default status only when status is null or undefined
-                        const displayStatus = job.status || 'pending';
-                        // Calculate serial number (1-based index)
-                        const serialNumber = index + 1;
-
-                        return (
-                            <div
-                                key={`${job.url}-${index}`}
-                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
-                            >
-                                {/* Header Section with Serial Number */}
-                                <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                                    {/* Serial Number */}
-                                    <div className="flex items-center justify-center bg-gray-100 rounded-full w-8 h-8 flex-shrink-0">
-                                        <span className="text-gray-700 font-medium text-sm">{serialNumber}</span>
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-gray-900 text-base break-words">
-                                                    {job.title || "Untitled Job"} ({job.url ? job.url.split('/').pop() : 'N/A'})
-                                                </h3>
-                                                <p className="text-sm text-blue-600 font-medium">{job.role_name || "N/A"}</p>
-                                            </div>
-                                            <div className="sm:ml-4">
-                                                <span
-                                                    className={`inline-block px-3 py-1 rounded-md text-xs font-semibold uppercase ${getStatusBadgeColor(
-                                                        displayStatus
-                                                    )}`}
-                                                >
-                                                    {displayStatus ? displayStatus.replace(/_/g, " ") : "N/A"}
-                                                </span>
-                                            </div>
+                            return (
+                                <div
+                                    key={`${job.url}-${index}`}
+                                    className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+                                >
+                                    {/* Header Section with Serial Number */}
+                                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                                        {/* Serial Number */}
+                                        <div className="flex items-center justify-center bg-gray-100 rounded-full w-8 h-8 flex-shrink-0">
+                                            <span className="text-gray-700 font-medium text-sm">{serialNumber}</span>
                                         </div>
 
-                                        {/* Match Score */}
-                                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                                            <span className="text-sm font-medium text-gray-700">Match Score: {job.score ?? 0}</span>
-                                            {/* <button className="text-blue-600 text-xs underline">Score Details</button> */}
-                                        </div>
-
-                                        {/* Location & Date Info */}
-                                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
-                                            <div className="flex items-center gap-1">
-                                                <MapPin size={14} />
-                                                <span className="break-words">{job.location || "Location not specified"}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Calendar size={14} />
-                                                <span>Posted: {formattedDate}{daysAgo}</span>
-                                            </div>
-                                            {overdue && (
-                                                <div className="flex items-center gap-1 text-red-600">
-                                                    <span className="font-medium">(Overdue)</span>
+                                        <div className="flex-1">
+                                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-gray-900 text-base break-words">
+                                                        {job.title || "Untitled Job"} ({job.url ? job.url.split('/').pop() : 'N/A'})
+                                                    </h3>
+                                                    <p className="text-sm text-blue-600 font-medium">{job.role_name || "N/A"}</p>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                                <div className="sm:ml-4">
+                                                    <span
+                                                        className={`inline-block px-3 py-1 rounded-md text-xs font-semibold uppercase ${getStatusBadgeColor(
+                                                            displayStatus
+                                                        )}`}
+                                                    >
+                                                        {displayStatus ? displayStatus.replace(/_/g, " ") : "N/A"}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                                    {/* Status Dropdown & Action Button */}
-                                    <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full sm:w-auto md:w-48">
-                                        <select
-                                            value={displayStatus}
-                                            onChange={(e) => job.id && handleStatusChange(job.id, e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                            disabled={!job.id}
-                                        >
-                                            {statusOptions.map((option) => (
-                                                <option key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <button
-                                            onClick={() => job.url && window.open(job.url, '_blank')}
-                                            disabled={!job.url}
-                                            className={`w-full flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                }`}
-                                        >
-                                            <ExternalLink size={14} />
-                                            <span className="whitespace-nowrap">View Job</span>
-                                        </button>
+                                            {/* Match Score */}
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <span className="text-sm font-medium text-gray-700">Match Score: {job.score ?? 0}</span>
+                                                {/* <button className="text-blue-600 text-xs underline">Score Details</button> */}
+                                            </div>
+
+                                            {/* Location & Date Info */}
+                                            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
+                                                <div className="flex items-center gap-1">
+                                                    <MapPin size={14} />
+                                                    <span className="break-words">{job.location || "Location not specified"}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Calendar size={14} />
+                                                    <span>Posted: {formattedDate}{daysAgo}</span>
+                                                </div>
+                                                {overdue && (
+                                                    <div className="flex items-center gap-1 text-red-600">
+                                                        <span className="font-medium">(Overdue)</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Status Dropdown & Action Button */}
+                                        <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full sm:w-auto md:w-48">
+                                            <select
+                                                value={displayStatus}
+                                                onChange={(e) => job.id && handleStatusChange(job.id, e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                                disabled={!job.id}
+                                            >
+                                                {statusOptions.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={() => job.url && window.open(job.url, '_blank')}
+                                                disabled={!job.url}
+                                                className={`w-full flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    }`}
+                                            >
+                                                <ExternalLink size={14} />
+                                                <span className="whitespace-nowrap">View Job</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                </>
             ) : (
                 // Date-wise View (New UI) with Serial Numbers
                 <div>
-                   
+
 
                     <div className="space-y-3">
                         {groupedJobs.map((group) => {
