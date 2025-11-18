@@ -575,7 +575,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             </button>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-4">
                         {filteredJobs.map((job, index) => {
                             const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
@@ -598,10 +598,12 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                     <div className="flex-1 mb-3 md:mb-0">
                                         <h3 className="font-semibold text-gray-800">
                                             {job.title || "Untitled Job"}
-                                             {/* ({job.url ? job.url.split('/').pop() : 'N/A'}) */}
+                                            {/* ({job.url ? job.url.split('/').pop() : 'N/A'}) */}
                                         </h3>
                                         <p className="text-sm text-blue-600 font-medium mt-1">{job.role_name || "N/A"}</p>
-                                        
+                                        <p className="text-sm text-gray-600 mt-2">
+                                            Company Name :{job.company || "Unknown Company"}
+                                        </p>
                                         {/* Match Score */}
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
@@ -738,7 +740,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                                                 </span>
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-2">
-                                                                {job.company || "Unknown Company"}
+                                                                Company Name :{job.company || "Unknown Company"}
                                                             </p>
                                                             <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
                                                                 <MapPin size={14} />
