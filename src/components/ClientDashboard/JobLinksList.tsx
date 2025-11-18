@@ -602,7 +602,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                         </h3>
                                         <p className="text-sm text-blue-600 font-medium mt-1">{job.role_name || "N/A"}</p>
                                         <p className="text-sm text-gray-600 mt-2">
-                                            Company Name :{job.company || "Unknown Company"}
+                                            Company Name : {job.company || "Unknown Company"}
                                         </p>
                                         {/* Match Score */}
                                         <div className="flex flex-wrap gap-2 mt-2">
@@ -740,7 +740,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                                                 </span>
                                                             </div>
                                                             <p className="text-sm text-gray-600 mt-2">
-                                                                Company Name :{job.company || "Unknown Company"}
+                                                                Company Name : {job.company || "Unknown Company"}
                                                             </p>
                                                             <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
                                                                 <MapPin size={14} />
