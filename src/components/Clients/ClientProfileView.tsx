@@ -4,6 +4,7 @@ import { User, Client, TestResult } from "@/types";
 import { Building, FileText, Phone, X, User as UserIcon, Mail, Shield, Calendar, CreditCard, Book, MapPin, GraduationCap, Link, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
+
 interface ClientAdditionalInfo {
   id: string;
   created_at?: string;
