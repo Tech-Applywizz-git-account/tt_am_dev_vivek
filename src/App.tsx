@@ -15,6 +15,7 @@ import { CSTicketEditModal } from './components/Tickets/CallSupport/CSTicketEdit
 import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModal';
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
+import { ClientProfileView } from './components/Clients/ClientProfileView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
@@ -162,6 +163,8 @@ function App() {
   const [isTicketEditModalOpen, setIsTicketEditModalOpen] = useState(false);
   // State to store whether the client edit modal is open
   const [isClientEditModalOpen, setIsClientEditModalOpen] = useState(false);
+  // State to store whether the client profile view modal is open
+  const [isClientProfileViewOpen, setIsClientProfileViewOpen] = useState(false);
 
   const [assignments, setAssignments] = useState<Record<string, AssignedUser[]>>({});
 
@@ -1386,6 +1389,14 @@ function App() {
     const stats = getDashboardStats();
 
     switch (activeView) {
+      case 'profile':
+        // For profile view, we show the profile modal, so we don't need to render anything in the main content
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold text-gray-900">My Profile</h2>
+            <p className="text-gray-600 mt-2">Please click on "View Profile" in the sidebar to see your profile information.</p>
+          </div>
+        );
       case 'dashboard':
         const isExecutive = currentUser && ['ceo', 'coo', 'cro'].includes(currentUser.role);
 
@@ -2071,7 +2082,13 @@ function App() {
                   <AppLayout
                     currentUser={currentUser}
                     activeView={activeView}
-                    setActiveView={setActiveView}
+                    setActiveView={(view) => {
+                      if (view === 'profile') {
+                        setIsClientProfileViewOpen(true);
+                      } else {
+                        setActiveView(view);
+                      }
+                    }}
                     renderMainContent={renderMainContent}
                     renderTicketEditModal={renderTicketEditModal}
                     isCreateTicketModalOpen={isCreateTicketModalOpen}
@@ -2080,6 +2097,8 @@ function App() {
                     setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
                     isClientEditModalOpen={isClientEditModalOpen}
                     setIsClientEditModalOpen={setIsClientEditModalOpen}
+                    isClientProfileViewOpen={isClientProfileViewOpen}
+                    setIsClientProfileViewOpen={setIsClientProfileViewOpen}
                     isUserManagementModalOpen={isUserManagementModalOpen}
                     setIsUserManagementModalOpen={setIsUserManagementModalOpen}
                     selectedTicket={selectedTicket}
@@ -2100,6 +2119,11 @@ function App() {
                     labId={selectedLabId}
                     isOpen={isLabResultsModalOpen}
                     onClose={() => setIsLabResultsModalOpen(false)}        
+                  />
+                  <ClientProfileView
+                    currentUser={currentUser}
+                    isOpen={isClientProfileViewOpen}
+                    onClose={() => setIsClientProfileViewOpen(false)}
                   />
                 </ProtectedRoute>
               }
