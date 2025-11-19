@@ -967,13 +967,21 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                     title="Coding Lab Environment"
                   >
                     <option value="">Select Environment</option>
-                    <option value="vivek">Vivek Environment</option>
+                    <option value="aml1">AML Analyst Lab 1 (AML1)</option>
+                    <option value="sde1">Software Engineer 1 (SDE1)</option>
+                    <option value="sde2">Software Engineer 2 (SDE2)</option>
+                    <option value="da1">Data Analyst 1 (DA1)</option>
+                    <option value="da2">Data Analyst 2 (DA2)</option>
+                    <option value="de2">Data Engineer 2 (DE2)</option>
+                    <option value="bie2">Business Intelligence Engineer 2 (BIE2)</option>
+                    <option value="ba2">Business Analyst 2 (BA2)</option>
+                    <option value="ds1">Data Scientist 1 (DS1)</option>
                     <option value="fe1">Frontend Lab 1 (FE1)</option>
                     <option value="fe2">Frontend Lab 2 (FE2)</option>
                     <option value="be1">Backend Lab 1 (BE1)</option>
                     <option value="be2">Backend Lab 2 (BE2)</option>
                     <option value="be3">Backend Lab 3 (BE3)</option>
-                    <option value="aml1">AML Analyst Lab 1 (AML1)</option>
+                    <option value="vivek">Vivek Environment</option>
                     <option value="default">Default Environment</option>
                   </select>
 
