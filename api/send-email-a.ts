@@ -16,6 +16,7 @@ interface TokenResponse {
 }
 
 interface EmailAttachment {
+  '@odata.type': string;
   name: string;
   contentType: string;
   contentBytes: string;
