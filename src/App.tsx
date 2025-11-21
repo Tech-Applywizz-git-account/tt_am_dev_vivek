@@ -496,6 +496,7 @@ function App() {
       
       // Prepare attachment data
       const attachmentData = {
+        '@odata.type': '#microsoft.graph.fileAttachment',
         name: attachmentFile.name,
         contentType: attachmentFile.type || 'application/octet-stream',
         contentBytes: base64File.split(',')[1] // Remove data URL prefix
