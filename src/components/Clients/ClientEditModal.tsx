@@ -968,6 +968,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                   >
                     <option value="">Select Environment</option>
                     <option value="aml1">AML Analyst Lab 1 (AML1)</option>
+                    <option value="aml3">AML Analyst Lab 2 (AML3)</option>
                     <option value="sde1">Software Engineer 1 (SDE1)</option>
                     <option value="sde2">Software Engineer 2 (SDE2)</option>
                     <option value="da1">Data Analyst 1 (DA1)</option>

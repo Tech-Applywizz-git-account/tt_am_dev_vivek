@@ -32,6 +32,10 @@ const ENVIRONMENTS = {
     productId: '68df98d58c6253ef47a720c3',
     contestUrl: 'https://careerbadge.apply-wizz.com/contest/pond-pound'
   },
+  aml3:{
+    productId: '691c6ce659f2b0a289b65a5f',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/sunlight-back'
+  },
   da1: {
     productId: '69132c01c37ccc70afb5687d',
     contestUrl: 'https://careerbadge.apply-wizz.com/contest/actually-equipment'
