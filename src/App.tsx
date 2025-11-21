@@ -183,6 +183,13 @@ function App() {
   const [emailMessage, setEmailMessage] = useState('');
   const [isEmailSent, setIsEmailSent] = useState(false);
 
+    // New state variables for email with attachment
+  const [isSendMailWithAttachmentModalOpen, setIsSendMailWithAttachmentModalOpen] = useState(false);
+  const [emailToAttachment, setEmailToAttachment] = useState('vivek@applywizz.com');
+  const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject with Attachment');
+  const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -472,6 +479,94 @@ function App() {
       setIsSendMailModalOpen(false);
       setIsEmailSent(false);
     }, 2000);
+  };
+
+  // New handler for sending email with attachment
+  const handleSendEmailWithAttachment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!attachmentFile) {
+      alert('Please select a file to attach');
+      return;
+    }
+    
+    try {
+      // Convert file to base64
+      const base64File = await fileToBase64(attachmentFile);
+      
+      // Prepare attachment data
+      const attachmentData = {
+        name: attachmentFile.name,
+        contentType: attachmentFile.type || 'application/octet-stream',
+        contentBytes: base64File.split(',')[1] // Remove data URL prefix
+      };
+      
+      // Send email with attachment using the send-email-a API
+      const response = await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email-a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: emailToAttachment,
+          subject: emailSubjectAttachment,
+          htmlBody: `
+            <html>
+              <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
+                <div style="text-align:center; margin-bottom:20px;">
+                  <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
+                       alt="ApplyWizz Logo" 
+                       style="width:150px;"/>
+                </div>
+                <h2 style="color:#1E90FF;">Hi there,</h2>
+                <p>${emailMessageAttachment}</p>
+                <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
+                <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
+                <hr style="border:none;border-top:1px solid #eee;" />
+                <p style="font-size:12px;color:#777;">This is an automated message. Please do not reply to this email.</p>
+              </body>
+            </html>
+          `,
+          attachments: [attachmentData]
+        })
+      });
+      
+      if (response.ok) {
+        setIsEmailSent(true);
+        // Reset form after submission
+        setEmailToAttachment('vivek@applywizz.com');
+        setEmailSubjectAttachment('Response form Applywizz Ticketing Tool');
+        setEmailMessageAttachment('');
+        setAttachmentFile(null);
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setIsSendMailWithAttachmentModalOpen(false);
+          setIsEmailSent(false);
+        }, 2000);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to send email: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending email with attachment:', error);
+      alert('Failed to send email with attachment. Please try again.');
+    }
+  };
+  
+  // Helper function to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+  
+  // Handler for file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setAttachmentFile(e.target.files[0]);
+    }
   };
 
   const handleCreateTicket = async (ticketData: any) => {
@@ -1327,7 +1422,7 @@ function App() {
     // Map through the users array and return a new array with the user with cthe given userId updated with the new userData
     setUsers(users.map(user =>
       user.id === userId ? { ...user, ...userData } : user
-    )); ``
+    ));
   };
   // const createdbyUser = users.find(u => u.id === ticket.createdby);
   // Function to handle deleting a user
@@ -1403,6 +1498,17 @@ function App() {
                       <Mail className="h-5 w-5" />
                       <span>Send mail</span>
                     </button>
+
+                    {/* New Send Mail with Attachment Button */}
+                    <button
+                      onClick={() => setIsSendMailWithAttachmentModalOpen(true)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Mail className="h-5 w-5" />
+                      <span>Send mail with attachment</span>
+                    </button>
+                    
+                    {/* Existing Send Mail Modal */}
                     
                     {/* Send Mail Modal */}
                     {isSendMailModalOpen && (
@@ -1475,6 +1581,111 @@ function App() {
                                 <button
                                   type="submit"
                                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                                >
+                                  Send Email
+                                </button>
+                              </div>
+                            </form>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {/* New Send Mail with Attachment Modal */}
+                    {isSendMailWithAttachmentModalOpen && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                          <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold">Send Email with Attachment</h2>
+                            <button 
+                              onClick={() => {
+                                setIsSendMailWithAttachmentModalOpen(false);
+                                setAttachmentFile(null);
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          
+                          {isEmailSent ? (
+                            <div className="text-center py-4">
+                              <p className="text-green-600 font-medium">Email sent successfully!</p>
+                            </div>
+                          ) : (
+                            <form onSubmit={handleSendEmailWithAttachment}>
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  To
+                                </label>
+                                <input
+                                  type="email"
+                                  value={emailToAttachment}
+                                  onChange={(e) => setEmailToAttachment(e.target.value)}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Subject
+                                </label>
+                                <input
+                                  type="text"
+                                  value={emailSubjectAttachment}
+                                  onChange={(e) => setEmailSubjectAttachment(e.target.value)}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Message
+                                </label>
+                                <textarea
+                                  value={emailMessageAttachment}
+                                  onChange={(e) => setEmailMessageAttachment(e.target.value)}
+                                  rows={4}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Enter your message here..."
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Attachment
+                                </label>
+                                <input
+                                  type="file"
+                                  onChange={handleFileChange}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                {attachmentFile && (
+                                  <p className="text-sm text-gray-500 mt-1">Selected: {attachmentFile.name}</p>
+                                )}
+                              </div>
+                              
+                              <div className="flex justify-end space-x-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSendMailWithAttachmentModalOpen(false);
+                                    setAttachmentFile(null);
+                                  }}
+                                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  disabled={!attachmentFile}
+                                  className={`px-4 py-2 text-white rounded-md transition-colors ${
+                                    !attachmentFile 
+                                      ? 'bg-gray-400 cursor-not-allowed' 
+                                      : 'bg-blue-600 hover:bg-blue-700'
+                                  }`}
                                 >
                                   Send Email
                                 </button>
