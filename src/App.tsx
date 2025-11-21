@@ -186,7 +186,7 @@ function App() {
     // New state variables for email with attachment
   const [isSendMailWithAttachmentModalOpen, setIsSendMailWithAttachmentModalOpen] = useState(false);
   const [emailToAttachment, setEmailToAttachment] = useState('vivek@applywizz.com');
-  const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject with Attachment');
+  const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject');
   const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
@@ -449,19 +449,15 @@ function App() {
         to: emailTo,
         subject: emailSubject,
         htmlBody: `
-            <html>
+             <html>
               <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
                 <div style="text-align:center; margin-bottom:20px;">
                   <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
                        alt="ApplyWizz Logo" 
                        style="width:150px;"/>
                 </div>
-                <h2 style="color:#1E90FF;">Hi Saketh Narla (saketh.tech01@gmail.com),</h2>
-                <p>${emailMessage}</p>
-                <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
-                <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
-                <hr style="border:none;border-top:1px solid #eee;" />
-                <p style="font-size:12px;color:#777;">This is an automated message. Please do not reply to this email.</p>
+                <p>${emailMessage}</p>               
+                <p>Best regards,<br/> <strong>ApplyWizz Support Team.</strong></p> 
               </body>
             </html>
           `
@@ -510,19 +506,15 @@ function App() {
           to: emailToAttachment,
           subject: emailSubjectAttachment,
           htmlBody: `
-            <html>
+             <html>
               <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
                 <div style="text-align:center; margin-bottom:20px;">
                   <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
                        alt="ApplyWizz Logo" 
                        style="width:150px;"/>
                 </div>
-                <h2 style="color:#1E90FF;">Hi there,</h2>
-                <p>${emailMessageAttachment}</p>
-                <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
-                <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
-                <hr style="border:none;border-top:1px solid #eee;" />
-                <p style="font-size:12px;color:#777;">This is an automated message. Please do not reply to this email.</p>
+                <p>${emailMessageAttachment}</p>                
+                <p>Best regards,<br/> <strong>ApplyWizz Support Team.</strong></p> 
               </body>
             </html>
           `,
@@ -1490,7 +1482,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
-                {currentUser?.role === 'system_admin' && (
+                { ['ceo', 'coo', 'cro','system_admin','ca_team_lead','resume_team_head'].includes(currentUser.role) && (
                   <>
                     <button
                       onClick={() => setIsSendMailModalOpen(true)}
