@@ -712,6 +712,7 @@ function App() {
           // Map visa types to work auth values
           switch (visaType) {
             case "OPT":
+              return "F1";
             case "CPT":
               return "F1";
             case "H4 EAD":
