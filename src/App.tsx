@@ -459,12 +459,8 @@ function App() {
                        alt="ApplyWizz Logo" 
                        style="width:150px;"/>
                 </div>
-                <h2 style="color:#1E90FF;">Hi Saketh Narla (saketh.tech01@gmail.com),</h2>
-                <p>${emailMessage}</p>
-                <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
-                <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
-                <hr style="border:none;border-top:1px solid #eee;" />
-                <p style="font-size:12px;color:#777;">This is an automated message. Please do not reply to this email.</p>
+                <p>${emailMessage}</p>               
+                <p>Best regards,<br/> <strong>ApplyWizz Support Team.</strong></p> 
               </body>
             </html>
           `
@@ -499,6 +495,7 @@ function App() {
       
       // Prepare attachment data
       const attachmentData = {
+        '@odata.type': '#microsoft.graph.fileAttachment',
         name: attachmentFile.name,
         contentType: attachmentFile.type || 'application/octet-stream',
         contentBytes: base64File.split(',')[1] // Remove data URL prefix
@@ -519,12 +516,8 @@ function App() {
                        alt="ApplyWizz Logo" 
                        style="width:150px;"/>
                 </div>
-                <h2 style="color:#1E90FF;">Hi there,</h2>
-                <p>${emailMessageAttachment}</p>
-                <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
-                <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
-                <hr style="border:none;border-top:1px solid #eee;" />
-                <p style="font-size:12px;color:#777;">This is an automated message. Please do not reply to this email.</p>
+                <p>${emailMessageAttachment}</p>                
+                <p>Best regards,<br/> <strong>ApplyWizz Support Team.</strong></p> 
               </body>
             </html>
           `,

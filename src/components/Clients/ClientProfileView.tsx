@@ -68,7 +68,7 @@ export function ClientProfileView({ currentUser, isOpen, onClose }: Props) {
   const [form, setForm] = useState<Client | null>(null);
   const [additionalInfo, setAdditionalInfo] = useState<ClientAdditionalInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'assignments' | 'education' | 'employment' | 'background' | 'codinglab'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'assignments' | 'education' | 'employment' | 'background' | 'codinglab' | 'resume'>('details');
   const [testResultsForm, setTestResultsForm] = useState<TestResult[]>([]);
 
   useEffect(() => {
@@ -338,6 +338,15 @@ export function ClientProfileView({ currentUser, isOpen, onClose }: Props) {
             >
               Background Check
             </button>
+            <button
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'resume'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              onClick={() => setActiveTab('resume')}
+            >
+              Resume
+            </button>
           </nav>
         </div>
 
@@ -475,7 +484,7 @@ export function ClientProfileView({ currentUser, isOpen, onClose }: Props) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {renderReadOnlyDateInput("Onboarding Date", form.onboardingdate, <Calendar className="h-4 w-4 text-gray-400" />)}
-                  {renderReadOnlyBooleanInput("Sponsorship Required", form.sponsorship, <CreditCard className="h-4 w-4 text-gray-400" />)}
+                  {renderReadOnlyField("Sponsorship Required", form.sponsorship, <CreditCard className="h-4 w-4 text-gray-400" />)}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
                     <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
@@ -597,7 +606,7 @@ export function ClientProfileView({ currentUser, isOpen, onClose }: Props) {
                       )}
                     </div>
                   </div>
-                  {renderAdditionalInfoReadOnlyField("Resume URL", additionalInfo?.resume_url, <Link className="h-4 w-4 text-gray-400" />)}
+
                 </div>
               </div>
             </div>
@@ -635,6 +644,54 @@ export function ClientProfileView({ currentUser, isOpen, onClose }: Props) {
                   {renderAdditionalInfoReadOnlyField("Disability Status", additionalInfo?.disability_status, <UserIcon className="h-4 w-4 text-gray-400" />)}
                   {renderReadOnlyBooleanInput("Has Relatives in Company", additionalInfo?.has_relatives_in_company, <UserIcon className="h-4 w-4 text-gray-400" />)}
                   {renderAdditionalInfoReadOnlyTextarea("Relatives Details", additionalInfo?.relatives_details, <UserIcon className="h-4 w-4 text-gray-400" />)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resume Tab */}
+          {activeTab === 'resume' && (
+            <div className="space-y-8">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 shadow-sm">
+                <div className="flex items-center space-x-2 mb-4">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-blue-800 font-semibold text-lg">Resume Information</h2>
+                </div>
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Resume Document</label>
+                    {additionalInfo?.resume_url ? (
+                      <div className="flex items-center p-4 border border-blue-200 rounded-lg bg-white shadow-sm">
+                        <div className="p-3 bg-blue-50 rounded-full mr-4">
+                          <FileText className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0 mr-4">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {additionalInfo.resume_url.split('/').pop() || 'Resume.pdf'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {additionalInfo.resume_url}
+                          </p>
+                        </div>
+                        <a
+                          href={additionalInfo.resume_url.startsWith('http')
+                            ? additionalInfo.resume_url
+                            : `https://applywizz-prod.s3.us-east-2.amazonaws.com/${additionalInfo.resume_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                        >
+                          <Link className="h-4 w-4 mr-2" />
+                          View Resume
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                        <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-500">No resume available</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

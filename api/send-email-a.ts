@@ -15,6 +15,7 @@ interface TokenResponse {
 }
 
 interface EmailAttachment {
+  '@odata.type': string;
   name: string;
   contentType: string;
   contentBytes: string;
@@ -39,6 +40,7 @@ async function getAccessToken() {
 // Send email
 async function sendEmail(to: string, subject: string, htmlBody: string, attachments?: EmailAttachment[]) {
   const token = await getAccessToken();
+  
   const payload = {
     message: {
       subject,

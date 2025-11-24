@@ -82,7 +82,7 @@ export interface Client {
   careerassociateid: string;
   scraperid: string;
   visa_type: string;
-  sponsorship: string;
+  sponsorship: boolean;
   applywizz_id: string;
   badge_value?: number;
   onboardingdate?: string;
