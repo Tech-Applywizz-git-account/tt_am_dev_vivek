@@ -1,0 +1,21 @@
+// {
+//   "files": [],
+//   "references": [
+//     { "path": "./tsconfig.app.json" },
+//     { "path": "./tsconfig.node.json" }
+//   ]
+// }
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "module": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "jsx": "react-jsx" ,
+    "paths": {
+      "@/*": ["*"]
+    }
+  },
+  "include": ["src","vite-env.d.ts"]
+}
