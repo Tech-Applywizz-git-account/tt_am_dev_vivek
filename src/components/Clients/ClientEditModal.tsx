@@ -977,6 +977,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                     <option value="bie2">Business Intelligence Engineer 2 (BIE2)</option>
                     <option value="ba2">Business Analyst 2 (BA2)</option>
                     <option value="ds1">Data Scientist 1 (DS1)</option>
+                    <option value="wda2">WorkDay Analyst 2 (WDA2)</option>
                     <option value="fe1">Frontend Lab 1 (FE1)</option>
                     <option value="fe2">Frontend Lab 2 (FE2)</option>
                     <option value="be1">Backend Lab 1 (BE1)</option>

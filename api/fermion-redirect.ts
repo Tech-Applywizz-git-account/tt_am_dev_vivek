@@ -68,6 +68,10 @@ const ENVIRONMENTS = {
     productId: '691acb48a0afbf8f08573758',
     contestUrl: 'https://careerbadge.apply-wizz.com/contest/history-several'
   },
+  wda2: {
+    productId: '69269b0e7d219b8d2cce7178',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/some-independent'
+  },
   //default
   default: {
     productId: '68d24a4a1295f90e0e22a041',
