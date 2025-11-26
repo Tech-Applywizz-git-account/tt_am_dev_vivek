@@ -4,7 +4,6 @@ import { Sidebar } from './Sidebar';
 import { CreateTicketModal } from '../Tickets/Shared/CreateTicketModal';
 import { ClientOnboardingModal } from '../Clients/ClientOnboardingModal';
 import { ClientEditModal } from '../Clients/ClientEditModal';
-import { ClientProfileView } from '../Clients/ClientProfileView';
 import { UserManagementModal } from '../Admin/UserManagementModal';
 import { VLTicketEditModal } from '../Tickets/VolumeShortfall/VLTicketEditModal';
 import { RUTicketEditModal } from '../Tickets/ResumeUpdate/RUTicketEditModel';
@@ -22,8 +21,6 @@ interface Props {
   setIsClientOnboardingModalOpen: (val: boolean) => void;
   isClientEditModalOpen: boolean;
   setIsClientEditModalOpen: (val: boolean) => void;
-  isClientProfileViewOpen: boolean;
-  setIsClientProfileViewOpen: (val: boolean) => void;
   isUserManagementModalOpen: boolean;
   setIsUserManagementModalOpen: (val: boolean) => void;
   selectedTicket: Ticket | null;
@@ -52,8 +49,6 @@ const AppLayout: React.FC<Props> = ({
   setIsClientOnboardingModalOpen,
   isClientEditModalOpen,
   setIsClientEditModalOpen,
-  isClientProfileViewOpen,
-  setIsClientProfileViewOpen,
   isUserManagementModalOpen,
   setIsUserManagementModalOpen,
   selectedTicket,
@@ -116,12 +111,6 @@ const AppLayout: React.FC<Props> = ({
           setSelectedClient(null);
         }}
         onSubmit={handleUpdateClient}
-      />
-
-      <ClientProfileView
-        currentUser={currentUser}
-        isOpen={isClientProfileViewOpen}
-        onClose={() => setIsClientProfileViewOpen(false)}
       />
 
       <UserManagementModal
