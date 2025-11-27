@@ -171,7 +171,7 @@ function App() {
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
-  
+
   // Client dashboard data
   const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
   const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
@@ -183,7 +183,7 @@ function App() {
   const [emailMessage, setEmailMessage] = useState('');
   const [isEmailSent, setIsEmailSent] = useState(false);
 
-    // New state variables for email with attachment
+  // New state variables for email with attachment
   const [isSendMailWithAttachmentModalOpen, setIsSendMailWithAttachmentModalOpen] = useState(false);
   const [emailToAttachment, setEmailToAttachment] = useState('vivek@applywizz.com');
   const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject');
@@ -313,21 +313,22 @@ function App() {
   useEffect(() => {
     const fetchClientJobLinksStatus = async () => {
       if (!currentUser?.email || currentUser?.role !== 'client') return;
-      
+
       try {
         const { data, error } = await supabase
           .from('clients')
           .select('opted_job_links')
-          .eq('company_email', currentUser.email)
-          .single();
-          
+          .eq('company_email', currentUser.email);
+
         if (error) {
           console.error('Error fetching opted_job_links:', error);
           return;
         }
-        
-        if (data) {
-          setOptedJobLinks(data.opted_job_links || false);
+
+        if (data && data.length > 0) {
+          // Check if any of the client accounts have opted for job links
+          const hasOpted = data.some(client => client.opted_job_links);
+          setOptedJobLinks(hasOpted);
         }
       } catch (err) {
         console.error('Failed to fetch client job links status:', err);
@@ -354,21 +355,24 @@ function App() {
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
           .select('applywizz_id,opted_job_links')
-          .eq('company_email', currentUser.email)
-          .single();
+          .eq('company_email', currentUser.email);
 
         if (clientError) {
           throw new Error(`Failed to fetch client data: ${clientError.message}`);
         }
 
-        if (!clientData || !clientData.applywizz_id) {
+        if (!clientData || clientData.length === 0) {
           throw new Error("Applywizz ID not found for this user");
         }
-        if (clientData.opted_job_links) {
+
+        // Use the first client account found
+        const activeClient = clientData[0];
+
+        if (activeClient.opted_job_links) {
           return;
         }
 
-        const fetchedApplywizzId = clientData.applywizz_id;
+        const fetchedApplywizzId = activeClient.applywizz_id;
         setApplywizzId(fetchedApplywizzId);
 
         // Fetch the actual data from the external API
@@ -441,7 +445,7 @@ function App() {
 
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -463,13 +467,13 @@ function App() {
           `
       })
     });
-    
+
     setIsEmailSent(true);
     // Reset form after submission
     setEmailTo('vivek@applywizz.com');
     setEmailSubject('Response form Applywizz Ticketing Tool');
     setEmailMessage('');
-    
+
     // Close modal after 2 seconds
     setTimeout(() => {
       setIsSendMailModalOpen(false);
@@ -480,16 +484,16 @@ function App() {
   // New handler for sending email with attachment
   const handleSendEmailWithAttachment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!attachmentFile) {
       alert('Please select a file to attach');
       return;
     }
-    
+
     try {
       // Convert file to base64
       const base64File = await fileToBase64(attachmentFile);
-      
+
       // Prepare attachment data
       const attachmentData = {
         '@odata.type': '#microsoft.graph.fileAttachment',
@@ -497,7 +501,7 @@ function App() {
         contentType: attachmentFile.type || 'application/octet-stream',
         contentBytes: base64File.split(',')[1] // Remove data URL prefix
       };
-      
+
       // Send email with attachment using the send-email-a API
       const response = await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email-a", {
         method: "POST",
@@ -521,7 +525,7 @@ function App() {
           attachments: [attachmentData]
         })
       });
-      
+
       if (response.ok) {
         setIsEmailSent(true);
         // Reset form after submission
@@ -529,7 +533,7 @@ function App() {
         setEmailSubjectAttachment('Response form Applywizz Ticketing Tool');
         setEmailMessageAttachment('');
         setAttachmentFile(null);
-        
+
         // Close modal after 2 seconds
         setTimeout(() => {
           setIsSendMailWithAttachmentModalOpen(false);
@@ -544,7 +548,7 @@ function App() {
       alert('Failed to send email with attachment. Please try again.');
     }
   };
-  
+
   // Helper function to convert file to base64
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -554,7 +558,7 @@ function App() {
       reader.onerror = error => reject(error);
     });
   };
-  
+
   // Handler for file input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -588,7 +592,7 @@ function App() {
 
   const handleAssignRoles = async (
     pendingClientId: string,
-    clientData: any,          
+    clientData: any,
     rolesData: any
   ) => {
     const { data: caEmail, error: caEmailError } = await supabase.from('users').select('email').eq('id', rolesData.careerassociateid).single();
@@ -806,10 +810,10 @@ function App() {
     } catch (error) {
       console.error('Error making external API call:', error);
       // Handle network errors or other exceptions
-    // Insert additional client information into clients_additional_information table
+      // Insert additional client information into clients_additional_information table
     }
     const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: pendingClientId, 
+      id: pendingClientId,
       applywizz_id: clientData.applywizz_id,
       resume_url: clientData.resume_url,
       resume_path: clientData.resume_path,
@@ -920,7 +924,7 @@ function App() {
         const cleanUsername = fetchedClientData.applywizz_id
           ? fetchedClientData.applywizz_id.replace(/[^a-zA-Z0-9]/g, '')
           : fetchedClientData.company_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
-        
+
         // Call the Fermion API to create the user
         const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
           method: 'POST',
@@ -1006,15 +1010,15 @@ function App() {
       badge_value: client.badge_value,
       created_at: new Date().toISOString(),
       update_at: new Date().toISOString(),
-      opted_job_links:true,
+      opted_job_links: true,
     });
     if (insertError) {
       alert("Failed to complete onboarding");
       console.error("Onboarding failed:", insertError.message);
       return;
     }
-        const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: client.id, 
+    const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
+      id: client.id,
       applywizz_id: client.applywizz_id,
       resume_url: client.resume_url,
       resume_path: client.resume_path,
@@ -1148,28 +1152,6 @@ function App() {
           // Default to empty array
           return [];
         })(),
-        // "alternate_job_roles": (() => {
-        //   // Handle if alternate_job_roles is a string (from database)
-        //   if (typeof client.alternate_job_roles === 'string') {
-        //     // First try to parse as JSON
-        //     try {
-        //       return JSON.parse(client.alternate_job_roles);
-        //     } catch {
-        //       // If not JSON, split by comma and trim whitespace
-        //       return client.alternate_job_roles
-        //         .split(',')
-        //         .map(role => role.trim())
-        //         .filter(role => role.length > 0);
-        //     }
-        //   }
-        //   // If it's already an array, use it
-        //   if (Array.isArray(client.alternate_job_roles)) {
-        //     return client.alternate_job_roles;
-        //   }
-        //   // Default to empty array
-        //   return [];
-        // })(),
-
         // Service dates
         "start_date": client.start_date,
         // "end_date": client.end_date || null,
@@ -1256,10 +1238,10 @@ function App() {
 
       // Successfully onboarded, remove from pending list
       await supabase.from('pending_clients').delete().eq('id', client.id);
-      
+
       // Refresh the pending clients list
       await fetchData();
-      
+
       alert("Client successfully onboarded to secondary database!");
       await supabase.from('pending_clients').delete().eq('id', client.id);
       await fetchData();
@@ -1401,7 +1383,7 @@ function App() {
       created_at: updatedClient.created_at ? new Date(updatedClient.created_at as any) : undefined,
       update_at: updatedClient.update_at ? new Date(updatedClient.update_at as any) : undefined
     };
-    
+
     // Map through the clients array and update the client with the matching id
     setClients(clients.map(client =>
       client.id === updatedClient.id ? processedUpdatedClient : client
@@ -1483,7 +1465,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
-                { ['ceo', 'coo', 'cro','system_admin','ca_team_lead','resume_team_head'].includes(currentUser.role) && (
+                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head'].includes(currentUser.role) && (
                   <>
                     <button
                       onClick={() => setIsSendMailModalOpen(true)}
@@ -1501,23 +1483,23 @@ function App() {
                       <Mail className="h-5 w-5" />
                       <span>Send mail with attachment</span>
                     </button>
-                    
+
                     {/* Existing Send Mail Modal */}
-                    
+
                     {/* Send Mail Modal */}
                     {isSendMailModalOpen && (
                       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-6 w-full max-w-md">
                           <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">Send Email</h2>
-                            <button 
+                            <button
                               onClick={() => setIsSendMailModalOpen(false)}
                               className="text-gray-500 hover:text-gray-700"
                             >
                               ✕
                             </button>
                           </div>
-                          
+
                           {isEmailSent ? (
                             <div className="text-center py-4">
                               <p className="text-green-600 font-medium">Email sent successfully!</p>
@@ -1536,7 +1518,7 @@ function App() {
                                   required
                                 />
                               </div>
-                              
+
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Subject
@@ -1549,7 +1531,7 @@ function App() {
                                   required
                                 />
                               </div>
-                              
+
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Message
@@ -1563,7 +1545,7 @@ function App() {
                                   required
                                 />
                               </div>
-                              
+
                               <div className="flex justify-end space-x-3">
                                 <button
                                   type="button"
@@ -1590,7 +1572,7 @@ function App() {
                         <div className="bg-white rounded-lg p-6 w-full max-w-md">
                           <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">Send Email with Attachment</h2>
-                            <button 
+                            <button
                               onClick={() => {
                                 setIsSendMailWithAttachmentModalOpen(false);
                                 setAttachmentFile(null);
@@ -1600,7 +1582,7 @@ function App() {
                               ✕
                             </button>
                           </div>
-                          
+
                           {isEmailSent ? (
                             <div className="text-center py-4">
                               <p className="text-green-600 font-medium">Email sent successfully!</p>
@@ -1619,7 +1601,7 @@ function App() {
                                   required
                                 />
                               </div>
-                              
+
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Subject
@@ -1632,7 +1614,7 @@ function App() {
                                   required
                                 />
                               </div>
-                              
+
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Message
@@ -1646,7 +1628,7 @@ function App() {
                                   required
                                 />
                               </div>
-                              
+
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Attachment
@@ -1660,7 +1642,7 @@ function App() {
                                   <p className="text-sm text-gray-500 mt-1">Selected: {attachmentFile.name}</p>
                                 )}
                               </div>
-                              
+
                               <div className="flex justify-end space-x-3">
                                 <button
                                   type="button"
@@ -1675,11 +1657,10 @@ function App() {
                                 <button
                                   type="submit"
                                   disabled={!attachmentFile}
-                                  className={`px-4 py-2 text-white rounded-md transition-colors ${
-                                    !attachmentFile 
-                                      ? 'bg-gray-400 cursor-not-allowed' 
-                                      : 'bg-blue-600 hover:bg-blue-700'
-                                  }`}
+                                  className={`px-4 py-2 text-white rounded-md transition-colors ${!attachmentFile
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                    }`}
                                 >
                                   Send Email
                                 </button>
@@ -1723,14 +1704,14 @@ function App() {
                   <JobLinksList currentUserEmail={currentUser?.email} />
                 ) : (
                   <>
-                    <ApplicationsOverTime 
-                      data={clientDashboardData} 
-                      loading={clientDashboardLoading} 
-                      error={clientDashboardError} 
+                    <ApplicationsOverTime
+                      data={clientDashboardData}
+                      loading={clientDashboardLoading}
+                      error={clientDashboardError}
                     />
-                    <ApplicationSummaryList 
-                      data={clientDashboardData} 
-                      loading={clientDashboardLoading} 
+                    <ApplicationSummaryList
+                      data={clientDashboardData}
+                      loading={clientDashboardLoading}
                       error={clientDashboardError}
                       applywizzId={applywizzId}
                     />
@@ -1741,82 +1722,82 @@ function App() {
               :
               (
                 <>
-                <DashboardStatsComponent
-                  stats={stats}
-                  userRole={currentUser?.role || ''}
-                  onTotalTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('all'); // Reset status filter
-                    setFilterType('all');   
-                    setFilterPriority('all');
-                  }}
-                  onOpenTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('open'); // This will filter to only open tickets
-                    setFilterType('all'); // Reset type filter
-                    setFilterPriority('all');
-                  }}
-                  onResolvedTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('resolved');
-                    setFilterType('all');
-                    setFilterPriority('all');
-                  }}
-                  onCriticalTicketsClick={() => {
-                    setActiveView('tickets');
-                    setFilterStatus('all');
-                    setFilterType('all');
-                    setFilterPriority('critical');
-                  }}
-                />            
-            {isExecutive ? (
-              <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h2>
-                  <div className="space-y-4">
-                    {getVisibleTickets().slice(0, 5).map(ticket => (
-                      <div
-                        key={ticket.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => handleTicketClick(ticket)}
-                      >
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{ticket.title}</h3>
-                          <p className="text-sm text-gray-600">{ticket.type.replace('_', ' ')}</p>
-                        </div>
-                        <div className={`px-2 py-1 text-xs font-medium rounded-full ${ticket.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                          ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                          {ticket.priority}
+                  <DashboardStatsComponent
+                    stats={stats}
+                    userRole={currentUser?.role || ''}
+                    onTotalTicketsClick={() => {
+                      setActiveView('tickets');
+                      setFilterStatus('all'); // Reset status filter
+                      setFilterType('all');
+                      setFilterPriority('all');
+                    }}
+                    onOpenTicketsClick={() => {
+                      setActiveView('tickets');
+                      setFilterStatus('open'); // This will filter to only open tickets
+                      setFilterType('all'); // Reset type filter
+                      setFilterPriority('all');
+                    }}
+                    onResolvedTicketsClick={() => {
+                      setActiveView('tickets');
+                      setFilterStatus('resolved');
+                      setFilterType('all');
+                      setFilterPriority('all');
+                    }}
+                    onCriticalTicketsClick={() => {
+                      setActiveView('tickets');
+                      setFilterStatus('all');
+                      setFilterType('all');
+                      setFilterPriority('critical');
+                    }}
+                  />
+                  {isExecutive ? (
+                    <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      <div className="bg-white rounded-xl border border-gray-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h2>
+                        <div className="space-y-4">
+                          {getVisibleTickets().slice(0, 5).map(ticket => (
+                            <div
+                              key={ticket.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                              onClick={() => handleTicketClick(ticket)}
+                            >
+                              <div className="flex-1">
+                                <h3 className="font-medium text-gray-900">{ticket.title}</h3>
+                                <p className="text-sm text-gray-600">{ticket.type.replace('_', ' ')}</p>
+                              </div>
+                              <div className={`px-2 py-1 text-xs font-medium rounded-full ${ticket.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                                ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                {ticket.priority}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => setActiveView('tickets')}
-                      className="w-full flex items-center space-x-3 p-3 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                    >
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium text-blue-900">View All Tickets</span>
-                    </button>
+                      <div className="bg-white rounded-xl border border-gray-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => setActiveView('tickets')}
+                            className="w-full flex items-center space-x-3 p-3 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                          >
+                            <FileText className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium text-blue-900">View All Tickets</span>
+                          </button>
 
-                    <button
-                      onClick={() => setActiveView('clients')}
-                      className="w-full flex items-center space-x-3 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                    >
-                      <Users className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-green-900">Manage Clients</span>
-                    </button>
+                          <button
+                            onClick={() => setActiveView('clients')}
+                            className="w-full flex items-center space-x-3 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                          >
+                            <Users className="h-5 w-5 text-green-600" />
+                            <span className="font-medium text-green-900">Manage Clients</span>
+                          </button>
 
-                    {/* <button
+                          {/* <button
                       onClick={() => setActiveView('reports')}
                       className="w-full flex items-center space-x-3 p-3 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
                     >
@@ -1824,21 +1805,21 @@ function App() {
                       <span className="font-medium text-purple-900">View Reports</span>
                     </button> */}
 
-                    {currentUser?.role === 'system_admin' && (
-                      <button
-                        onClick={() => setIsUserManagementModalOpen(true)}
-                        className="w-full flex items-center space-x-3 p-3 text-left bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
-                      >
-                        <Settings className="h-5 w-5 text-orange-600" />
-                        <span className="font-medium text-orange-900">User Management</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            </>
-            )}
+                          {currentUser?.role === 'system_admin' && (
+                            <button
+                              onClick={() => setIsUserManagementModalOpen(true)}
+                              className="w-full flex items-center space-x-3 p-3 text-left bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                            >
+                              <Settings className="h-5 w-5 text-orange-600" />
+                              <span className="font-medium text-orange-900">User Management</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             <FeedbackButton user={currentUser} />
           </div>
         );
@@ -2304,7 +2285,7 @@ function App() {
                     user={currentUser}
                     labId={selectedLabId}
                     isOpen={isLabResultsModalOpen}
-                    onClose={() => setIsLabResultsModalOpen(false)}        
+                    onClose={() => setIsLabResultsModalOpen(false)}
                   />
                 </ProtectedRoute>
               }
