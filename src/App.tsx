@@ -1112,7 +1112,7 @@ function App() {
     }
 
     try {
-      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL1}/api/client-create`;
 
       // Validate required fields before sending
       if (!client.company_email || !client.full_name) {
