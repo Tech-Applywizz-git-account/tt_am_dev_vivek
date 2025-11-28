@@ -2055,8 +2055,6 @@ function App() {
             <Route path="/EmailVerifyRedirect" element={<EmailVerifyRedirect />} />
             <Route path="/LinkExpired" element={<LinkExpired />} />
             <Route path="/EmailConfirmed" element={<EmailConfirmed />} />
-            {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
-
             {/* Login route */}
             <Route
               path="/login"
