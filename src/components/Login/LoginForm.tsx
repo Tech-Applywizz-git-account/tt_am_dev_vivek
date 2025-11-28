@@ -18,7 +18,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -53,35 +52,43 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     setShowResetModal(true);
   };
 
-  const handleSendResetLink = async () => {
-    if (!resetEmail) {
-      setShowResetModal(false);
-      return setError("Please enter your email above to reset your password.");
-    }
-
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: 'https://ticketingtoolapplywizz.vercel.app/EmailConfirmed',
-    });
-
-    if (error) {
-      // setToast({ type: 'error', message: error.message });
-      alert("Unable to send reset link. Please try again");
-    } else {
-      // setToast({ type: 'success', message: 'Reset link sent to your email!' });
-      toastify("Reset link sent to your email!", {
-        position: "top-center",
-        autoClose: 4000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
-      setShowResetModal(false);
-      setResetEmail('');
-    }
-  };
+    const handleSendResetLink = async () => {
+      if (!resetEmail) {
+        setError("Please enter your email to reset your password.");
+        return;
+      }
+    
+      try {
+        const response = await fetch(
+          "https://zkebbnegghodwmgmkynt.supabase.co/functions/v1/request-password-reset",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email: resetEmail }),
+          }
+        );
+    
+        const result = await response.json();
+    
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to send reset link");
+        }
+    
+        toastify(result.message || "Reset link sent to your email!", {
+          position: "top-center",
+          autoClose: 4000,
+          theme: "dark",
+        });
+    
+        setShowResetModal(false);
+        setResetEmail("");
+      } catch (err: any) {
+        console.error('Reset password error:', err);
+        alert(err.message || "Unable to send reset link. Please try again.");
+      }
+    };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
