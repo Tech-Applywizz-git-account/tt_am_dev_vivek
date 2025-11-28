@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { supabase1 as supabase } from "../lib/supabaseClient";
-
-
 import { toast as toastify } from "react-toastify";
 
 const ResetPassword: React.FC = () => {
