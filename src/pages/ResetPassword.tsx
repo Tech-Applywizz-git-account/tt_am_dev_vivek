@@ -21,9 +21,7 @@ const ResetPassword: React.FC = () => {
     if (!password) return alert("Password cannot be empty");
     if (password !== confirm)
     return alert("Passwords do not match. Please re-enter.");
-
     setLoading(true);
-
     try {
       const { data, error } = await supabase.functions.invoke(
         "reset-password",
@@ -43,7 +41,6 @@ const ResetPassword: React.FC = () => {
         autoClose: 3000,
         theme: "dark",
       });
-
       // Redirect to login after 2 seconds
       setTimeout(() => {
         window.location.href = "/";
@@ -59,7 +56,7 @@ const ResetPassword: React.FC = () => {
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Invalid or missing token.
+        Invalid or missing token. Please try again.
       </div>
     );
   }
@@ -91,7 +88,6 @@ const ResetPassword: React.FC = () => {
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
-
         <button
           type="submit"
           disabled={loading}
