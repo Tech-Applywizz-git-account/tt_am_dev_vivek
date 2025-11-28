@@ -1465,7 +1465,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
-                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head'].includes(currentUser.role) && (
+                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head' , 'resume_team_member'].includes(currentUser.role) && (
                   <>
                     <button
                       onClick={() => setIsSendMailModalOpen(true)}
