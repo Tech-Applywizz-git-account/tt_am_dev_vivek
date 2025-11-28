@@ -26,6 +26,11 @@ interface JobGroup {
     count: number;
 }
 
+interface ClientAccount {
+    applywizz_id: string;
+    full_name?: string;
+}
+
 interface JobLinksListProps {
     currentUserEmail?: string;
 }
@@ -101,76 +106,92 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     const [viewMode, setViewMode] = useState<'list' | 'date'>('date'); // New state for view mode
     const [expandedDate, setExpandedDate] = useState<string | null>(null); // For date-wise view
     const [groupedJobs, setGroupedJobs] = useState<JobGroup[]>([]); // For date-wise view
-    const hasFetchedData = useRef(false);
+
+    // New state for multiple accounts
+    const [accounts, setAccounts] = useState<ClientAccount[]>([]);
+    const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
     // Extract the data fetching logic into a separate function
-    const fetchJobLinks = async () => {
+    // Fetch client accounts based on email
+    useEffect(() => {
         if (!currentUserEmail) return;
 
-        setLoading(true);
-        setError("");
+        const fetchAccounts = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('clients')
+                    .select('applywizz_id, full_name')
+                    .eq('company_email', currentUserEmail);
 
-        try {
-            // First, get the applywizz_id from Supabase based on the user's email
-            const { data: clientData, error: clientError } = await supabase
-                .from('clients')
-                .select('applywizz_id')
-                .eq('company_email', currentUserEmail)
-                .single();
+                if (error) {
+                    console.error("Error fetching accounts:", error);
+                    setError("Failed to load client accounts.");
+                    return;
+                }
+                console.log("Accounts fetched:", data); 
 
-            if (clientError) {
-                throw new Error(`Failed to fetch client data: ${clientError.message}`);
+                if (data && data.length > 0) {
+                    // Filter out any accounts without applywizz_id
+                    const validAccounts = data.filter(acc => acc.applywizz_id);
+                    setAccounts(validAccounts);
+
+                    // Automatically select the first account
+                    if (validAccounts.length > 0) {
+                        setSelectedAccountId(validAccounts[0].applywizz_id);
+                    }
+                } else {
+                    // No accounts found, maybe handle this gracefully or show error
+                    // For now, we just don't set a selected ID, so no jobs will load
+                }
+            } catch (err) {
+                console.error("Error in fetchAccounts:", err);
+                setError("An unexpected error occurred while loading accounts.");
             }
-
-            if (!clientData || !clientData.applywizz_id) {
-                throw new Error("Applywizz ID not found for this user");
-            }
-
-            const applywizzId = clientData.applywizz_id;
-
-            // Now fetch the job links from the external API
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-            if (!apiUrl) {
-                throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
-            }
-
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}`);
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
-            }
-
-            const apiData: JobLinksResponse = await response.json();
-
-            // Convert backend statuses to frontend format
-            const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
-                ...job,
-                // Only convert status if it's not null, otherwise keep it as null
-                status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
-            }));
-
-            setJobs(jobsWithConvertedStatuses);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Use a more robust approach to prevent double fetching
-    useEffect(() => {
-        // Prevent double fetching in development due to React StrictMode
-        if (hasFetchedData.current || !currentUserEmail) {
-            return;
-        }
-
-        hasFetchedData.current = true;
-        fetchJobLinks();
-
-        return () => {
-            // Cleanup if needed
         };
+
+        fetchAccounts();
     }, [currentUserEmail]);
+
+    // Fetch jobs when selectedAccountId changes
+    useEffect(() => {
+        if (!selectedAccountId) return;
+
+        const fetchJobLinks = async () => {
+            setLoading(true);
+            setError("");
+
+            try {
+                // Now fetch the job links from the external API
+                const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+                if (!apiUrl) {
+                    throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+                }
+
+                const response = await fetch(`${apiUrl}/api/job-links?lead_id=${selectedAccountId}`);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+                }
+
+                const apiData: JobLinksResponse = await response.json();
+
+                // Convert backend statuses to frontend format
+                const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
+                    ...job,
+                    // Only convert status if it's not null, otherwise keep it as null
+                    status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
+                }));
+
+                setJobs(jobsWithConvertedStatuses);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "An unknown error occurred");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchJobLinks();
+    }, [selectedAccountId]);
 
     // Log when currentUserEmail changes
     useEffect(() => {
@@ -297,7 +318,22 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             console.log("Job status updated successfully:", result);
 
             // Refresh the job list to ensure consistency
-            await fetchJobLinks();
+            if (selectedAccountId) {
+                // We can't easily call fetchJobLinks here because it's inside the effect now.
+                // But we can trigger a re-fetch by toggling something or just manually fetching.
+                // Or better, we can extract fetchJobLinks outside the effect.
+                // For now, let's just re-fetch using the same logic.
+                const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL as string;
+                const response = await fetch(`${apiUrl}/api/job-links?lead_id=${selectedAccountId}`);
+                if (response.ok) {
+                    const apiData: JobLinksResponse = await response.json();
+                    const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
+                        ...job,
+                        status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
+                    }));
+                    setJobs(jobsWithConvertedStatuses);
+                }
+            }
         } catch (error) {
             console.error("Error updating job status:", error);
             // Revert the local state change if the API call fails
@@ -388,6 +424,22 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     if (!jobs || jobs.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold">Job Applications</h2>
+                    {accounts.length > 1 && (
+                        <select
+                            value={selectedAccountId || ''}
+                            onChange={(e) => setSelectedAccountId(e.target.value)}
+                            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
+                        >
+                            {accounts.map((account) => (
+                                <option key={account.applywizz_id} value={account.applywizz_id}>
+                                    {account.full_name || account.applywizz_id}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                </div>
                 <p className="text-gray-500">No job links available.</p>
             </div>
         );
@@ -408,7 +460,23 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
-                <h2 className="text-lg font-semibold">Job Applications</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold">Job Applications</h2>
+                    {accounts.length > 1 && (
+                        <select
+                            value={selectedAccountId || ''}
+                            onChange={(e) => setSelectedAccountId(e.target.value)}
+                            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
+                        >
+                            {accounts.map((account) => (
+                                <option key={account.applywizz_id} value={account.applywizz_id}>
+                                    {account.full_name || account.applywizz_id}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+                
 
                 {/* View Mode Toggle and Date Filter/Sort Controls */}
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
