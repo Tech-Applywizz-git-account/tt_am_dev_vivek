@@ -9,7 +9,6 @@ import { supabase } from "../../lib/supabaseClient"; // Adjust path as needed
 
 const EmailConfirmed = () => {
   const navigate = useNavigate();
-
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [token, setToken] = useState<string | null>(null);

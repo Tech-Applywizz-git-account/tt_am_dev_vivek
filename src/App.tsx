@@ -1512,7 +1512,6 @@ function App() {
                   )}
               </div>
             </div>
-
             {currentUser?.role === 'client' ? (
               <>
                 {optedJobLinks ? (

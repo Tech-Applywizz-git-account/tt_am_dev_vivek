@@ -18,7 +18,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

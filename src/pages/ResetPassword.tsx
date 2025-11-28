@@ -20,7 +20,7 @@ const ResetPassword: React.FC = () => {
     if (!token) return alert("Invalid reset link");
     if (!password) return alert("Password cannot be empty");
     if (password !== confirm)
-      return alert("Passwords do not match. Please re-enter.");
+    return alert("Passwords do not match. Please re-enter.");
 
     setLoading(true);
 
