@@ -19,7 +19,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Enable CORS for cross-origin requests
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
     // Handle preflight requests
@@ -27,8 +27,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    // Only accept POST requests as per requirement "applywizz_id in payload"
-    if (req.method !== 'POST') {
+    // Only accept GET requests
+    if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
@@ -39,22 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
 
-        // Extract the applywizz_id from the request body
-        let body = req.body;
-
-        // Handle string body if necessary
-        if (typeof body === 'string') {
-            try {
-                body = JSON.parse(body);
-            } catch (parseError) {
-                return res.status(400).json({
-                    error: 'Invalid JSON in request body',
-                    details: 'Request body must be valid JSON'
-                });
-            }
-        }
-
-        const { applywizz_id } = body || {};
+        // Extract the applywizz_id from the query parameters
+        const applywizz_id = Array.isArray(req.query.applywizz_id)
+            ? req.query.applywizz_id[0]
+            : req.query.applywizz_id;
 
         if (!applywizz_id) {
             return res.status(400).json({ error: 'applywizz_id is required in the payload' });
