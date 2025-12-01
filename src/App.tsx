@@ -1093,22 +1093,21 @@ function App() {
         console.log("Error", error)
         console.error(`❌ Error creating ${client.company_email} : ${error.message}`);
       }
+    } else {
+      const { error: userInsertError } = await supabase.from('users').insert({
+        id: userData.user.id, // must match auth.users.id
+        name: name,
+        email: email,
+        role: 'client',
+        department: 'Client Services',
+        is_active: true,
+      });
+  
+      if (userInsertError) {
+        console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
+        console.error(userInsertError);
+      }
     }
-
-    const { error: userInsertError } = await supabase.from('users').insert({
-      id: userData.user.id, // must match auth.users.id
-      name: name,
-      email: email,
-      role: 'client',
-      department: 'Client Services',
-      is_active: true,
-    });
-
-    if (userInsertError) {
-      console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
-      console.error(userInsertError);
-    }
-
     try {
       const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
 
@@ -1257,7 +1256,7 @@ function App() {
       }
 
       // Successfully onboarded, remove from pending list
-      await supabase.from('pending_clients').delete().eq('id', client.id);
+      // await supabase.from('pending_clients').delete().eq('id', client.id);
 
       // Refresh the pending clients list
       await fetchData();
