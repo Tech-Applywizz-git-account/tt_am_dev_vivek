@@ -16,8 +16,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     }
 });
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-    
+export default async function handler(req: VercelRequest, res: VercelResponse) {    
     // Enable CORS for cross-origin requests
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
