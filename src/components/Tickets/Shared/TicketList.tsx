@@ -53,7 +53,6 @@ export const TicketList: React.FC<TicketListProps> = ({
   useEffect(() => {
     // Only fetch CA Team Leads if user can see the filter
     if (!canSeeCATeamLeadFilter) return;
-
     const fetchCATeamLeads = async () => {
       setLoadingCATeamLeads(true);
       try {
