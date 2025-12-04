@@ -25,14 +25,14 @@ interface TicketListProps {
   initialFilterPriority?: TicketPriority | 'all';
 }
 
-export const TicketList: React.FC<TicketListProps> = ({ 
-  tickets, 
-  user, 
-  assignments, 
-  onTicketClick, 
-  initialFilterStatus = 'all', 
-  initialFilterType = 'all', 
-  initialFilterPriority = 'all' 
+export const TicketList: React.FC<TicketListProps> = ({
+  tickets,
+  user,
+  assignments,
+  onTicketClick,
+  initialFilterStatus = 'all',
+  initialFilterType = 'all',
+  initialFilterPriority = 'all'
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TicketType | 'all'>(initialFilterType);
@@ -40,6 +40,8 @@ export const TicketList: React.FC<TicketListProps> = ({
   const [filterPriority, setFilterPriority] = useState<TicketPriority | 'all'>(initialFilterPriority);
   const [filterCATeamLead, setFilterCATeamLead] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'created' | 'priority' | 'due'>('created');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
   const [caTeamLeads, setCaTeamLeads] = useState<CATeamLead[]>([]);
   const [loadingCATeamLeads, setLoadingCATeamLeads] = useState(false);
@@ -62,7 +64,7 @@ export const TicketList: React.FC<TicketListProps> = ({
           .order('name');
 
         if (error) throw error;
-        
+
         setCaTeamLeads(data || []);
       } catch (error) {
         console.error('Error fetching CA Team Leads:', error);
@@ -81,12 +83,15 @@ export const TicketList: React.FC<TicketListProps> = ({
       const matchesType = filterType === 'all' || ticket.type === filterType;
       const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
       const matchesPriority = filterPriority === 'all' || ticket.priority === filterPriority;
-      
-      // Filter by CA Team Lead assignment (only if user can see this filter)
-      const matchesCATeamLead = !canSeeCATeamLeadFilter || filterCATeamLead === 'all' || 
-        (assignments[ticket.id] && assignments[ticket.id].some(u => u.id === filterCATeamLead));
 
-      return matchesSearch && matchesType && matchesStatus && matchesPriority && matchesCATeamLead;
+      // Filter by CA Team Lead assignment (only if user can see this filter)
+      const matchesCATeamLead = !canSeeCATeamLeadFilter || filterCATeamLead === 'all' ||
+        (assignments[ticket.id] && assignments[ticket.id].some(u => u.id === filterCATeamLead));
+      const ticketDate = new Date(ticket.createdat).toISOString().split('T')[0];
+      const matchesDateFrom = !filterDateFrom || ticketDate >= filterDateFrom;
+      const matchesDateTo = !filterDateTo || ticketDate <= filterDateTo;
+
+      return matchesSearch && matchesType && matchesStatus && matchesPriority && matchesCATeamLead && matchesDateFrom && matchesDateTo;
     })
     .sort((a, b) => {
       if (sortBy === 'created') {
@@ -105,7 +110,7 @@ export const TicketList: React.FC<TicketListProps> = ({
   // Get label for current filter values
   const getFilterLabel = (filterValue: string, filterType: 'type' | 'status' | 'priority' | 'ca_team_lead') => {
     if (filterValue === 'all') return '';
-    
+
     switch (filterType) {
       case 'type':
         return ticketTypeLabels[filterValue as TicketType] || filterValue;
@@ -122,9 +127,9 @@ export const TicketList: React.FC<TicketListProps> = ({
   };
 
   // Check if any filters are active (excluding 'all')
-  const hasActiveFilters = filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' || 
-    (canSeeCATeamLeadFilter && filterCATeamLead !== 'all');
-    
+  const hasActiveFilters = filterType !== 'all' || filterStatus !== 'all' || filterPriority !== 'all' ||
+    (canSeeCATeamLeadFilter && filterCATeamLead !== 'all') || filterDateFrom !== '' || filterDateTo !== '';
+
   // Reset all filters
   const resetFilters = () => {
     setFilterType('all');
@@ -134,9 +139,11 @@ export const TicketList: React.FC<TicketListProps> = ({
     if (canSeeCATeamLeadFilter) {
       setFilterCATeamLead('all');
     }
+    setFilterDateFrom('');
+    setFilterDateTo('');
     setSearchTerm('');
   };
-  
+
   return (
     <div className="space-y-6">
       {/* Search and Main Filters */}
@@ -158,21 +165,21 @@ export const TicketList: React.FC<TicketListProps> = ({
           <div className="flex gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                showFilters 
-                  ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
             >
               <Filter className="h-4 w-4" />
               Filters
               {hasActiveFilters && (
                 <span className="bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {['type', 'status', 'priority', 'ca_team_lead'].filter(type => {
+                  {['type', 'status', 'priority', 'ca_team_lead', 'date'].filter(type => {
                     if (type === 'type') return filterType !== 'all';
                     if (type === 'status') return filterStatus !== 'all';
                     if (type === 'priority') return filterPriority !== 'all';
                     if (type === 'ca_team_lead') return filterCATeamLead !== 'all';
+                    if (type === 'date') return filterDateFrom !== '' || filterDateTo !== '';
                     return false;
                   }).length}
                 </span>
@@ -206,7 +213,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </button>
               </div>
             )}
-            
+
             {filterType !== 'all' && (
               <div className="flex items-center gap-1 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
                 <span>Type: {getFilterLabel(filterType, 'type')}</span>
@@ -215,7 +222,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </button>
               </div>
             )}
-            
+
             {filterStatus !== 'all' && (
               <div className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
                 <span>Status: {getFilterLabel(filterStatus, 'status')}</span>
@@ -224,7 +231,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </button>
               </div>
             )}
-            
+
             {filterPriority !== 'all' && (
               <div className="flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
                 <span>Priority: {getFilterLabel(filterPriority, 'priority')}</span>
@@ -233,7 +240,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </button>
               </div>
             )}
-            
+
             {filterCATeamLead !== 'all' && (
               <div className="flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
                 <span>CA Lead: {getFilterLabel(filterCATeamLead, 'ca_team_lead')}</span>
@@ -242,8 +249,25 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </button>
               </div>
             )}
-            
-            <button 
+
+            {(filterDateFrom || filterDateTo) && (
+              <div className="flex items-center gap-1 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">
+                <span>
+                  Date: {filterDateFrom || '...'} to {filterDateTo || '...'}
+                </span>
+                <button
+                  onClick={() => {
+                    setFilterDateFrom('');
+                    setFilterDateTo('');
+                  }}
+                  className="hover:bg-orange-200 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
+            <button
               onClick={resetFilters}
               className="text-sm text-gray-500 hover:text-gray-700 underline ml-2"
             >
@@ -288,6 +312,26 @@ export const TicketList: React.FC<TicketListProps> = ({
               </select>
             </div>
 
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
@@ -309,7 +353,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 <option value="closed">Closed</option>
               </select>
             </div>
-
+            
             {/* CA Team Lead Filter - only shown to specific roles */}
             {canSeeCATeamLeadFilter && (
               <div>
@@ -359,9 +403,9 @@ export const TicketList: React.FC<TicketListProps> = ({
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
           <p className="text-gray-600">Try adjusting your search or filter criteria</p>
-          
+
           {(hasActiveFilters || searchTerm) && (
-            <button 
+            <button
               onClick={resetFilters}
               className="mt-4 text-blue-600 hover:text-blue-800 underline"
             >

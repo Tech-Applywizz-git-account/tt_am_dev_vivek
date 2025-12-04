@@ -321,16 +321,17 @@ function App() {
         const { data, error } = await supabase
           .from('clients')
           .select('opted_job_links')
-          .eq('company_email', currentUser.email)
-          .single();
+          .eq('company_email', currentUser.email);
 
         if (error) {
           console.error('Error fetching opted_job_links:', error);
           return;
         }
 
-        if (data) {
-          setOptedJobLinks(data.opted_job_links || false);
+        if (data && data.length > 0) {
+          // Check if any of the client accounts have opted for job links
+          const hasOpted = data.some(client => client.opted_job_links);
+          setOptedJobLinks(hasOpted);
         }
       } catch (err) {
         console.error('Failed to fetch client job links status:', err);
@@ -357,21 +358,24 @@ function App() {
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
           .select('applywizz_id,opted_job_links')
-          .eq('company_email', currentUser.email)
-          .single();
+          .eq('company_email', currentUser.email);
 
         if (clientError) {
           throw new Error(`Failed to fetch client data: ${clientError.message}`);
         }
 
-        if (!clientData || !clientData.applywizz_id) {
+        if (!clientData || clientData.length === 0) {
           throw new Error("Applywizz ID not found for this user");
         }
-        if (clientData.opted_job_links) {
+
+        // Use the first client account found
+        const activeClient = clientData[0];
+
+        if (activeClient.opted_job_links) {
           return;
         }
 
-        const fetchedApplywizzId = clientData.applywizz_id;
+        const fetchedApplywizzId = activeClient.applywizz_id;
         setApplywizzId(fetchedApplywizzId);
 
         // Fetch the actual data from the external API
@@ -452,7 +456,7 @@ function App() {
         to: emailTo,
         subject: emailSubject,
         htmlBody: `
-            <html>
+             <html>
               <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
                 <div style="text-align:center; margin-bottom:20px;">
                   <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
@@ -715,6 +719,7 @@ function App() {
           // Map visa types to work auth values
           switch (visaType) {
             case "OPT":
+              return "F1";
             case "CPT":
               return "F1";
             case "H4 EAD":
@@ -1093,7 +1098,7 @@ function App() {
         console.log("Error", error)
         console.error(`❌ Error creating ${client.company_email} : ${error.message}`);
       }
-    } else {
+    }else{
       const { error: userInsertError } = await supabase.from('users').insert({
         id: userData.user.id, // must match auth.users.id
         name: name,
@@ -1102,7 +1107,7 @@ function App() {
         department: 'Client Services',
         is_active: true,
       });
-  
+      
       if (userInsertError) {
         console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
         console.error(userInsertError);
@@ -1149,28 +1154,6 @@ function App() {
           // Default to empty array
           return [];
         })(),
-        // "alternate_job_roles": (() => {
-        //   // Handle if alternate_job_roles is a string (from database)
-        //   if (typeof client.alternate_job_roles === 'string') {
-        //     // First try to parse as JSON
-        //     try {
-        //       return JSON.parse(client.alternate_job_roles);
-        //     } catch {
-        //       // If not JSON, split by comma and trim whitespace
-        //       return client.alternate_job_roles
-        //         .split(',')
-        //         .map(role => role.trim())
-        //         .filter(role => role.length > 0);
-        //     }
-        //   }
-        //   // If it's already an array, use it
-        //   if (Array.isArray(client.alternate_job_roles)) {
-        //     return client.alternate_job_roles;
-        //   }
-        //   // Default to empty array
-        //   return [];
-        // })(),
-
         // Service dates
         "start_date": client.start_date,
         // "end_date": client.end_date || null,
@@ -1256,7 +1239,7 @@ function App() {
       }
 
       // Successfully onboarded, remove from pending list
-      // await supabase.from('pending_clients').delete().eq('id', client.id);
+      await supabase.from('pending_clients').delete().eq('id', client.id);
 
       // Refresh the pending clients list
       await fetchData();
@@ -1417,7 +1400,7 @@ function App() {
     // Map through the users array and return a new array with the user with cthe given userId updated with the new userData
     setUsers(users.map(user =>
       user.id === userId ? { ...user, ...userData } : user
-    )); ``
+    ));
   };
   // const createdbyUser = users.find(u => u.id === ticket.createdby);
   // Function to handle deleting a user
@@ -1493,7 +1476,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
-                {currentUser?.role === 'system_admin' && (
+                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head' , 'resume_team_member'].includes(currentUser.role) && (
                   <>
                     <button
                       onClick={() => setIsSendMailModalOpen(true)}
@@ -1513,6 +1496,8 @@ function App() {
                     </button>
 
                     {/* Existing Send Mail Modal */}
+
+                    {/* Send Mail Modal */}
                     {isSendMailModalOpen && (
                       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -1592,7 +1577,6 @@ function App() {
                         </div>
                       </div>
                     )}
-
                     {/* New Send Mail with Attachment Modal */}
                     {isSendMailWithAttachmentModalOpen && (
                       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1685,8 +1669,8 @@ function App() {
                                   type="submit"
                                   disabled={!attachmentFile}
                                   className={`px-4 py-2 text-white rounded-md transition-colors ${!attachmentFile
-                                      ? 'bg-gray-400 cursor-not-allowed'
-                                      : 'bg-blue-600 hover:bg-blue-700'
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
                                     }`}
                                 >
                                   Send Email

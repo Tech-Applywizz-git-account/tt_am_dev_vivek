@@ -32,6 +32,47 @@ const ENVIRONMENTS = {
     productId: '68df98d58c6253ef47a720c3',
     contestUrl: 'https://careerbadge.apply-wizz.com/contest/pond-pound'
   },
+  aml3:{
+    productId: '691c6ce659f2b0a289b65a5f',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/sunlight-back'
+  },
+  da1: {
+    productId: '69132c01c37ccc70afb5687d',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/actually-equipment'
+  },
+  da2: {
+    productId: '690c7a799f7fb845155d31e7',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/new-pig'
+  },
+  de2: {
+    productId: '690c7b0a9f7fb845155d33d9',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/return-paragraph'
+  },
+  bie2: {
+    productId: '690c7f90d114064589ca7c1b',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/military-seed'
+  },
+  sde1: {
+    productId: '68d24a735824ea0d74588d2e',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/thou-under'
+  },
+  sde2: {
+    productId: '68d24a7f9fd1dab5a920e877',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/chemical-rhythm'
+  },
+  ba2: {
+    productId: '68dfa749141229ed7fc97e87',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/hurry-seeing'
+  },
+  ds1: {
+    productId: '691acb48a0afbf8f08573758',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/history-several'
+  },
+  wda2: {
+    productId: '69269b0e7d219b8d2cce7178',
+    contestUrl: 'https://careerbadge.apply-wizz.com/contest/some-independent'
+  },
+  //default
   default: {
     productId: '68d24a4a1295f90e0e22a041',
     contestUrl: 'https://careerbadge.apply-wizz.com/contest/situation-needs'
