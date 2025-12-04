@@ -10,7 +10,8 @@ import {
   Search,
   AlertTriangle,
   Clock,
-  TrendingUp
+  TrendingUp,
+  User as UserIcon
 } from 'lucide-react';
 import { User } from '../../types';
 import { rolePermissions } from '../../data/mockData';
@@ -43,6 +44,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       label: 'Clients',
       icon: Users,
       show: permissions.canViewClients,
+    },
+    {
+      id: 'profile',
+      label: 'View Profile',
+      icon: UserIcon,
+      show: user.role === 'client',
     },
     {
       id: "pending_onboarding",

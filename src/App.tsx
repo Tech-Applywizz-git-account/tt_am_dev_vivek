@@ -15,6 +15,7 @@ import { CSTicketEditModal } from './components/Tickets/CallSupport/CSTicketEdit
 import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModal';
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
+import { ClientProfileView } from './components/Clients/ClientProfileView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
@@ -162,6 +163,8 @@ function App() {
   const [isTicketEditModalOpen, setIsTicketEditModalOpen] = useState(false);
   // State to store whether the client edit modal is open
   const [isClientEditModalOpen, setIsClientEditModalOpen] = useState(false);
+  // State to store whether the client profile view modal is open
+
 
   const [assignments, setAssignments] = useState<Record<string, AssignedUser[]>>({});
 
@@ -186,7 +189,7 @@ function App() {
   // New state variables for email with attachment
   const [isSendMailWithAttachmentModalOpen, setIsSendMailWithAttachmentModalOpen] = useState(false);
   const [emailToAttachment, setEmailToAttachment] = useState('vivek@applywizz.com');
-  const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject');
+  const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject with Attachment');
   const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
@@ -510,7 +513,7 @@ function App() {
           to: emailToAttachment,
           subject: emailSubjectAttachment,
           htmlBody: `
-             <html>
+            <html>
               <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
                 <div style="text-align:center; margin-bottom:20px;">
                   <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
@@ -1110,9 +1113,8 @@ function App() {
         console.error(userInsertError);
       }
     }
-
     try {
-      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL1}/api/client-create`;
 
       // Validate required fields before sending
       if (!client.company_email || !client.full_name) {
@@ -1457,6 +1459,15 @@ function App() {
     const stats = getDashboardStats();
 
     switch (activeView) {
+      case 'profile':
+        return (
+          <ClientProfileView
+            currentUser={currentUser}
+            isOpen={true}
+            isModal={false}
+            onClose={() => setActiveView('dashboard')}
+          />
+        );
       case 'dashboard':
         const isExecutive = currentUser && ['ceo', 'coo', 'cro'].includes(currentUser.role);
 
@@ -2266,6 +2277,7 @@ function App() {
                     setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
                     isClientEditModalOpen={isClientEditModalOpen}
                     setIsClientEditModalOpen={setIsClientEditModalOpen}
+
                     isUserManagementModalOpen={isUserManagementModalOpen}
                     setIsUserManagementModalOpen={setIsUserManagementModalOpen}
                     selectedTicket={selectedTicket}
@@ -2287,6 +2299,7 @@ function App() {
                     isOpen={isLabResultsModalOpen}
                     onClose={() => setIsLabResultsModalOpen(false)}
                   />
+
                 </ProtectedRoute>
               }
             />

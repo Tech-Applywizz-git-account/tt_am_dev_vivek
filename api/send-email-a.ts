@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 
-
 // Environment variables
 const TENANT_ID = process.env.TENANT_ID;
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -41,6 +40,7 @@ async function getAccessToken() {
 // Send email
 async function sendEmail(to: string, subject: string, htmlBody: string, attachments?: EmailAttachment[]) {
   const token = await getAccessToken();
+  
   const payload = {
     message: {
       subject,
