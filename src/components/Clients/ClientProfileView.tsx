@@ -489,31 +489,6 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
                 )}
               </div>
             </div>
-
-            {/* Additional Details Section */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center space-x-2 mb-4">
-                <Calendar className="h-5 w-5 text-gray-600" />
-                <h2 className="text-gray-800 font-semibold text-lg">Additional Details</h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {renderReadOnlyDateInput("Onboarding Date", form.onboardingdate, <Calendar className="h-4 w-4 text-gray-400" />)}
-                {renderReadOnlyField("Sponsorship Required", form.sponsorship, <CreditCard className="h-4 w-4 text-gray-400" />)}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Created At</label>
-                  <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                    {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Updated</label>
-                  <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                    {form.update_at ? new Date(form.update_at).toLocaleDateString() : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -558,19 +533,6 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {renderAdditionalInfoReadOnlyField("GitHub URL", additionalInfo?.github_url, <Link className="h-4 w-4 text-gray-400" />)}
                 {renderAdditionalInfoReadOnlyField("LinkedIn URL", additionalInfo?.linked_in_url, <Link className="h-4 w-4 text-gray-400" />)}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 shadow-sm">
-              <div className="flex items-center space-x-2 mb-4">
-                <Calendar className="h-5 w-5 text-orange-600" />
-                <h2 className="text-orange-800 font-semibold text-lg">Availability</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {renderReadOnlyDateInput("Desired Start Date", additionalInfo?.desired_start_date, <Calendar className="h-4 w-4 text-gray-400" />)}
-                {renderReadOnlyDateInput("Start Date", additionalInfo?.start_date, <Calendar className="h-4 w-4 text-gray-400" />)}
-                {renderReadOnlyDateInput("End Date", additionalInfo?.end_date, <Calendar className="h-4 w-4 text-gray-400" />)}
-                {renderAdditionalInfoReadOnlyField("No. of Applications", additionalInfo?.no_of_applications, <FileText className="h-4 w-4 text-gray-400" />)}
               </div>
             </div>
           </div>
