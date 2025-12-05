@@ -112,6 +112,35 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                 alt="ApplyWizz"
               />
             </div>
+            
+            {/* Trigger Email Notification Button - Visible only to CRO */}
+            {user.role === 'cro' && (
+              <button
+                className="text-sm px-3 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors flex items-center gap-2"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('https://applywizz.onrender.com/api/check-all-leads-threshold/', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                    });
+                    
+                    if (response.ok) {
+                      alert('Email notifications triggered successfully!');
+                    } else {
+                      alert('Failed to trigger email notifications. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Error triggering email notifications:', error);
+                    alert('An error occurred while triggering email notifications.');
+                  }
+                }}
+                title="Trigger email notifications for leads threshold"
+              >
+                <span>Trigger Email Notification</span>
+              </button>
+            )}
           </div>
 
           {(user.role === 'client' && badgeValue && badgeValue > 0) && ( // show buttons only if the user is a client and has a badgeValue
