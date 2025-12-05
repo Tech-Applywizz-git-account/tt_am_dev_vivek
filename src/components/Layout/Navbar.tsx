@@ -114,7 +114,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
             </div>
             
             {/* Trigger Email Notification Button - Visible only to CRO */}
-            {user.role === 'cro' && (
               <button
                 className="text-sm px-3 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors flex items-center gap-2"
                 onClick={async () => {
@@ -140,7 +139,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
               >
                 <span>Trigger Email Notification</span>
               </button>
-            )}
           </div>
 
           {(user.role === 'client' && badgeValue && badgeValue > 0) && ( // show buttons only if the user is a client and has a badgeValue
