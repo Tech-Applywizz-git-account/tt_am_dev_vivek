@@ -112,66 +112,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
                 alt="ApplyWizz"
               />
             </div>
-
-            {/* Small/Medium: open modal instead of details */}
-            {/* <button
-              type="button"
-              onClick={() => setIsBetaOpen(true)}
-              className="lg:hidden text-xs sm:text-sm text-gray-600 bg-transparent border border-green-200 rounded px-2 py-1 hover:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-300"
-              aria-haspopup="dialog"
-              aria-expanded={isBetaOpen}
-              aria-controls="beta-modal"
-              title="ApplyWizz Ticketing Tool - Beta Version"
-            >
-              <span className="font-medium text-gray-900">🚀ApplyWizz Ticketing Tool<br/> - Beta Version</span><br/>
-              <span className="ml-1 text-gray-900">(tap for details)</span>
-            </button> */}
-            {/* {isBetaOpen && (
-              <div id="beta-modal" role="dialog" aria-modal="true" className="fixed inset-0 z-[70]">
-                <div className="absolute inset-0 bg-black/40" onClick={() => setIsBetaOpen(false)} aria-hidden="true" />
-                <div className="absolute inset-0 grid place-items-center px-4">
-                  <div className="w-full max-w-md rounded-xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
-                    <div className="flex items-center justify-center  py-3 bg-gray-100 ">
-                      <h2 className="text-base text-center bg-gradient-to-r from-blue-900 via-blue-600 via-blue-600 to-lime-600 inline-block text-transparent bg-clip-text px-8 font-semibold">
-                        ApplyWizz Ticketing Tool<br/> - Beta Version</h2>
-                      <button
-                        onClick={() => setIsBetaOpen(false)}
-                        className="p-1 rounded hover:bg-black/20 pl-8 text-black focus:outline-none focus:ring-2 focus:ring-black/60"
-                        aria-label="Close"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    <div className="p-4 text-sm text-gray-700 space-y-3">
-                      <p>
-                        You’re now using the beta version of our internal ticketing system. 🎉 We’re testing and
-                        improving how tickets are created, tracked, and resolved across teams.
-                      </p>
-                      <p>
-                        💬 Found a bug or have feedback? Let us know - your input helps us make it better!<br/>
-                        - ApplyWizz Ops &amp; Tech Team
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}  */}
-
-
-            {/* Full text only on large+ (unchanged look) */}
-             {/* <div className="hidden lg:block text-sm text-gray-600 bg-transparent border border-green-200 rounded px-3 py-2 text-gray-900">
-              <div className="text-center">🚀 ApplyWizz Ticketing Tool – Beta Version Launched!</div>
-              <div className="px-4 text-center ">
-                <p>
-                  You’re now using the beta version of our internal ticketing system. 🎉 We’re testing and improving how tickets are created, tracked, and resolved across teams.
-                </p>
-                <p>
-                  💬 Found a bug or have feedback? Let us know - your input helps us make it better!
-                  - ApplyWizz Ops &amp; Tech Team
-                </p>
-              </div>
-            </div>  */}
           </div>
 
           {(user.role === 'client' && badgeValue && badgeValue > 0) && ( // show buttons only if the user is a client and has a badgeValue
