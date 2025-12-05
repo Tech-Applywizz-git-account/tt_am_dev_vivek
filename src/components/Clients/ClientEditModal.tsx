@@ -117,16 +117,48 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   }, [client]);
 
   const fetchAdditionalClientInfo = async (clientId: string) => {
-    const { data, error } = await supabase
-      .from("clients_additional_information")
-      .select("*")
-      .eq("id", clientId)
-      .single();
+    // Use the new API endpoint to fetch details
+    if (!client?.applywizz_id) {
+      // Fallback to direct ID query if applywizz_id is missing, or just return
+      console.log("No applywizz_id, attempting fallback or skipping");
+      const { data, error } = await supabase
+        .from("clients_additional_information")
+        .select("*")
+        .eq("id", clientId)
+        .single();
 
-    if (error) {
-      console.error("Failed to fetch additional client information", error);
-    } else {
-      setAdditionalInfo(data || null);
+      if (error) {
+        console.error("Failed to fetch additional client information (fallback)", error);
+      } else {
+        setAdditionalInfo(data || null);
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/get-client-details?applywizz_id=${client.applywizz_id}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch client details: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // The API returns { client: ..., additional_information: ... }
+      // We update additionalInfo with the data from the API
+      if (data.additional_information) {
+        setAdditionalInfo(data.additional_information);
+      } else {
+        setAdditionalInfo(null);
+      }
+
+      // We can also update the main client form if needed, but for now we stick to additional info
+      // as requested.
+
+    } catch (error) {
+      console.error("Error fetching client details from API:", error);
+      // Optional: Fallback to direct Supabase query on error?
+      // For now, we'll just log the error.
     }
   };
 
@@ -220,7 +252,7 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
     // Update client information with test results
     const { error: clientError } = await supabase
       .from("clients")
-      .update({ 
+      .update({
         ...form,
         test_results: testResultsForm.length > 0 ? testResultsForm : null
       })

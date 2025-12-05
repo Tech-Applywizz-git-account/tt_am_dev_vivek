@@ -861,7 +861,13 @@ function App() {
       graduation_year: clientData.graduation_year,
       add_ons_info: clientData.add_ons_info,
       github_url: clientData.github_url,
-      linked_in_url: clientData.linked_in_url
+      linked_in_url: clientData.linked_in_url,
+      client_form_fill_date: clientData.client_form_fill_date,
+      cover_letter_path: clientData.cover_letter_path,
+      full_address: clientData.full_address,
+      date_of_birth: clientData.date_of_birth,
+      primary_phone: clientData.primary_phone,
+ 
     });
 
     if (additionalInfoError) {
