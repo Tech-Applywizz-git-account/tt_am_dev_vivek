@@ -16,27 +16,24 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-// import { Toaster } from 'react-hot-toast';
+import { AccountProvider } from './contexts/AccountContext';
 
-// ❌ REMOVE BrowserRouter from here
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  // <React.StrictMode>
-  //   {/* ❌ Remove this BrowserRouter wrapper */}
-  //   <App /> {/* Just render App directly */}
-  // </React.StrictMode>
   <React.StrictMode>
-  <ToastContainer
-  position="top-right"
-  autoClose={2000}
-  hideProgressBar={false}
-  newestOnTop={false}
-  closeOnClick
-  rtl={false}
-  pauseOnFocusLoss={false}
-  draggable
-  pauseOnHover
-  theme="dark"
-  />
-  <App />
-</React.StrictMode>
+    <ToastContainer
+      position="top-right"
+      autoClose={2000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss={false}
+      draggable
+      pauseOnHover
+      theme="dark"
+    />
+    <AccountProvider>
+      <App />
+    </AccountProvider>
+  </React.StrictMode>
 );

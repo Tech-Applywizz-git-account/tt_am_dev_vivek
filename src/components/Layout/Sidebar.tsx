@@ -21,9 +21,10 @@ interface SidebarProps {
   activeView: string;
   onViewChange: (view: string) => void;
   pendingClientsCount: number;
+  optedJobLinks?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange, pendingClientsCount }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange, pendingClientsCount, optedJobLinks }) => {
   const permissions = rolePermissions[user.role];
   // console.log(permissions)
   const menuItems = [
@@ -37,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'tickets',
       label: 'Tickets',
       icon: Ticket,
-      show: permissions.canViewTickets,
+      show: !optedJobLinks,
     },
     {
       id: 'clients',

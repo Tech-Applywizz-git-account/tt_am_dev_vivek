@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { User, Ticket, Client, AssignedUser, DashboardStats, TicketStatus, TicketType } from './types';
 import { LoginForm } from './components/Login/LoginForm';
 import { Navbar } from './components/Layout/Navbar';
-import { Sidebar } from './components/Layout/Sidebar';
 import { DashboardStats as DashboardStatsComponent } from './components/Dashboard/DashboardStats';
 import { ExecutiveDashboard } from './components/Dashboard/ExecutiveDashboard';
 import { format } from 'date-fns';

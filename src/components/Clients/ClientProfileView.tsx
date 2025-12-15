@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { User, Client, TestResult } from "@/types";
 import { Building, FileText, Phone, X, User as UserIcon, Mail, Shield, Calendar, CreditCard, Book, MapPin, GraduationCap, Link, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useAccount } from '@/contexts/AccountContext';
 
 
 interface ClientAdditionalInfo {
@@ -65,6 +66,12 @@ interface Props {
   isModal?: boolean;
 }
 
+interface ClientAccount {
+  applywizz_id: string;
+  full_name?: string;
+  id: string;
+}
+
 export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true }: Props) {
   const [form, setForm] = useState<Client | null>(null);
   const [additionalInfo, setAdditionalInfo] = useState<ClientAdditionalInfo | null>(null);
@@ -72,20 +79,36 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
   const [activeTab, setActiveTab] = useState<'details' | 'assignments' | 'education' | 'employment' | 'background' | 'codinglab' | 'resume'>('details');
   const [testResultsForm, setTestResultsForm] = useState<TestResult[]>([]);
 
-  useEffect(() => {
-    if (isOpen && currentUser?.email) {
-      fetchClientData(currentUser.email);
-    }
-  }, [isOpen, currentUser]);
+  // New state for multiple accounts
+  const [accounts, setAccounts] = useState<ClientAccount[]>([]);
 
-  const fetchClientData = async (email: string) => {
+  // Use the shared context for selectedAccountId
+  const { selectedAccountId, setSelectedAccountId } = useAccount();
+
+  // Fetch additional client information
+  const fetchAdditionalClientInfo = useCallback(async (clientId: string) => {
+    const { data, error } = await supabase
+      .from("clients_additional_information")
+      .select("*")
+      .eq("id", clientId)
+      .single();
+
+    if (error) {
+      console.error("Failed to fetch additional client information", error);
+    } else {
+      setAdditionalInfo(data || null);
+    }
+  }, []);
+
+  // Fetch client data by ID (not email)
+  const fetchClientDataById = useCallback(async (clientId: string) => {
     setLoading(true);
     try {
-      // Fetch client data by matching company_email with current user's email
+      // Fetch client data by ID
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
         .select("*")
-        .eq("company_email", email)
+        .eq("id", clientId)
         .single();
 
       if (clientError) {
@@ -122,21 +145,66 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchAdditionalClientInfo]);
 
-  const fetchAdditionalClientInfo = async (clientId: string) => {
-    const { data, error } = await supabase
-      .from("clients_additional_information")
-      .select("*")
-      .eq("id", clientId)
-      .single();
+  // Fetch all accounts for the current user's email
+  const fetchAccounts = useCallback(async (email: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('applywizz_id, full_name, id')
+        .eq('company_email', email);
 
-    if (error) {
-      console.error("Failed to fetch additional client information", error);
-    } else {
-      setAdditionalInfo(data || null);
+      if (error) {
+        console.error("Error fetching accounts:", error);
+        toast.error("Failed to load client accounts.");
+        return;
+      }
+
+      console.log("Accounts fetched:", data);
+
+      if (data && data.length > 0) {
+        // Filter out any accounts without required IDs
+        const validAccounts = data.filter(acc => acc.id && acc.applywizz_id);
+        setAccounts(validAccounts);
+
+        const hasMultipleAccounts = validAccounts.length > 1;
+
+        // If no account is selected or selected account is not in the list, select the first one
+        if (!selectedAccountId || !validAccounts.find(acc => acc.id === selectedAccountId)) {
+          if (validAccounts.length > 0) {
+            // Only persist to localStorage if there are multiple accounts
+            setSelectedAccountId(validAccounts[0].id, hasMultipleAccounts);
+          }
+        } else if (!hasMultipleAccounts) {
+          // If only one account, make sure we're not persisting to localStorage
+          setSelectedAccountId(validAccounts[0].id, false);
+        }
+      } else {
+        toast.error("No accounts found for this email.");
+      }
+    } catch (error) {
+      console.error("Error in fetchAccounts:", error);
+      toast.error("An unexpected error occurred while loading accounts.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [selectedAccountId, setSelectedAccountId]);
+
+  // Fetch accounts when component opens
+  useEffect(() => {
+    if (isOpen && currentUser?.email) {
+      fetchAccounts(currentUser.email);
+    }
+  }, [isOpen, currentUser, fetchAccounts]);
+
+  // Fetch client data when selected account changes
+  useEffect(() => {
+    if (selectedAccountId) {
+      fetchClientDataById(selectedAccountId);
+    }
+  }, [selectedAccountId, fetchClientDataById]);
 
   if (!isOpen && isModal) return null;
 
@@ -298,9 +366,26 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
     <div className={`${isModal ? 'bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col' : 'w-full flex flex-col space-y-6'}`}>
       {/* Header */}
       <div className={`flex justify-between items-center ${isModal ? 'p-6 border-b border-gray-200 sticky top-0 bg-white z-10' : 'pb-6 border-b border-gray-200'}`}>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-          <p className="text-sm text-gray-500 mt-1">View your profile information</p>
+        <div className="flex items-center gap-4 flex-1">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
+            <p className="text-sm text-gray-500 mt-1">View your profile information</p>
+          </div>
+
+          {/* Account Selector - Show only if multiple accounts */}
+          {accounts.length > 1 && (
+            <select
+              value={selectedAccountId || ''}
+              onChange={(e) => setSelectedAccountId(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px] bg-white"
+            >
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.full_name || account.applywizz_id}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         {isModal && (
           <button
@@ -312,6 +397,7 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
             <X className="h-5 w-5 text-gray-500" />
           </button>
         )}
+
       </div>
 
       {/* Tab Navigation */}
