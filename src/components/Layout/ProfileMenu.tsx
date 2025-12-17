@@ -54,6 +54,9 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
             <div className="min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{user.name}</div>
               <div className="text-xs text-gray-600 truncate">{user.email}</div>
+              {user.role !== 'client' && (
+                <div className="text-xs text-gray-600 truncate">{user.role}</div>
+              )}
             </div>
             <button
               className="p-1 rounded hover:bg-gray-100"
