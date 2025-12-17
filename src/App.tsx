@@ -935,7 +935,7 @@ function App() {
           : fetchedClientData.company_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
 
         // Call the Fermion API to create the user
-        const fermionResponse = await fetch('https://ticketingtoolapplywi-git-29729d-applywizz-tech-vercels-projects.vercel.app/api/create-fermion-user', {
+        const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
