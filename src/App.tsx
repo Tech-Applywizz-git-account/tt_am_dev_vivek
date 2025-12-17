@@ -870,7 +870,7 @@ function App() {
       full_address: clientData.full_address,
       date_of_birth: clientData.date_of_birth,
       primary_phone: clientData.primary_phone,
- 
+
     });
 
     if (additionalInfoError) {
@@ -1104,7 +1104,7 @@ function App() {
         console.log("Error", error)
         console.error(`❌ Error creating ${client.company_email} : ${error.message}`);
       }
-    }else{
+    } else {
       const { error: userInsertError } = await supabase.from('users').insert({
         id: userData.user.id, // must match auth.users.id
         name: name,
@@ -1113,7 +1113,7 @@ function App() {
         department: 'Client Services',
         is_active: true,
       });
-      
+
       if (userInsertError) {
         console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
         console.error(userInsertError);
@@ -1482,7 +1482,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
-                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head' , 'resume_team_member'].includes(currentUser.role) && (
+                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head', 'resume_team_member'].includes(currentUser.role) && (
                   <>
                     <button
                       onClick={() => setIsSendMailModalOpen(true)}

@@ -75,6 +75,62 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'details' | 'assignments' | 'education' | 'employment' | 'background' | 'codinglab'>('details');
   const [testResultsForm, setTestResultsForm] = useState<TestResult[]>([]);
+  const [isCreatingFermionUser, setIsCreatingFermionUser] = useState(false);
+  const [showFermionUserModal, setShowFermionUserModal] = useState(false);
+
+  // Handler to open Fermion user creation modal  
+  const handleOpenFermionUserModal = () => {
+    if (!client?.applywizz_id) {
+      toast.error('❌ ApplyWizz ID is required to create Fermion user');
+      return;
+    }
+    setShowFermionUserModal(true);
+  };
+
+  // Handler to create Fermion user with auto-populated client data
+  const handleCreateFermionUser = async () => {
+    if (!client) return;
+
+    // Generate username from applywizz_id or email (remove hyphens)
+    const username = client.applywizz_id
+      ? client.applywizz_id.replace(/-/g, '')
+      : client.company_email.split('@')[0];
+
+    const confirmMessage = `Create Fermion user for:\n\nName: ${client.full_name}\nEmail: ${client.company_email}\nUser ID: ${client.applywizz_id}\nUsername: ${username}\n\nDefault password: Created@123\n\nProceed?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsCreatingFermionUser(true);
+
+    try {
+      const response = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: client.applywizz_id,
+          name: client.full_name,
+          email: client.company_email,
+          username: username
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(
+          `🎉 Fermion user created successfully!\n📧 Email sent to: ${client.company_email}\n🔑 Default password: Created@123`,
+          { autoClose: 5000 }
+        );
+      } else {
+        toast.error(`❌ Error: ${data.message || 'Failed to create Fermion user'}`);
+      }
+    } catch (error) {
+      console.error('Error creating Fermion user:', error);
+      toast.error('❌ Network error. Please try again.');
+    } finally {
+      setIsCreatingFermionUser(false);
+    }
+  };
 
   const isReadOnly = currentUserRole === "career_associate";
 
@@ -986,6 +1042,44 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                   Configure coding lab environment and test results for this client
                 </p>
 
+                {/* Add Fermion User Button */}
+                <div className="mb-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-purple-700 mb-2">
+                    Fermion Account Creation
+                  </h3>
+                  <p className="text-xs text-purple-600 mb-3">
+                    Create a Fermion assessment platform account for this client using their existing information.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenFermionUserModal}
+                    disabled={isCreatingFermionUser || !client?.applywizz_id}
+                    className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreatingFermionUser ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Creating Fermion User...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Add Fermion User</span>
+                      </>
+                    )}
+                  </button>
+                  {!client?.applywizz_id && (
+                    <p className="text-xs text-red-600 mt-2">
+                      ⚠️ ApplyWizz ID is required to create Fermion user
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-600 mt-2">
+                    <strong>Auto-filled data:</strong> Name, Email, User ID from client profile. Default password: Created@123
+                  </p>
+                </div>
+
                 {/* Coding Lab URL Dropdown */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1010,6 +1104,16 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
                     <option value="ba2">Business Analyst 2 (BA2)</option>
                     <option value="ds1">Data Scientist 1 (DS1)</option>
                     <option value="wda2">WorkDay Analyst 2 (WDA2)</option>
+                    <option value="pd1">Python Developer 1 (PD1)</option>
+                    <option value="pd2">Python Developer 2 (PD2)</option>
+                    <option value="genai1">Generative AI 1 (GENAI1)</option>
+                    <option value="genai2">Generative AI 2 (GENAI2)</option>
+                    <option value="medc1">Medical Coding 1 (MEDC1)</option>
+                    <option value="medc2">Medical Coding 2 (MEDC2)</option>
+                    <option value="cs1">Cyber Security 1 (CS1)</option>
+                    <option value="cs2">Cyber Security 2 (CS2)</option>
+                    <option value="aiml1">AI/ML 1 (AIML1)</option>
+                    <option value="aiml2">AI/ML 2 (AIML2)</option>
                     <option value="fe1">Frontend Lab 1 (FE1)</option>
                     <option value="fe2">Frontend Lab 2 (FE2)</option>
                     <option value="be1">Backend Lab 1 (BE1)</option>
@@ -1407,6 +1511,106 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
           </div>
         </div>
       </div>
+
+      {/* Fermion User Creation Modal */}
+      {showFermionUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg w-full max-w-md mx-4">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-purple-50">
+              <div className="flex items-center space-x-2">
+                <h2 className="text-xl font-bold text-purple-900">Create Fermion User</h2>
+              </div>
+              <button
+                onClick={() => setShowFermionUserModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Creating Fermion assessment account with the following details:
+              </p>
+
+              <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                {/* User ID */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">User ID</label>
+                  <div className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-900">
+                    {client?.applywizz_id || 'N/A'}
+                  </div>
+                </div>
+
+                {/* Full Name */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Full Name</label>
+                  <div className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-900">
+                    {client?.full_name || 'N/A'}
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Email Address</label>
+                  <div className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-900">
+                    {client?.company_email || 'N/A'}
+                  </div>
+                </div>
+
+                {/* Username */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Username</label>
+                  <div className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-900">
+                    {client?.applywizz_id
+                      ? client.applywizz_id.replace(/-/g, '')
+                      : client?.company_email.split('@')[0] || 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <p className="text-sm text-purple-800">
+                  <strong>Default Password:</strong> <code className="bg-purple-100 px-2 py-0.5 rounded">Created@123</code>
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  A welcome email will be sent to the client's email address.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowFermionUserModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateFermionUser}
+                disabled={isCreatingFermionUser}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isCreatingFermionUser ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <span>Create User</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
