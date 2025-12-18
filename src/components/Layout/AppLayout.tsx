@@ -71,14 +71,13 @@ const AppLayout: React.FC<Props> = ({
       <Navbar user={currentUser} onLogout={handleLogout} onViewLabResults={onViewLabResults} />
 
       <div className="flex">
-        {showSidebar && (
-          <Sidebar
-            user={currentUser}
-            activeView={activeView}
-            onViewChange={setActiveView}
-            pendingClientsCount={pendingClientsCount}
-          />
-        )}
+        <Sidebar
+          user={currentUser}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          pendingClientsCount={pendingClientsCount}
+          optedJobLinks={optedJobLinks}
+        />
         <main className="flex-1 p-8">
           {renderMainContent()}
         </main>

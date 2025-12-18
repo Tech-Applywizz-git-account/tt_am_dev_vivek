@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Calendar, MapPin, ExternalLink, Loader2, ChevronDown, ChevronUp, Briefcase } from "lucide-react";
 import { supabase } from '@/lib/supabaseClient';
+import { useAccount } from '@/contexts/AccountContext';
 
 // ✅ Types
 interface Job {
@@ -14,10 +15,13 @@ interface Job {
     date_posted?: string;
     role_name?: string;
     status?: string;
+    source?: string;
+    apply_type?: string | null;
 }
 
 interface JobLinksResponse {
     jobs: Job[];
+    easyapply: Job[];
 }
 
 interface JobGroup {
@@ -29,6 +33,7 @@ interface JobGroup {
 interface ClientAccount {
     applywizz_id: string;
     full_name?: string;
+    id: string; // Added ID field
 }
 
 interface JobLinksListProps {
@@ -96,7 +101,9 @@ const getStatusBadgeColor = (status: string | undefined | null) => {
 };
 
 const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
-    const [jobs, setJobs] = useState<Job[]>([]);
+    const [jobs, setJobs] = useState<Job[]>([]); // Regular jobs
+    const [easyApplyJobs, setEasyApplyJobs] = useState<Job[]>([]); // Easy apply jobs
+    const [allJobs, setAllJobs] = useState<Job[]>([]); // Combined for filtering/sorting
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>("");
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -109,7 +116,12 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
     // New state for multiple accounts
     const [accounts, setAccounts] = useState<ClientAccount[]>([]);
-    const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+
+    // Use the shared context for selectedAccountId
+    const { selectedAccountId, setSelectedAccountId } = useAccount();
+
+    // Local state to store the applywizz_id for the selected account
+    const [selectedApplywizzId, setSelectedApplywizzId] = useState<string | null>(null);
 
     // Extract the data fetching logic into a separate function
     // Fetch client accounts based on email
@@ -120,7 +132,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             try {
                 const { data, error } = await supabase
                     .from('clients')
-                    .select('applywizz_id, full_name')
+                    .select('applywizz_id, full_name, id')
                     .eq('company_email', currentUserEmail);
 
                 if (error) {
@@ -128,16 +140,24 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                     setError("Failed to load client accounts.");
                     return;
                 }
-                console.log("Accounts fetched:", data); 
+                console.log("Accounts fetched:", data);
 
                 if (data && data.length > 0) {
-                    // Filter out any accounts without applywizz_id
-                    const validAccounts = data.filter(acc => acc.applywizz_id);
+                    // Filter out any accounts without applywizz_id or id
+                    const validAccounts = data.filter(acc => acc.applywizz_id && acc.id);
                     setAccounts(validAccounts);
 
-                    // Automatically select the first account
-                    if (validAccounts.length > 0) {
-                        setSelectedAccountId(validAccounts[0].applywizz_id);
+                    const hasMultipleAccounts = validAccounts.length > 1;
+
+                    // If no account is selected or selected account is not in the list, select the first one
+                    if (!selectedAccountId || !validAccounts.find(acc => acc.id === selectedAccountId)) {
+                        if (validAccounts.length > 0) {
+                            // Only persist to localStorage if there are multiple accounts
+                            setSelectedAccountId(validAccounts[0].id, hasMultipleAccounts);
+                        }
+                    } else if (!hasMultipleAccounts) {
+                        // If only one account, make sure we're not persisting to localStorage
+                        setSelectedAccountId(validAccounts[0].id, false);
                     }
                 } else {
                     // No accounts found, maybe handle this gracefully or show error
@@ -150,11 +170,21 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         };
 
         fetchAccounts();
-    }, [currentUserEmail]);
+    }, [currentUserEmail, selectedAccountId, setSelectedAccountId]);
 
-    // Fetch jobs when selectedAccountId changes
+    // Map the selectedAccountId from context to applywizz_id
     useEffect(() => {
-        if (!selectedAccountId) return;
+        if (selectedAccountId && accounts.length > 0) {
+            const account = accounts.find(acc => acc.id === selectedAccountId);
+            if (account) {
+                setSelectedApplywizzId(account.applywizz_id);
+            }
+        }
+    }, [selectedAccountId, accounts]);
+
+    // Fetch jobs when selectedApplywizzId changes
+    useEffect(() => {
+        if (!selectedApplywizzId) return;
 
         const fetchJobLinks = async () => {
             setLoading(true);
@@ -167,7 +197,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                     throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
                 }
 
-                const response = await fetch(`${apiUrl}/api/job-links?lead_id=${selectedAccountId}`);
+                const response = await fetch(`${apiUrl}/api/job-links?lead_id=${selectedApplywizzId}`);
 
                 if (!response.ok) {
                     throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
@@ -175,14 +205,24 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
                 const apiData: JobLinksResponse = await response.json();
 
-                // Convert backend statuses to frontend format
-                const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
+                // Convert backend statuses to frontend format for both regular and easy apply jobs
+                const regularJobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
                     ...job,
                     // Only convert status if it's not null, otherwise keep it as null
                     status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
                 }));
 
-                setJobs(jobsWithConvertedStatuses);
+                const easyApplyJobsWithConvertedStatuses = (apiData.easyapply || []).map(job => ({
+                    ...job,
+                    // Only convert status if it's not null, otherwise keep it as null
+                    status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
+                }));
+
+                setJobs(regularJobsWithConvertedStatuses);
+                setEasyApplyJobs(easyApplyJobsWithConvertedStatuses);
+
+                // Combine both for filtering/sorting (backward compatibility)
+                setAllJobs([...regularJobsWithConvertedStatuses, ...easyApplyJobsWithConvertedStatuses]);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "An unknown error occurred");
             } finally {
@@ -191,7 +231,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         };
 
         fetchJobLinks();
-    }, [selectedAccountId]);
+    }, [selectedApplywizzId]);
 
     // Log when currentUserEmail changes
     useEffect(() => {
@@ -200,10 +240,10 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
     // Group jobs by date for the date-wise view
     useEffect(() => {
-        if (jobs.length > 0) {
+        if (allJobs.length > 0) {
             const groups: Record<string, Job[]> = {};
 
-            jobs.forEach(job => {
+            allJobs.forEach(job => {
                 if (job.date_posted) {
                     const dateKey = job.date_posted.split('T')[0]; // Extract YYYY-MM-DD
                     if (!groups[dateKey]) {
@@ -226,11 +266,11 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
             setGroupedJobs(groupedArray);
         }
-    }, [jobs]);
+    }, [allJobs]);
 
     useEffect(() => {
-        console.log("JobLinksList: Filter/sort useEffect running with jobs:", jobs.length, "selectedDate:", selectedDate, "selectedStatus:", selectedStatus, "sortOrder:", sortOrder);
-        let result = [...jobs];
+        console.log("JobLinksList: Filter/sort useEffect running with allJobs:", allJobs.length, "selectedDate:", selectedDate, "selectedStatus:", selectedStatus, "sortOrder:", sortOrder);
+        let result = [...allJobs];
 
         // Filter by selected date if provided
         if (selectedDate) {
@@ -273,20 +313,36 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
         setFilteredJobs(result);
         console.log("JobLinksList: Filter/sort complete, filtered jobs:", result.length);
-    }, [jobs, selectedDate, selectedStatus, sortOrder]);
+    }, [allJobs, selectedDate, selectedStatus, sortOrder]);
 
     const handleStatusChange = async (jobId: string, newStatus: string) => {
-        // Find the job index by ID instead of using array index
-        const jobIndex = jobs.findIndex(job => job.id === jobId);
-        if (jobIndex === -1) {
+        // Find the job in either regular jobs or easy apply jobs
+        const regularJobIndex = jobs.findIndex(job => job.id === jobId);
+        const easyApplyJobIndex = easyApplyJobs.findIndex(job => job.id === jobId);
+
+        if (regularJobIndex === -1 && easyApplyJobIndex === -1) {
             console.error("Job not found");
             return;
         }
 
         // Update the local state immediately for better UX
-        const updatedJobs = [...jobs];
-        updatedJobs[jobIndex].status = newStatus;
-        setJobs(updatedJobs);
+        if (regularJobIndex !== -1) {
+            const updatedJobs = [...jobs];
+            updatedJobs[regularJobIndex].status = newStatus;
+            setJobs(updatedJobs);
+        } else if (easyApplyJobIndex !== -1) {
+            const updatedEasyApplyJobs = [...easyApplyJobs];
+            updatedEasyApplyJobs[easyApplyJobIndex].status = newStatus;
+            setEasyApplyJobs(updatedEasyApplyJobs);
+        }
+
+        // Also update allJobs
+        const updatedAllJobs = [...allJobs];
+        const allJobsIndex = updatedAllJobs.findIndex(job => job.id === jobId);
+        if (allJobsIndex !== -1) {
+            updatedAllJobs[allJobsIndex].status = newStatus;
+            setAllJobs(updatedAllJobs);
+        }
 
         // Map frontend status values to backend expected values
         const backendStatus = convertFrontendStatusToBackend(newStatus);
@@ -318,28 +374,35 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             console.log("Job status updated successfully:", result);
 
             // Refresh the job list to ensure consistency
-            if (selectedAccountId) {
-                // We can't easily call fetchJobLinks here because it's inside the effect now.
-                // But we can trigger a re-fetch by toggling something or just manually fetching.
-                // Or better, we can extract fetchJobLinks outside the effect.
-                // For now, let's just re-fetch using the same logic.
-                const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL as string;
-                const response = await fetch(`${apiUrl}/api/job-links?lead_id=${selectedAccountId}`);
-                if (response.ok) {
-                    const apiData: JobLinksResponse = await response.json();
-                    const jobsWithConvertedStatuses = (apiData.jobs || []).map(job => ({
+            if (selectedApplywizzId) {
+                const refreshResponse = await fetch(`${apiUrl}/api/job-links?lead_id=${selectedApplywizzId}`);
+                if (refreshResponse.ok) {
+                    const apiData: JobLinksResponse = await refreshResponse.json();
+                    const regularJobsRefreshed = (apiData.jobs || []).map(job => ({
                         ...job,
                         status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
                     }));
-                    setJobs(jobsWithConvertedStatuses);
+                    const easyApplyJobsRefreshed = (apiData.easyapply || []).map(job => ({
+                        ...job,
+                        status: job.status ? convertBackendStatusToFrontend(job.status) : job.status
+                    }));
+                    setJobs(regularJobsRefreshed);
+                    setEasyApplyJobs(easyApplyJobsRefreshed);
+                    setAllJobs([...regularJobsRefreshed, ...easyApplyJobsRefreshed]);
                 }
             }
         } catch (error) {
             console.error("Error updating job status:", error);
-            // Revert the local state change if the API call fails
-            const revertedJobs = [...jobs];
-            revertedJobs[jobIndex].status = jobs[jobIndex].status;
-            setJobs(revertedJobs);
+            // Revert the local state change if the API call fails - revert all three states
+            if (regularJobIndex !== -1) {
+                const revertedJobs = [...jobs];
+                revertedJobs[regularJobIndex].status = jobs[regularJobIndex].status;
+                setJobs(revertedJobs);
+            } else if (easyApplyJobIndex !== -1) {
+                const revertedEasyApplyJobs = [...easyApplyJobs];
+                revertedEasyApplyJobs[easyApplyJobIndex].status = easyApplyJobs[easyApplyJobIndex].status;
+                setEasyApplyJobs(revertedEasyApplyJobs);
+            }
         }
     };
 
@@ -357,7 +420,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
             const today = new Date();
             const diffTime = today.getTime() - postedDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays > 7; // Consider overdue if posted more than 7 days ago
+            return diffDays > 15; // Consider overdue if posted more than 7 days ago
         } catch {
             return false;
         }
@@ -402,6 +465,94 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         }
     };
 
+    // Helper function to render a job card (to avoid duplication)
+    const renderJobCard = (job: Job, index: number, serialNumber: number) => {
+        const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
+        const overdue = isOverdue(job.date_posted);
+        const displayStatus = job.status || 'pending';
+
+        return (
+            <div
+                key={`${job.id}-${index}`}
+                className="bg-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-start shadow-sm hover:shadow transition"
+            >
+                {/* Serial Number */}
+                <div className="flex items-center justify-center bg-gray-100 rounded-full w-6 h-6 flex-shrink-0 mr-3 mb-2 md:mb-0">
+                    <span className="text-gray-700 font-medium text-xs">{serialNumber}</span>
+                </div>
+
+                <div className="flex-1 mb-3 md:mb-0">
+                    <h3 className="font-semibold text-gray-800">
+                        {job.title || "Untitled Job"}{job.id}
+                    </h3>
+                    <p className="text-sm text-blue-600 font-medium mt-1">{job.role_name || "N/A"}</p>
+                    <p className="text-sm text-gray-600 mt-2">
+                        Company Name : {job.company || "Unknown Company"}
+                    </p>
+                    {/* Match Score */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
+                            Score: {job.score ?? "N/A"}
+                        </span>
+                    </div>
+
+                    {/* Location & Date Info */}
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                            <MapPin size={14} />
+                            <span className="break-words">{job.location || "Location not specified"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Calendar size={14} />
+                            <span>
+                                {formattedDate} ({daysAgo})
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-start md:items-end gap-2 w-full md:w-auto">
+                    {/* Status Badge */}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(displayStatus)}`}>
+                        {displayStatus.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                    </span>
+
+                    {/* Overdue Warning */}
+                    {/* {overdue && (
+                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">
+                            Overdue
+                        </span>
+                    )} */}
+
+                    {/* Status Dropdown */}
+                    <select
+                        value={displayStatus}
+                        onChange={(e) => handleStatusChange(job.id!, e.target.value)}
+                        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {statusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Apply Link */}
+                    {job.url && (
+                        <a
+                            href={job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition"
+                        >
+                            Apply <ExternalLink size={14} />
+                        </a>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     if (loading) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
@@ -421,7 +572,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
         );
     }
 
-    if (!jobs || jobs.length === 0) {
+    if (!allJobs || allJobs.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
                 <div className="flex items-center gap-4">
@@ -433,7 +584,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
                         >
                             {accounts.map((account) => (
-                                <option key={account.applywizz_id} value={account.applywizz_id}>
+                                <option key={account.id} value={account.id}>
                                     {account.full_name || account.applywizz_id}
                                 </option>
                             ))}
@@ -448,13 +599,13 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
     // Calculate status counts based on all jobs (from API) - not filtered
     // Treat null status values as pending
     const originalStatusCounts = {
-        total: jobs.length,
-        pending: jobs.filter(job => job.status === 'pending' || job.status === null).length,
-        in_progress: jobs.filter(job => job.status === 'in_progress').length,
-        completed: jobs.filter(job => job.status === 'completed').length,
-        already_applied: jobs.filter(job => job.status === 'already_applied').length,
-        not_relevant: jobs.filter(job => job.status === 'not_relevant').length,
-        job_not_found: jobs.filter(job => job.status === 'job_not_found').length,
+        total: allJobs.length,
+        pending: allJobs.filter(job => job.status === 'pending' || job.status === null).length,
+        in_progress: allJobs.filter(job => job.status === 'in_progress').length,
+        completed: allJobs.filter(job => job.status === 'completed').length,
+        already_applied: allJobs.filter(job => job.status === 'already_applied').length,
+        not_relevant: allJobs.filter(job => job.status === 'not_relevant').length,
+        job_not_found: allJobs.filter(job => job.status === 'job_not_found').length,
     };
 
     return (
@@ -469,14 +620,14 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                             className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
                         >
                             {accounts.map((account) => (
-                                <option key={account.applywizz_id} value={account.applywizz_id}>
+                                <option key={account.id} value={account.id}>
                                     {account.full_name || account.applywizz_id}
                                 </option>
                             ))}
                         </select>
                     )}
                 </div>
-                
+
 
                 {/* View Mode Toggle and Date Filter/Sort Controls */}
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
@@ -645,95 +796,50 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                     </div>
 
                     <div className="space-y-4">
-                        {filteredJobs.map((job, index) => {
-                            const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
-                            const overdue = isOverdue(job.date_posted);
-                            // Use 'pending' as default status only when status is null or undefined
-                            const displayStatus = job.status || 'pending';
-                            // Calculate serial number (1-based index)
-                            const serialNumber = index + 1;
-
-                            return (
-                                <div
-                                    key={`${job.url}-${index}`}
-                                    className="bg-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-start shadow-sm hover:shadow transition"
-                                >
-                                    {/* Serial Number */}
-                                    <div className="flex items-center justify-center bg-gray-100 rounded-full w-6 h-6 flex-shrink-0 mr-3 mb-2 md:mb-0">
-                                        <span className="text-gray-700 font-medium text-xs">{serialNumber}</span>
-                                    </div>
-
-                                    <div className="flex-1 mb-3 md:mb-0">
-                                        <h3 className="font-semibold text-gray-800">
-                                            {job.title || "Untitled Job"}
-                                            {/* ({job.url ? job.url.split('/').pop() : 'N/A'}) */}
-                                        </h3>
-                                        <p className="text-sm text-blue-600 font-medium mt-1">{job.role_name || "N/A"}</p>
-                                        <p className="text-sm text-gray-600 mt-2">
-                                            Company Name : {job.company || "Unknown Company"}
-                                        </p>
-                                        {/* Match Score */}
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
-                                                Score: {job.score ?? "N/A"}
-                                            </span>
-                                        </div>
-
-                                        {/* Location & Date Info */}
-                                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-2 text-sm text-gray-600">
-                                            <div className="flex items-center gap-1">
-                                                <MapPin size={14} />
-                                                <span className="break-words">{job.location || "Location not specified"}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Calendar size={14} />
-                                                <span>Posted: {formattedDate}{daysAgo}</span>
-                                            </div>
-                                            {overdue && (
-                                                <div className="flex items-center gap-1 text-red-600">
-                                                    <span className="font-medium">(Overdue)</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col sm:flex-row md:flex-col gap-2 min-w-[180px]">
-                                        <div className="flex items-center justify-between md:justify-start gap-2">
-                                            <span className="text-sm font-medium">Status:</span>
-                                            <span
-                                                className={`inline-block px-2 py-1 rounded text-xs font-semibold uppercase ${getStatusBadgeColor(
-                                                    displayStatus
-                                                )}`}
-                                            >
-                                                {displayStatus ? displayStatus.replace(/_/g, " ") : "N/A"}
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={displayStatus}
-                                                onChange={(e) => job.id && handleStatusChange(job.id, e.target.value)}
-                                                className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                                disabled={!job.id}
-                                            >
-                                                {statusOptions.map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                onClick={() => job.url && window.open(job.url, '_blank')}
-                                                disabled={!job.url}
-                                                className={`flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition ${job.url ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} w-full md:w-auto`}
-                                            >
-                                                <ExternalLink size={14} />
-                                                <span className="whitespace-nowrap">View Job</span>
-                                            </button>
-                                        </div>
-                                    </div>
+                        {/* Two-Column Grid for Regular Jobs and Easy Apply */}
+                        <div className={`grid gap-6 ${easyApplyJobs.length > 0 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                            {/* Left Column: Regular Applications */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Briefcase className="h-5 w-5 text-blue-600" />
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        Regular Applications ({jobs.length})
+                                    </h3>
                                 </div>
-                            );
-                        })}
+
+                                {jobs.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {jobs.map((job, index) => renderJobCard(job, index, index + 1))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                        No regular applications available
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Column: Easy Apply */}
+                            {easyApplyJobs.length > 0 && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Briefcase className="h-5 w-5 text-green-600" />
+                                        <h3 className="text-lg font-semibold text-gray-900">
+                                            Easy Apply ({easyApplyJobs.length})
+                                        </h3>
+                                    </div>
+
+                                    {easyApplyJobs.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {easyApplyJobs.map((job, index) => renderJobCard(job, index, index + 1))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                            No easy apply applications available
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -750,6 +856,10 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
                             const isExpanded = expandedDate === group.date;
 
+                            // Separate jobs into regular and easy apply for this date
+                            const regularJobsForDate = group.jobs.filter(job => !job.apply_type || job.apply_type !== 'EASY_APPLY');
+                            const easyApplyJobsForDate = group.jobs.filter(job => job.apply_type === 'EASY_APPLY');
+
                             return (
                                 <div key={group.date}>
                                     {/* Date Row */}
@@ -765,95 +875,64 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
 
                                         <div className="flex items-center gap-3 text-blue-700 font-semibold">
                                             <div className="flex items-center gap-2">
-                                                <Briefcase size={18} />
-                                                <span>{group.count} Applications</span>
+                                                <Briefcase size={18} className="text-blue-600" />
+                                                <span>{regularJobsForDate.length} Regular Apply</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Briefcase size={18} className="text-green-600" />
+                                                <span>{easyApplyJobsForDate.length} Easy Apply</span>
                                             </div>
                                             {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                         </div>
                                     </div>
 
-                                    {/* Expanded Job List with Serial Numbers */}
+                                    {/* Expanded Job List with Two-Column Layout */}
                                     {isExpanded && (
-                                        <div className="mt-3 space-y-4 bg-gray-50 p-4 rounded-lg">
-                                            {group.jobs.map((job, index) => {
-                                                const { formattedDate, daysAgo } = formatDateInfo(job.date_posted);
-                                                const overdue = isOverdue(job.date_posted);
-                                                const displayStatus = job.status || 'pending';
-                                                // Calculate serial number within the date group (1-based index)
-                                                const serialNumber = index + 1;
-
-                                                return (
-                                                    <div
-                                                        key={job.id || `${job.url}-${Math.random()}`}
-                                                        className="bg-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-start shadow-sm hover:shadow transition"
-                                                    >
-                                                        {/* Serial Number */}
-                                                        <div className="flex items-center justify-center bg-gray-100 rounded-full w-6 h-6 flex-shrink-0 mr-3 mb-2 md:mb-0">
-                                                            <span className="text-gray-700 font-medium text-xs">{serialNumber}</span>
-                                                        </div>
-
-                                                        <div className="flex-1 mb-3 md:mb-0">
-                                                            <h3 className="font-semibold text-gray-800">
-                                                                {job.title || "Untitled Role"}
-                                                            </h3>
-                                                            {/* Role Name and Score Information */}
-                                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                                {job.role_name && (
-                                                                    <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                                                                        {job.role_name}
-                                                                    </span>
-                                                                )}
-                                                                <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
-                                                                    Score: {job.score ?? "N/A"}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm text-gray-600 mt-2">
-                                                                Company Name : {job.company || "Unknown Company"}
-                                                            </p>
-                                                            <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
-                                                                <MapPin size={14} />
-                                                                <span>{job.location || "Not Available"}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex flex-col sm:flex-row md:flex-col gap-2 min-w-[180px]">
-                                                            <div className="flex items-center justify-between md:justify-start gap-2">
-                                                                <span className="text-sm font-medium">Status:</span>
-                                                                <span
-                                                                    className={`inline-block px-2 py-1 rounded text-xs font-semibold uppercase ${getStatusBadgeColor(
-                                                                        displayStatus
-                                                                    )}`}
-                                                                >
-                                                                    {displayStatus.replace(/_/g, " ")}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex gap-2">
-                                                                <select
-                                                                    value={displayStatus}
-                                                                    onChange={(e) => job.id && handleStatusChange(job.id, e.target.value)}
-                                                                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                                                    disabled={!job.id}
-                                                                >
-                                                                    {statusOptions.map((option) => (
-                                                                        <option key={option.value} value={option.value}>
-                                                                            {option.label}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                                <a
-                                                                    href={job.url || "#"}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1 text-sm hover:bg-green-700 transition w-full md:w-auto justify-center"
-                                                                >
-                                                                    <ExternalLink size={14} />
-                                                                    View Job
-                                                                </a>
-                                                            </div>
-                                                        </div>
+                                        <div className="mt-3 bg-gray-50 p-4 rounded-lg">
+                                            {/* Two-Column Grid for Regular Jobs and Easy Apply */}
+                                            <div className={`grid gap-6 ${easyApplyJobsForDate.length > 0 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                                                {/* Left Column: Regular Applications */}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center gap-2 mb-4">
+                                                        <Briefcase className="h-5 w-5 text-blue-600" />
+                                                        <h4 className="text-md font-semibold text-gray-900">
+                                                            Regular Applications ({regularJobsForDate.length})
+                                                        </h4>
                                                     </div>
-                                                );
-                                            })}
+
+                                                    {regularJobsForDate.length > 0 ? (
+                                                        <div className="space-y-4">
+                                                            {regularJobsForDate.map((job, index) => renderJobCard(job, index, index + 1))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-8 text-gray-500">
+                                                            No regular applications for this date
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Right Column: Easy Apply */}
+                                                {easyApplyJobsForDate.length > 0 && (
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center gap-2 mb-4">
+                                                            <Briefcase className="h-5 w-5 text-green-600" />
+                                                            <h4 className="text-md font-semibold text-gray-900">
+                                                                Easy Apply ({easyApplyJobsForDate.length})
+                                                            </h4>
+                                                        </div>
+
+                                                        {easyApplyJobsForDate.length > 0 ? (
+                                                            <div className="space-y-4">
+                                                                {easyApplyJobsForDate.map((job, index) => renderJobCard(job, index, index + 1))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-center py-8 text-gray-500">
+                                                                No easy apply applications for this date
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
