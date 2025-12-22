@@ -41,6 +41,7 @@ import ScoredJobsDashboard from './components/ClientDashboard/ScoredJobsDashboar
 import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegularList';
 import ScoredJobsEasyApplyList from './components/ClientDashboard/ScoredJobsEasyApplyList';
 import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
+import { useAccount } from './contexts/AccountContext';
 
 function App() {
   const fetchData = async () => {
@@ -197,6 +198,9 @@ function App() {
   const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject with Attachment');
   const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
+  // Get selectedAccountId from context for multi-account support
+  const { selectedAccountId } = useAccount();
 
   useEffect(() => {
     fetchData();
@@ -426,6 +430,38 @@ function App() {
 
     fetchClientDashboardData();
   }, [currentUser?.email, currentUser?.role, optedJobLinks]);
+
+  // Update applywizzId when selectedAccountId changes (for multi-account scored jobs clients)
+  useEffect(() => {
+    const fetchApplywizzIdForSelectedAccount = async () => {
+      // Only fetch if selectedAccountId exists and this is a scored jobs client
+      if (selectedAccountId && optedJobLinks) {
+        try {
+          console.log("Fetching applywizz_id for selected account:", selectedAccountId);
+
+          const { data, error } = await supabase
+            .from('clients')
+            .select('applywizz_id')
+            .eq('id', selectedAccountId)
+            .single();
+
+          if (error) {
+            console.error("Error fetching applywizz_id:", error);
+            return;
+          }
+
+          if (data && data.applywizz_id) {
+            console.log("Updated applywizzId to:", data.applywizz_id);
+            setApplywizzId(data.applywizz_id);
+          }
+        } catch (err) {
+          console.error("Error in fetchApplywizzIdForSelectedAccount:", err);
+        }
+      }
+    };
+
+    fetchApplywizzIdForSelectedAccount();
+  }, [selectedAccountId, optedJobLinks]);
 
   // Add this to save view changes
   useEffect(() => {

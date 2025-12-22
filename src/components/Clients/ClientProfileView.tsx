@@ -365,39 +365,51 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
   const content = (
     <div className={`${isModal ? 'bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col' : 'w-full flex flex-col space-y-6'}`}>
       {/* Header */}
-      <div className={`flex justify-between items-center ${isModal ? 'p-6 border-b border-gray-200 sticky top-0 bg-white z-10' : 'pb-6 border-b border-gray-200'}`}>
-        <div className="flex items-center gap-4 flex-1">
-          <div>
+      <div className={`${isModal ? 'p-6 border-b border-gray-200 sticky top-0 bg-white z-10' : 'pb-6 border-b border-gray-200'}`}>
+        <div className="flex justify-between items-start gap-6">
+          {/* Title and Subtitle */}
+          <div className="flex-shrink-0">
             <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
             <p className="text-sm text-gray-500 mt-1">View your profile information</p>
           </div>
 
-          {/* Account Selector - Show only if multiple accounts */}
-          {accounts.length > 1 && (
-            <select
-              value={selectedAccountId || ''}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px] bg-white"
-            >
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.full_name || account.applywizz_id}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        {isModal && (
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            title="Close"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        )}
+          {/* Right side content: Account Selector and Close Button */}
+          <div className="flex items-center gap-4">
+            {/* Account Selector - Show only if multiple accounts */}
+            {accounts.length > 1 && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 rounded-lg border border-blue-200 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                    Select Account :
+                  </label>
+                  <select
+                    value={selectedAccountId || ''}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    className="px-4 py-2 border border-blue-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[220px] bg-white shadow-sm hover:border-blue-400 transition-colors cursor-pointer"
+                  >
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.full_name || account.applywizz_id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
+            {/* Close Button */}
+            {isModal && (
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                title="Close"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tab Navigation */}
