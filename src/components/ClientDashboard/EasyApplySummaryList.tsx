@@ -95,7 +95,7 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
         }));
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
@@ -154,7 +154,7 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
             setJobsLoading(prev => ({ ...prev, [date]: true }));
 
             // Fetch ONLY easy apply jobs for this date
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }

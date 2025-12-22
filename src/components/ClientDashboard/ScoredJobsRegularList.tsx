@@ -90,7 +90,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         if (!applywizzId) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}`);
 
             if (!response.ok) {

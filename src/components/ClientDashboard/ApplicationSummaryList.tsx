@@ -94,7 +94,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
     }));
 
     try {
-      const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+      const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
       if (!apiUrl) {
         throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
       }
@@ -153,7 +153,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
       setJobsLoading(prev => ({ ...prev, [date]: true }));
 
       // Fetch the job data for the specific date
-      const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+      const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
       if (!apiUrl) {
         throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
       }
