@@ -64,7 +64,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
@@ -143,7 +143,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         });
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             const response = await fetch(`${apiUrl}/api/job-links/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
