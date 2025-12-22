@@ -11,7 +11,10 @@ import {
   AlertTriangle,
   Clock,
   TrendingUp,
-  User as UserIcon
+  User as UserIcon,
+  Zap,
+  Briefcase,
+  CheckCircle
 } from 'lucide-react';
 import { User } from '../../types';
 import { rolePermissions } from '../../data/mockData';
@@ -50,6 +53,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'profile',
       label: 'View Profile',
       icon: UserIcon,
+      show: user.role === 'client',
+    },
+    {
+      id: 'regular-applications',
+      label: 'Career Portal Applications',
+      icon: Briefcase,
+      show: user.role === 'client',
+    },
+    {
+      id: 'easy-apply',
+      label: 'Easy Apply',
+      icon: Zap,
+      show: user.role === 'client',
+    },
+    {
+      id: 'applied-jobs',
+      label: 'Applied Jobs',
+      icon: CheckCircle,
       show: user.role === 'client',
     },
     {

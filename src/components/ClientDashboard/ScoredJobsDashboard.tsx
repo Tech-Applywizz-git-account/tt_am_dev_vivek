@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     BarChart,
     Bar,
@@ -18,17 +18,67 @@ export interface ChartItem {
     easyApplyCount: number;
 }
 
-interface ApplicationsOverTimeProps {
-    data: ChartItem[];
-    loading?: boolean;
-    error?: string;
+interface ScoredJobsDashboardProps {
+    applywizzId?: string;
 }
 
-const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loading = false, error = "" }) => {
+const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }) => {
+    const [chartData, setChartData] = useState<ChartItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    // Calculate totals for summary cards
-    const totalRegular = data.reduce((sum, item) => sum + item.regularCount, 0);
-    const totalEasyApply = data.reduce((sum, item) => sum + item.easyApplyCount, 0);
+    // Fetch summary data
+    const fetchSummaryData = async () => {
+        if (!applywizzId) {
+            setError("Applywizz ID not available");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError("");
+
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            if (!apiUrl) {
+                throw new Error('VITE_EXTERNAL_API_URL is not defined');
+            }
+
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}`);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch summary: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Transform data for chart
+            const allDates = new Set([
+                ...Object.keys(data.regular_jobs || {}),
+                ...Object.keys(data.easy_apply_jobs || {})
+            ]);
+
+            const formatted: ChartItem[] = Array.from(allDates).map(date => ({
+                date,
+                regularCount: Number(data.regular_jobs[date] || 0),
+                easyApplyCount: Number(data.easy_apply_jobs[date] || 0)
+            })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            setChartData(formatted);
+        } catch (err) {
+            console.error("Error fetching summary:", err);
+            setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSummaryData();
+    }, [applywizzId]);
+
+    // Calculate totals
+    const totalRegular = chartData.reduce((sum, item) => sum + item.regularCount, 0);
+    const totalEasyApply = chartData.reduce((sum, item) => sum + item.easyApplyCount, 0);
     const totalApplications = totalRegular + totalEasyApply;
 
     // Custom tooltip
@@ -67,6 +117,24 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
         }
         return null;
     };
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-600 font-medium">{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -127,22 +195,10 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                     <h2 className="text-xl font-bold text-gray-800">Applications Over Time</h2>
                 </div>
 
-                {loading && (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    </div>
-                )}
-
-                {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-600 font-medium">{error}</p>
-                    </div>
-                )}
-
-                {!loading && !error && data.length > 0 && (
+                {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={400}>
                         <BarChart
-                            data={data}
+                            data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                         >
                             <defs>
@@ -215,9 +271,7 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                             />
                         </BarChart>
                     </ResponsiveContainer>
-                )}
-
-                {!loading && !error && data.length === 0 && (
+                ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                         <Calendar size={48} className="mb-4" />
                         <p className="text-lg font-medium">No application data available</p>
@@ -228,4 +282,4 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
     );
 };
 
-export default ApplicationsOverTime;
+export default ScoredJobsDashboard;

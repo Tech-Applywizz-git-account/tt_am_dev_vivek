@@ -34,7 +34,13 @@ import { ca } from 'date-fns/locale';
 import { SupabaseAdminCreateClient } from './lib/supabaseAdminCreateClient';
 import ApplicationsOverTime, { ChartItem } from './components/ClientDashboard/ApplicationsOverTime';
 import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/ApplicationSummaryList';
+import EasyApplySummaryList from './components/ClientDashboard/EasyApplySummaryList';
+import AppliedJobsList from './components/ClientDashboard/AppliedJobsList';
 import JobLinksList from './components/ClientDashboard/JobLinksList';
+import ScoredJobsDashboard from './components/ClientDashboard/ScoredJobsDashboard';
+import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegularList';
+import ScoredJobsEasyApplyList from './components/ClientDashboard/ScoredJobsEasyApplyList';
+import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
 
 function App() {
   const fetchData = async () => {
@@ -369,34 +375,47 @@ function App() {
 
         // Use the first client account found
         const activeClient = clientData[0];
+        console.log("activeClient data:", activeClient);
 
-        if (activeClient.opted_job_links) {
-          return;
-        }
-
+        // Set applywizzId for BOTH client types
         const fetchedApplywizzId = activeClient.applywizz_id;
         setApplywizzId(fetchedApplywizzId);
+        console.log("fetchedApplywizzId:", fetchedApplywizzId);
 
-        // Fetch the actual data from the external API
-        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-        if (!apiUrl) {
-          throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+        // Only fetch summary data for regular clients
+        // Scored jobs clients (opted_job_links = true) fetch their own data in components
+        if (!activeClient.opted_job_links) {
+          // Fetch the actual data from the external API for regular clients
+          const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+          if (!apiUrl) {
+            throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+          }
+
+          const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+          }
+
+          const apiData = await response.json();
+
+          // Transform the new API data format
+          // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
+          const allDates = new Set([
+            ...Object.keys(apiData.completed_tasks || {}),
+            ...Object.keys(apiData.easy_apply_tasks || {})
+          ]);
+
+          const formattedData: TaskCount[] = Array.from(allDates).map(date => ({
+            date,
+            regularCount: Number(apiData.completed_tasks[date] || 0),
+            easyApplyCount: Number(apiData.easy_apply_tasks[date] || 0)
+          })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          setClientDashboardData(formattedData);
+        } else {
+          console.log("Scored jobs client detected - components will fetch their own data");
         }
-
-        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
-        }
-
-        const apiData = await response.json();
-
-        // Transform the API data to match our expected format
-        const formattedData: TaskCount[] = Object.entries(apiData.completed_tasks || {})
-          .map(([date, count]) => ({ date, count: Number(count) }))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        setClientDashboardData(formattedData);
       } catch (err) {
         console.error("Error fetching client dashboard data:", err);
         setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -1097,7 +1116,7 @@ function App() {
         console.log("Error", error)
         console.error(`❌ Error creating ${client.company_email} : ${error.message}`);
       }
-    }else{
+    } else {
       const { error: userInsertError } = await supabase.from('users').insert({
         id: userData.user.id, // must match auth.users.id
         name: name,
@@ -1106,7 +1125,7 @@ function App() {
         department: 'Client Services',
         is_active: true,
       });
-      
+
       if (userInsertError) {
         console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
         console.error(userInsertError);
@@ -1475,7 +1494,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <div className="flex space-x-3">
-                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head' , 'resume_team_member'].includes(currentUser.role) && (
+                {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head', 'resume_team_member'].includes(currentUser.role) && (
                   <>
                     <button
                       onClick={() => setIsSendMailModalOpen(true)}
@@ -1711,7 +1730,7 @@ function App() {
             {currentUser?.role === 'client' ? (
               <>
                 {optedJobLinks ? (
-                  <JobLinksList currentUserEmail={currentUser?.email} />
+                  <ScoredJobsDashboard applywizzId={applywizzId} />
                 ) : (
                   <>
                     <ApplicationsOverTime
@@ -1865,6 +1884,76 @@ function App() {
               initialFilterPriority={filterPriority} // Pass the filter priority
             />
             <FeedbackButton user={currentUser} />
+          </div>
+        );
+
+      case 'easy-apply':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Easy Apply</h1>
+            </div>
+            {currentUser?.role === 'client' ? (
+              optedJobLinks ? (
+                <ScoredJobsEasyApplyList applywizzId={applywizzId} />
+              ) : (
+                <EasyApplySummaryList
+                  data={clientDashboardData}
+                  loading={clientDashboardLoading}
+                  error={clientDashboardError}
+                  applywizzId={applywizzId}
+                />
+              )
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'regular-applications':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Regular Applications</h1>
+            </div>
+            {currentUser?.role === 'client' ? (
+              optedJobLinks ? (
+                <ScoredJobsRegularList applywizzId={applywizzId} />
+              ) : (
+                <ApplicationSummaryList
+                  data={clientDashboardData}
+                  loading={clientDashboardLoading}
+                  error={clientDashboardError}
+                  applywizzId={applywizzId}
+                />
+              )
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'applied-jobs':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Applied Jobs</h1>
+            </div>
+            {currentUser?.role === 'client' ? (
+              optedJobLinks ? (
+                <ScoredJobsAppliedList applywizzId={applywizzId} />
+              ) : (
+                <AppliedJobsList applywizzId={applywizzId} />
+              )
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
+              </div>
+            )}
           </div>
         );
 
