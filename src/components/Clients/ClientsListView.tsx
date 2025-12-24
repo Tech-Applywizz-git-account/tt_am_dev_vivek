@@ -14,6 +14,7 @@ interface ClientsListViewProps {
     handleViewClientApplications: (client: Client) => void;
 }
 
+
 export const ClientsListView: React.FC<ClientsListViewProps> = ({
     currentUser,
     clients,
