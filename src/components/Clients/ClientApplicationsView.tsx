@@ -26,9 +26,9 @@ export const ClientApplicationsView: React.FC<ClientApplicationsViewProps> = ({ 
                 setError('');
 
                 // Fetch application data from external API
-                const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+                const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
                 if (!apiUrl) {
-                    throw new Error('API URL not configured (VITE_EXTERNAL_API_URL1)');
+                    throw new Error('API URL not configured (VITE_EXTERNAL_API_URL)');
                 }
 
                 const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${client.applywizz_id}`);

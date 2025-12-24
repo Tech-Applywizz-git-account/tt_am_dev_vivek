@@ -64,7 +64,7 @@ const ReportPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
 
             // Route 1: Detailed Report
             const detailedUrl = `https://applywizz-ca-management.vercel.app/api/tasks/summary?date=${date}`;
