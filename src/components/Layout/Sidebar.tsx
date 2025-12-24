@@ -80,12 +80,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       show: ["cro", "ceo", "coo", "resume_team_head", "ca_team_lead"].includes(user.role),
       hasNotification: pendingClientsCount > 0,
     },
-    // {
-    //   id: 'reports',
-    //   label: 'Reports',
-    //   icon: BarChart3,
-    //   show: permissions.canViewReports,
-    // },
+    {
+      id: 'reports',
+      label: 'Report',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
     // {
     //   id: 'sla-monitor',
     //   label: 'SLA Monitor',

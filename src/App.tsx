@@ -44,6 +44,8 @@ import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegula
 import ScoredJobsEasyApplyList from './components/ClientDashboard/ScoredJobsEasyApplyList';
 import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
 import { useAccount } from './contexts/AccountContext';
+import ReportPage from './components/Report/ReportPage';
+
 
 function App() {
   const fetchData = async () => {
@@ -2123,45 +2125,8 @@ function App() {
           </div>
         );
 
-      // case 'reports':
-      //   return (
-      //     <div className="space-y-6">
-      //       <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-
-      //       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      //         <div className="bg-white rounded-xl border border-gray-200 p-6">
-      //           <h2 className="text-lg font-semibold text-gray-900 mb-4">SLA Performance</h2>
-      //           <div className="space-y-4">
-      //             <div className="flex justify-between items-center">
-      //               <span className="text-gray-600">On-time Resolution Rate</span>
-      //               <span className="font-semibold text-green-600">87%</span>
-      //             </div>
-      //             <div className="w-full bg-gray-200 rounded-full h-2">
-      //               <div className="bg-green-600 h-2 rounded-full" style={{ width: '87%' }}></div>
-      //             </div>
-      //           </div>
-      //         </div>
-
-      //         <div className="bg-white rounded-xl border border-gray-200 p-6">
-      //           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ticket Volume Trends</h2>
-      //           <div className="space-y-3">
-      //             <div className="flex justify-between">
-      //               <span className="text-gray-600">This Week</span>
-      //               <span className="font-semibold">{getVisibleTickets().length}</span>
-      //             </div>
-      //             <div className="flex justify-between">
-      //               <span className="text-gray-600">Last Week</span>
-      //               <span className="font-semibold">23</span>
-      //             </div>
-      //             <div className="flex justify-between">
-      //               <span className="text-green-600">Growth</span>
-      //               <span className="font-semibold text-green-600">+12%</span>
-      //             </div>
-      //           </div>
-      //         </div>
-      //       </div>
-      //     </div>
-      //   );
+      case 'reports':
+        return <ReportPage />;
 
       case 'escalations':
         return (<ExecutiveDashboard user={currentUser!} tickets={tickets} escalations={escalations} />);
