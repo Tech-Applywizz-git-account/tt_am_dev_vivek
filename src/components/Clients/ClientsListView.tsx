@@ -35,10 +35,13 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
         }
 
         // Apply search filter
+        const search = searchTerm.toLowerCase();
         return filteredClients.filter(client =>
-            client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
+            client.full_name.toLowerCase().includes(search) ||
+            client.personal_email.toLowerCase().includes(search) ||
+            client.company_email.toLowerCase().includes(search) ||
+            (client.applywizz_id && client.applywizz_id.toLowerCase().includes(search)) ||
+            (client.job_role_preferences && client.job_role_preferences.some(role => role.toLowerCase().includes(search)))
         );
     };
 
@@ -64,7 +67,7 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                     type="text"
-                    placeholder="Search clients by name or email..."
+                    placeholder="Search clients by name, email, ApplyWizz ID or roles..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -125,8 +128,8 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                                             onClick={() => handleViewClientApplications(client)}
                                             disabled={!client.applywizz_id}
                                             className={`flex items-center space-x-1 px-3 py-1 text-sm rounded-lg transition-colors ${client.applywizz_id
-                                                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                 }`}
                                             title={client.applywizz_id ? 'View applications' : 'ApplyWizz ID not available'}
                                         >
