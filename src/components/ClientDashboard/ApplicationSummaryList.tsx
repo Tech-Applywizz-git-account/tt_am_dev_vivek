@@ -4,7 +4,8 @@ import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Load
 // ✅ Types
 export interface TaskCount {
   date: string;
-  count: number;
+  regularCount: number;
+  easyApplyCount: number;
 }
 
 interface JobItem {
@@ -165,10 +166,10 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
 
       const apiData = await response.json();
 
-      // Transform the API data to match our expected format
+      // Backend returns only tasks (no easyapply for regular application summary)
       return {
         tasks: apiData.tasks || [],
-        easyapply: apiData.easyapply || []
+        easyapply: [] // No easy apply in this view
       };
     } catch (err) {
       console.error("Error fetching job data:", err);
@@ -299,7 +300,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
                 <div className="flex items-center gap-3 text-blue-700 font-semibold">
                   <div className="flex items-center gap-2">
                     <Briefcase size={18} />
-                    <span>{item.count} Applications</span>
+                    <span>{item.regularCount} Applications</span>
                   </div>
                   {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
@@ -313,43 +314,17 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
                       <Loader2 className="animate-spin mr-2" size={20} />
                       <span>Loading jobs...</span>
                     </div>
-                  ) : tasks.length > 0 || easyapply.length > 0 ? (
-                    <div className={`grid gap-6 ${easyapply.length > 0 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-                      {/* Left Column - Tasks */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Briefcase size={18} className="text-blue-600" />
-                          <h3 className="font-semibold text-gray-800">
-                            Regular Applications ({tasks.length})
-                          </h3>
-                        </div>
-                        {tasks.length > 0 ? (
-                          <div className="space-y-3">
-                            {tasks.map((job) => renderJobCard(job))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500 text-sm italic">No regular applications for this date.</p>
-                        )}
+                  ) : tasks.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Briefcase size={18} className="text-blue-600" />
+                        <h3 className="font-semibold text-gray-800">
+                          Regular Applications ({tasks.length})
+                        </h3>
                       </div>
-
-                      {/* Right Column - Easy Apply */}
-                      {easyapply.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Briefcase size={18} className="text-green-600" />
-                            <h3 className="font-semibold text-gray-800">
-                              Easy Apply ({easyapply.length})
-                            </h3>
-                          </div>
-                          {easyapply.length > 0 ? (
-                            <div className="space-y-3">
-                              {easyapply.map((job) => renderJobCard(job, true, item.date))}
-                            </div>
-                          ) : (
-                            <p className="text-gray-500 text-sm italic">No easy apply applications for this date.</p>
-                          )}
-                        </div>
-                      )}
+                      <div className="space-y-3">
+                        {tasks.map((job) => renderJobCard(job))}
+                      </div>
                     </div>
                   ) : (
                     <p className="text-gray-500 text-sm">No jobs for this date.</p>

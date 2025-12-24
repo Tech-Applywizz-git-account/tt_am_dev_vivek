@@ -11,7 +11,10 @@ import {
   AlertTriangle,
   Clock,
   TrendingUp,
-  User as UserIcon
+  User as UserIcon,
+  Zap,
+  Briefcase,
+  CheckCircle
 } from 'lucide-react';
 import { User } from '../../types';
 import { rolePermissions } from '../../data/mockData';
@@ -53,18 +56,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       show: user.role === 'client',
     },
     {
+      id: 'regular-applications',
+      label: 'Career Portal Applications',
+      icon: Briefcase,
+      show: user.role === 'client',
+    },
+    {
+      id: 'easy-apply',
+      label: 'Easy Apply',
+      icon: Zap,
+      show: user.role === 'client',
+    },
+    {
+      id: 'applied-jobs',
+      label: 'Applied Jobs',
+      icon: CheckCircle,
+      show: user.role === 'client',
+    },
+    {
       id: "pending_onboarding",
       label: "Pending Onboarding",
       icon: UserPlus,
       show: ["cro", "ceo", "coo", "resume_team_head", "ca_team_lead"].includes(user.role),
       hasNotification: pendingClientsCount > 0,
     },
-    // {
-    //   id: 'reports',
-    //   label: 'Reports',
-    //   icon: BarChart3,
-    //   show: permissions.canViewReports,
-    // },
+    {
+      id: 'reports',
+      label: 'Report',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
     // {
     //   id: 'sla-monitor',
     //   label: 'SLA Monitor',
@@ -125,7 +146,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
           })}
         </div>
       </div>
-
       {/* <div className="px-6 py-4 border-t border-gray-200 mt-auto">
         <div className="text-xs text-gray-500 mb-2">Quick Actions</div>
         <div className="space-y-2">

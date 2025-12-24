@@ -15,6 +15,8 @@ import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModa
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
 import { ClientProfileView } from './components/Clients/ClientProfileView';
+import { ClientsListView } from './components/Clients/ClientsListView';
+import { ClientApplicationsView } from './components/Clients/ClientApplicationsView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
@@ -34,7 +36,16 @@ import { ca } from 'date-fns/locale';
 import { SupabaseAdminCreateClient } from './lib/supabaseAdminCreateClient';
 import ApplicationsOverTime, { ChartItem } from './components/ClientDashboard/ApplicationsOverTime';
 import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/ApplicationSummaryList';
+import EasyApplySummaryList from './components/ClientDashboard/EasyApplySummaryList';
+import AppliedJobsList from './components/ClientDashboard/AppliedJobsList';
 import JobLinksList from './components/ClientDashboard/JobLinksList';
+import ScoredJobsDashboard from './components/ClientDashboard/ScoredJobsDashboard';
+import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegularList';
+import ScoredJobsEasyApplyList from './components/ClientDashboard/ScoredJobsEasyApplyList';
+import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
+import { useAccount } from './contexts/AccountContext';
+import ReportPage from './components/Report/ReportPage';
+
 
 function App() {
   const fetchData = async () => {
@@ -179,6 +190,10 @@ function App() {
   const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
   const [clientDashboardError, setClientDashboardError] = useState("");
   const [applywizzId, setApplywizzId] = useState<string | undefined>();
+
+  // Selected client for viewing applications
+  const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
+
   const [isSendMailModalOpen, setIsSendMailModalOpen] = useState(false);
   const [emailTo, setEmailTo] = useState('vivek@applywizz.com');
   const [emailSubject, setEmailSubject] = useState('Subject');
@@ -191,6 +206,9 @@ function App() {
   const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject with Attachment');
   const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
+  // Get selectedAccountId from context for multi-account support
+  const { selectedAccountId } = useAccount();
 
   useEffect(() => {
     fetchData();
@@ -369,34 +387,47 @@ function App() {
 
         // Use the first client account found
         const activeClient = clientData[0];
+        console.log("activeClient data:", activeClient);
 
-        if (activeClient.opted_job_links) {
-          return;
-        }
-
+        // Set applywizzId for BOTH client types
         const fetchedApplywizzId = activeClient.applywizz_id;
         setApplywizzId(fetchedApplywizzId);
+        console.log("fetchedApplywizzId:", fetchedApplywizzId);
 
-        // Fetch the actual data from the external API
-        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-        if (!apiUrl) {
-          throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+        // Only fetch summary data for regular clients
+        // Scored jobs clients (opted_job_links = true) fetch their own data in components
+        if (!activeClient.opted_job_links) {
+          // Fetch the actual data from the external API for regular clients
+          const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+          if (!apiUrl) {
+            throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+          }
+
+          const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+          }
+
+          const apiData = await response.json();
+
+          // Transform the new API data format
+          // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
+          const allDates = new Set([
+            ...Object.keys(apiData.completed_tasks || {}),
+            ...Object.keys(apiData.easy_apply_tasks || {})
+          ]);
+
+          const formattedData: TaskCount[] = Array.from(allDates).map(date => ({
+            date,
+            regularCount: Number(apiData.completed_tasks[date] || 0),
+            easyApplyCount: Number(apiData.easy_apply_tasks[date] || 0)
+          })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          setClientDashboardData(formattedData);
+        } else {
+          console.log("Scored jobs client detected - components will fetch their own data");
         }
-
-        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
-        }
-
-        const apiData = await response.json();
-
-        // Transform the API data to match our expected format
-        const formattedData: TaskCount[] = Object.entries(apiData.completed_tasks || {})
-          .map(([date, count]) => ({ date, count: Number(count) }))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        setClientDashboardData(formattedData);
       } catch (err) {
         console.error("Error fetching client dashboard data:", err);
         setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -407,6 +438,38 @@ function App() {
 
     fetchClientDashboardData();
   }, [currentUser?.email, currentUser?.role, optedJobLinks]);
+
+  // Update applywizzId when selectedAccountId changes (for multi-account scored jobs clients)
+  useEffect(() => {
+    const fetchApplywizzIdForSelectedAccount = async () => {
+      // Only fetch if selectedAccountId exists and this is a scored jobs client
+      if (selectedAccountId && optedJobLinks) {
+        try {
+          console.log("Fetching applywizz_id for selected account:", selectedAccountId);
+
+          const { data, error } = await supabase
+            .from('clients')
+            .select('applywizz_id')
+            .eq('id', selectedAccountId)
+            .single();
+
+          if (error) {
+            console.error("Error fetching applywizz_id:", error);
+            return;
+          }
+
+          if (data && data.applywizz_id) {
+            console.log("Updated applywizzId to:", data.applywizz_id);
+            setApplywizzId(data.applywizz_id);
+          }
+        } catch (err) {
+          console.error("Error in fetchApplywizzIdForSelectedAccount:", err);
+        }
+      }
+    };
+
+    fetchApplywizzIdForSelectedAccount();
+  }, [selectedAccountId, optedJobLinks]);
 
   // Add this to save view changes
   useEffect(() => {
@@ -1433,6 +1496,12 @@ function App() {
     setIsClientEditModalOpen(true);
   };
 
+  // Function to handle viewing client applications
+  const handleViewClientApplications = (client: Client) => {
+    setSelectedClientForApplications(client);
+    setActiveView('client-applications');
+  };
+
   // Function to get dashboard statistics
   const getDashboardStats = (): DashboardStats => {
     const visibleTickets = getVisibleTickets();
@@ -1717,7 +1786,7 @@ function App() {
             {currentUser?.role === 'client' ? (
               <>
                 {optedJobLinks ? (
-                  <JobLinksList currentUserEmail={currentUser?.email} />
+                  <ScoredJobsDashboard applywizzId={applywizzId} />
                 ) : (
                   <>
                     <ApplicationsOverTime
@@ -1874,214 +1943,95 @@ function App() {
           </div>
         );
 
-      case 'clients':
-
+      case 'easy-apply':
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-
-              {(currentUser?.role === 'sales') && (
-                <button
-                  onClick={() => setIsClientOnboardingModalOpen(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <UserPlus className="h-5 w-5" />
-                  <span>Onboard Client</span>
-                </button>
-              )}
+              <h1 className="text-2xl font-bold text-gray-900">Easy Apply</h1>
             </div>
-            <div className='relative'>
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search clients by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="relative w-full max-w-sm mb-4">
-                  <h2 className="font-semibold text-gray-900">Client Directory</h2>
-                </div>
+            {currentUser?.role === 'client' ? (
+              optedJobLinks ? (
+                <ScoredJobsEasyApplyList applywizzId={applywizzId} />
+              ) : (
+                <EasyApplySummaryList
+                  data={clientDashboardData}
+                  loading={clientDashboardLoading}
+                  error={clientDashboardError}
+                  applywizzId={applywizzId}
+                />
+              )
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No.</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preferences</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarded</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {currentUser?.role == 'career_associate' &&
-                      clients
-                        .filter(client => client.careerassociateid === currentUser.id)
-                        .filter(client =>
-                          client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map((client, index) => (
-                          <tr key={client.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="font-medium text-gray-900">{client.full_name}({client.applywizz_id})</div>
-                                <div className="text-sm text-gray-500">{client.company_email}</div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
-                              <div className="text-sm text-gray-500">{client.callable_phone}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="text-sm text-gray-900">{<p className="text-sm text-gray-600">
-                                Roles:{" "}
-                                {client.job_role_preferences ? client.job_role_preferences.join(", ") : '-'}
-                              </p>
-                              }</div>
-                              <div className="text-sm text-gray-500">{client.salary_range}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{format(new Date(client.created_at), 'yyyy-MM-dd')}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {currentUser?.role == 'career_associate' && (
-                                <button
-                                  onClick={() => handleClientEdit(client)}
-                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                >
-                                  <span>View</span>
-                                </button>
-                              )}
-                              {currentUser?.role !== 'career_associate' && (
-                                <button
-                                  onClick={() => handleClientEdit(client)}
-                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span>Edit</span>
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    {currentUser?.role == 'ca_team_lead' &&
-                      clients
-                        .filter(client => client.careerassociatemanagerid === currentUser.id)
-                        .filter(client =>
-                          client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map((client, index) => (
-                          <tr key={client.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="font-medium text-gray-900">{client.full_name}({client.applywizz_id})</div>
-                                <div className="text-sm text-gray-500">{client.company_email}</div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
-                              <div className="text-sm text-gray-500">{client.callable_phone}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="text-sm text-gray-900">{<p className="text-sm text-gray-600">
-                                Roles:{" "}
-                                {client.job_role_preferences ? client.job_role_preferences.join(", ") : '-'}
-                              </p>
-                              }</div>
-                              <div className="text-sm text-gray-500">{client.salary_range}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{format(new Date(client.created_at), 'yyyy-MM-dd')}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {currentUser?.role == 'career_associate' && (
-                                <button
-                                  onClick={() => handleClientEdit(client)}
-                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                >
-                                  <span>View</span>
-                                </button>
-                              )}
-                              {currentUser?.role !== 'career_associate' && (
-                                <button
-                                  onClick={() => handleClientEdit(client)}
-                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span>Edit</span>
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    {(currentUser?.role !== 'ca_team_lead' && currentUser?.role !== 'career_associate') &&
-                      clients
-                        .filter(client =>
-                          client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.personal_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          client.company_email.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map((client, index) => (
-                          <tr key={client.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{index + 1}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="font-medium text-gray-900">{client.full_name}({client.applywizz_id || "Not Found"})</div>
-                                <div className="text-sm text-gray-500">{client.company_email}</div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
-                              <div className="text-sm text-gray-500">{client.callable_phone}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="text-sm text-gray-900">{<p className="text-sm text-gray-600">
-                                Roles:{" "}
-                                {client.job_role_preferences ? client.job_role_preferences.join(", ") : '-'}
-                              </p>
-                              }</div>
-                              <div className="text-sm text-gray-500">{client.salary_range}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{format(new Date(client.created_at), 'yyyy-MM-dd')}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {currentUser?.role == 'career_associate' && (
-                                <button
-                                  onClick={() => handleClientEdit(client)}
-                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                >
-                                  <span>View</span>
-                                </button>
-                              )}
-                              {currentUser?.role !== 'career_associate' && (
-                                <button
-                                  onClick={() => handleClientEdit(client)}
-                                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  <span>Edit</span>
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <FeedbackButton user={currentUser} />
+            )}
           </div>
+        );
+
+      case 'regular-applications':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Regular Applications</h1>
+            </div>
+            {currentUser?.role === 'client' ? (
+              optedJobLinks ? (
+                <ScoredJobsRegularList applywizzId={applywizzId} />
+              ) : (
+                <ApplicationSummaryList
+                  data={clientDashboardData}
+                  loading={clientDashboardLoading}
+                  error={clientDashboardError}
+                  applywizzId={applywizzId}
+                />
+              )
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'applied-jobs':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Applied Jobs</h1>
+            </div>
+            {currentUser?.role === 'client' ? (
+              optedJobLinks ? (
+                <ScoredJobsAppliedList applywizzId={applywizzId} />
+              ) : (
+                <AppliedJobsList applywizzId={applywizzId} />
+              )
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'clients':
+        return (
+          <ClientsListView
+            currentUser={currentUser}
+            clients={clients}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
+            handleClientEdit={handleClientEdit}
+            handleViewClientApplications={handleViewClientApplications}
+          />
+        );
+
+      case 'client-applications':
+        return (
+          <ClientApplicationsView
+            client={selectedClientForApplications}
+            onBack={() => setActiveView('clients')}
+          />
         );
 
       case 'user-management':
@@ -2181,45 +2131,8 @@ function App() {
           </div>
         );
 
-      // case 'reports':
-      //   return (
-      //     <div className="space-y-6">
-      //       <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-
-      //       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      //         <div className="bg-white rounded-xl border border-gray-200 p-6">
-      //           <h2 className="text-lg font-semibold text-gray-900 mb-4">SLA Performance</h2>
-      //           <div className="space-y-4">
-      //             <div className="flex justify-between items-center">
-      //               <span className="text-gray-600">On-time Resolution Rate</span>
-      //               <span className="font-semibold text-green-600">87%</span>
-      //             </div>
-      //             <div className="w-full bg-gray-200 rounded-full h-2">
-      //               <div className="bg-green-600 h-2 rounded-full" style={{ width: '87%' }}></div>
-      //             </div>
-      //           </div>
-      //         </div>
-
-      //         <div className="bg-white rounded-xl border border-gray-200 p-6">
-      //           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ticket Volume Trends</h2>
-      //           <div className="space-y-3">
-      //             <div className="flex justify-between">
-      //               <span className="text-gray-600">This Week</span>
-      //               <span className="font-semibold">{getVisibleTickets().length}</span>
-      //             </div>
-      //             <div className="flex justify-between">
-      //               <span className="text-gray-600">Last Week</span>
-      //               <span className="font-semibold">23</span>
-      //             </div>
-      //             <div className="flex justify-between">
-      //               <span className="text-green-600">Growth</span>
-      //               <span className="font-semibold text-green-600">+12%</span>
-      //             </div>
-      //           </div>
-      //         </div>
-      //       </div>
-      //     </div>
-      //   );
+      case 'reports':
+        return <ReportPage />;
 
       case 'escalations':
         return (<ExecutiveDashboard user={currentUser!} tickets={tickets} escalations={escalations} />);
