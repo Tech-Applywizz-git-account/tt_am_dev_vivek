@@ -146,7 +146,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
           })}
         </div>
       </div>
-
       {/* <div className="px-6 py-4 border-t border-gray-200 mt-auto">
         <div className="text-xs text-gray-500 mb-2">Quick Actions</div>
         <div className="space-y-2">
