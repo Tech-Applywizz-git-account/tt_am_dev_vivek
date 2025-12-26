@@ -99,8 +99,7 @@ const ADDITIONAL_INFO_TABLE_FIELDS = new Set([
   'full_address',
   'date_of_birth',
   'primary_phone',
-  'google_drive_resume_link',
-  'services_opted'
+  'google_drive_resume_link'
 ]);
 
 // Define the structure of the incoming client data
@@ -256,7 +255,13 @@ function splitClientData(data: ClientSyncData): {
     } else if (ADDITIONAL_INFO_TABLE_FIELDS.has(key)) {
       additionalInfoData[key] = value;
     }
-    // If field not in either set, it's ignored (future-proofing)
+  }
+
+  // ✅ Map services_opted to add_ons_info for Supabase
+  if (data.services_opted && !data.add_ons_info) {
+    additionalInfoData['add_ons_info'] = data.services_opted;
+  } else if (data.add_ons_info) {
+    additionalInfoData['add_ons_info'] = data.add_ons_info;
   }
 
   return { clientsData, additionalInfoData };
@@ -270,7 +275,7 @@ function mapToDjangoData(data: ClientSyncData): any {
     resume_url: data.resume_url,
     years_experience: data.experience,
     location: Array.isArray(data.location_preferences) ? data.location_preferences[0] : (data.location_preferences || data.location),
-    services_opted: data.services_opted,
+    services_opted: data.services_opted || data.add_ons_info,
     gender: data.gender,
     work_auth: data.work_auth || data.visa_type,
     work_preference: data.work_preference || data.work_preferences,
