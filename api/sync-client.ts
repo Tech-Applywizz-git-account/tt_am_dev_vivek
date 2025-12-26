@@ -40,7 +40,8 @@ const CLIENTS_TABLE_FIELDS = new Set([
   'lab_id_1',
   'lab_id_2',
   'mcq_results',
-  'test_results'
+  'test_results',
+  'status'
 ]);
 
 // Define fields that belong to clients_additional_information table
@@ -111,9 +112,26 @@ interface ClientSyncData {
   job_role_preferences?: string[];
   salary_range?: string;
   location_preferences?: string[];
-  // Add any other fields that might be updated
+  status?: string;
+  gender?: string;
+  experience?: string;
+  no_of_applications?: string;
+  willing_to_relocate?: boolean;
+  resume_url?: string;
+  resume_path?: string;
+  zip_or_country?: string;
+  linked_in_url?: string;
+  github_url?: string;
+  google_drive_resume_link?: string;
   [key: string]: any; // Allow for additional fields
 }
+
+// ✅ Validation Constants
+const ALLOWED_SERVICES = ["job-links", "resume", "portfolio", "linkedin", "github", "courses", "experience", "badge", "applications"];
+const ALLOWED_GENDERS = ["Male", "Female", "Other", "Prefer Not to Say"];
+const ALLOWED_WORK_AUTH = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
+const ALLOWED_WORK_PREF = ["Remote", "Hybrid", "On-site", "All"];
+// const ALLOWED_NUM_APPS = ["20+", "40+"];
 
 // Simple authentication middleware
 function authenticateRequest(req: VercelRequest): boolean {
@@ -158,6 +176,54 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     errors.push('ApplyWizz ID must follow the pattern AWL-X to AWL-XXXXX where X is a digit (1-5 digits)');
   }
 
+  // ✅ XOR check for resume
+  // const resumeUrl = data.resume_url;
+  // const resumePath = data.resume_path || data.resume_s3_path;
+  // if (!!resumeUrl !== !!resumePath) {
+  //   errors.push('Both resume_url and resume_s3_path are required together.');
+  // }
+
+  // ✅ Enum checks
+  if (data.services_opted) {
+    const services = Array.isArray(data.services_opted) ? data.services_opted : [data.services_opted];
+    if (services.some((opt: string) => !ALLOWED_SERVICES.includes(opt))) {
+      errors.push(`Invalid service option found. Allowed: ${ALLOWED_SERVICES.join(', ')}`);
+    }
+  }
+
+  if (data.gender && !ALLOWED_GENDERS.includes(data.gender)) {
+    errors.push(`Invalid gender '${data.gender}'. Allowed: ${ALLOWED_GENDERS.join(', ')}`);
+  }
+
+  const workAuth = data.work_auth || data.visa_type;
+  if (workAuth && !ALLOWED_WORK_AUTH.includes(workAuth)) {
+    errors.push(`Invalid work authorization '${workAuth}'. Allowed: ${ALLOWED_WORK_AUTH.join(', ')}`);
+  }
+
+  const workPreference = data.work_preference || data.work_preferences;
+  if (workPreference && !ALLOWED_WORK_PREF.includes(workPreference)) {
+    errors.push(`Invalid work preference '${workPreference}'. Allowed: ${ALLOWED_WORK_PREF.join(', ')}`);
+  }
+
+  // const numApps = data.number_of_applications || data.no_of_applications;
+  // if (numApps && !ALLOWED_NUM_APPS.includes(numApps)) {
+  //   errors.push(`Invalid number_of_applications '${numApps}'. Allowed: ${ALLOWED_NUM_APPS.join(', ')}`);
+  // }
+
+  // ✅ Check if at least one field is provided (aside from applywizz_id)
+  const fieldsToCheck = [
+    'resume_url', 'experience', 'location_preferences', 'services_opted', 'gender',
+    'work_auth', 'visa_type', 'work_preference', 'work_preferences', 'zip_or_country',
+    'exclude_companies', 'full_name', 'job_role_preferences', 'resume_path', 'resume_s3_path',
+    'status', 'willing_to_relocate', 'salary_range', 'github_url', 'linked_in_url',
+    'sponsorship', 'no_of_applications', 'number_of_applications', 'google_drive_resume_link'
+  ];
+
+  const hasAtLeastOneField = fieldsToCheck.some(field => data[field] !== undefined && data[field] !== null);
+  if (!hasAtLeastOneField) {
+    errors.push('At least one field must be provided to update the client.');
+  }
+
   // Validate email format if provided
   if (data.personal_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.personal_email)) {
     errors.push('Invalid personal email format');
@@ -187,10 +253,64 @@ function splitClientData(data: ClientSyncData): {
     } else if (ADDITIONAL_INFO_TABLE_FIELDS.has(key)) {
       additionalInfoData[key] = value;
     }
-    // If field not in either set, it's ignored (future-proofing)
+  }
+
+  // ✅ Map services_opted to add_ons_info for Supabase
+  if (data.services_opted && !data.add_ons_info) {
+    additionalInfoData['add_ons_info'] = data.services_opted;
+  } else if (data.add_ons_info) {
+    additionalInfoData['add_ons_info'] = data.add_ons_info;
   }
 
   return { clientsData, additionalInfoData };
+}
+
+// ✅ Map data to Django's expected format
+function mapToDjangoData(data: ClientSyncData): any {
+  return {
+    apw_id: data.applywizz_id,
+    name: data.full_name,
+    resume_url: data.resume_url,
+    years_experience: data.experience,
+    location: Array.isArray(data.location_preferences) ? data.location_preferences[0] : (data.location_preferences || data.location),
+    services_opted: data.services_opted || data.add_ons_info,
+    gender: data.gender,
+    work_auth: data.work_auth || data.visa_type,
+    work_preference: data.work_preference || data.work_preferences,
+    country: data.zip_or_country || data.country,
+    exclude_companies: data.exclude_companies,
+    "target-role": Array.isArray(data.job_role_preferences) ? data.job_role_preferences[0] : (data.job_role_preferences || data["target-role"]),
+    resume_s3_path: data.resume_path || data.resume_s3_path,
+    number_of_applications: data.number_of_applications || data.no_of_applications,
+    willing_to_relocate: data.willing_to_relocate,
+    expected_salary: data.salary_range || data.expected_salary,
+    github_url: data.github_url,
+    linkedin_url: data.linked_in_url || data.linkedin_url,
+    sponsorship: data.sponsorship,
+    status: data.status,
+    google_drive_resume_link: data.google_drive_resume_link
+  };
+}
+
+// ✅ Sync with Django Project
+async function syncToDjangoProject(data: any) {
+  const DJANGO_API_URL = 'https://dashboard.apply-wizz.com/api/client-update';
+
+  const response = await fetch(DJANGO_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(result.error || `Django API failed with status ${response.status}`);
+  }
+
+  return result;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -372,9 +492,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to sync additional information', details: additionalInfoError.message });
     }
 
+    // ✅ NEW: Sync with Django Project (Option A: Both must succeed)
+    try {
+      const djangoMappedData = mapToDjangoData(clientData);
+      await syncToDjangoProject(djangoMappedData);
+    } catch (djangoError: any) {
+      console.error('Django Sync Error:', djangoError);
+      return res.status(500).json({
+        error: 'Supabase sync succeeded but Django sync failed',
+        details: djangoError.message || 'Unknown Django API error'
+      });
+    }
+
     // Return success response (only clients table data as requested)
     return res.status(200).json({
-      message: 'Client data synchronized successfully',
+      message: 'Client data synchronized successfully to both Supabase and Django',
       applywizz_id: applywizzId,
       client: clientResult[0]
     });
