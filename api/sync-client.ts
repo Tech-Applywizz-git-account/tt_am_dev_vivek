@@ -114,7 +114,6 @@ interface ClientSyncData {
   salary_range?: string;
   location_preferences?: string[];
   status?: string;
-  services_opted?: string[];
   gender?: string;
   experience?: string;
   no_of_applications?: string;
