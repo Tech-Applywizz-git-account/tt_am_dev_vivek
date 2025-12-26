@@ -13,7 +13,8 @@ import {
     Briefcase,
     FileText,
     ChevronUp,
-    ChevronDown
+    ChevronDown,
+    X
 } from 'lucide-react';
 
 interface LeadDetail {
@@ -43,7 +44,6 @@ interface MergedLeadData extends Partial<LeadDetail> {
     inSummary: boolean;
 }
 
-
 const ReportPage: React.FC = () => {
     const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
     const [loading, setLoading] = useState<boolean>(true);
@@ -60,6 +60,11 @@ const ReportPage: React.FC = () => {
     });
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+    const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; title: string; data: { lead_id: string; client_name?: string }[] }>({
+        isOpen: false,
+        title: '',
+        data: []
+    });
 
 
     const fetchData = async () => {
@@ -135,6 +140,31 @@ const ReportPage: React.FC = () => {
             direction = 'desc';
         }
         setSortConfig({ key, direction });
+    };
+
+    const handleCardClick = (type: 'missingTask' | 'missingCA') => {
+        let filtered: typeof modalConfig.data = [];
+        let title = '';
+
+        if (type === 'missingTask') {
+            filtered = reportData
+                .filter(item => item.inDetailed && !item.inSummary)
+                .map(item => ({ lead_id: item.lead_id, client_name: item.client_name }));
+            title = 'Leads Missing in Task Management';
+        } else {
+            filtered = reportData
+                .filter(item => !item.inDetailed && item.inSummary)
+                .map(item => ({ lead_id: item.lead_id, client_name: item.client_name }));
+            title = 'Leads Missing in CA Management';
+        }
+
+        if (filtered.length > 0) {
+            setModalConfig({
+                isOpen: true,
+                title,
+                data: filtered
+            });
+        }
     };
 
     const filteredData = reportData
@@ -264,37 +294,43 @@ const ReportPage: React.FC = () => {
                 </div>
 
                 {/* Card 1: Missing in Task Management */}
-                <div className={`p-6 rounded-2xl border transition-shadow ${summary.missingTaskCount > 0 ? 'bg-orange-50/50 border-orange-100' : 'bg-white border-gray-100'} shadow-sm hover:shadow-md`}>
+                <div
+                    onClick={() => handleCardClick('missingTask')}
+                    className={`p-6 rounded-2xl border transition-all ${summary.missingTaskCount > 0 ? 'bg-orange-50/50 border-orange-100 cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : 'bg-white border-gray-100'} shadow-sm`}
+                >
                     <div className="flex items-center justify-between mb-4">
                         <div className={`p-3 rounded-xl ${summary.missingTaskCount > 0 ? 'bg-orange-100' : 'bg-gray-50'}`}>
                             <AlertCircle className={`h-6 w-6 ${summary.missingTaskCount > 0 ? 'text-orange-600' : 'text-gray-400'}`} />
                         </div>
                         {summary.missingTaskCount > 0 && (
-                            <span className="text-[10px] font-bold px-2 py-1 bg-orange-600 text-white rounded-full animate-pulse">ACTION REQUIRED</span>
+                            <span className="text-[10px] font-bold px-2 py-1 bg-orange-600 text-white rounded-full animate-pulse uppercase">Click to view</span>
                         )}
                     </div>
                     <p className="text-gray-500 text-sm font-medium">Missing in Tasks</p>
                     <h3 className={`text-2xl font-bold mt-1 ${summary.missingTaskCount > 0 ? 'text-orange-700' : 'text-gray-900'}`}>
                         {summary.missingTaskCount} <span className="text-sm font-normal text-gray-500 ml-1">Leads</span>
                     </h3>
-                    <p className="text-[10px] text-gray-400 mt-2 uppercase font-semibold">NOT IN TASK MGMT</p>
+                    <p className="text-[10px] text-gray-400 mt-2 uppercase font-semibold tracking-wider">NOT IN TASK MGMT</p>
                 </div>
 
                 {/* Card 2: Missing in CA Management */}
-                <div className={`p-6 rounded-2xl border transition-shadow ${summary.missingCACount > 0 ? 'bg-red-50/50 border-red-100' : 'bg-white border-gray-100'} shadow-sm hover:shadow-md`}>
+                <div
+                    onClick={() => handleCardClick('missingCA')}
+                    className={`p-6 rounded-2xl border transition-all ${summary.missingCACount > 0 ? 'bg-red-50/50 border-red-100 cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.98]' : 'bg-white border-gray-100'} shadow-sm`}
+                >
                     <div className="flex items-center justify-between mb-4">
                         <div className={`p-3 rounded-xl ${summary.missingCACount > 0 ? 'bg-red-100' : 'bg-gray-50'}`}>
                             <AlertCircle className={`h-6 w-6 ${summary.missingCACount > 0 ? 'text-red-600' : 'text-gray-400'}`} />
                         </div>
                         {summary.missingCACount > 0 && (
-                            <span className="text-[10px] font-bold px-2 py-1 bg-red-600 text-white rounded-full animate-pulse">DATA GAP</span>
+                            <span className="text-[10px] font-bold px-2 py-1 bg-red-600 text-white rounded-full animate-pulse uppercase">Click to view</span>
                         )}
                     </div>
                     <p className="text-gray-500 text-sm font-medium">Missing in CA</p>
                     <h3 className={`text-2xl font-bold mt-1 ${summary.missingCACount > 0 ? 'text-red-700' : 'text-gray-900'}`}>
                         {summary.missingCACount} <span className="text-sm font-normal text-gray-500 ml-1">Leads</span>
                     </h3>
-                    <p className="text-[10px] text-gray-400 mt-2 uppercase font-semibold">NOT IN CA MGMT</p>
+                    <p className="text-[10px] text-gray-400 mt-2 uppercase font-semibold tracking-wider">NOT IN CA MGMT</p>
                 </div>
             </div>
 
@@ -384,24 +420,18 @@ const ReportPage: React.FC = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-gray-900 leading-tight">{lead.lead_id}</span>
-                                                    <span className="text-[10px] text-gray-400 font-semibold tracking-tighter uppercase">ID TRACKER</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center space-x-3">
-                                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                                                        {lead.client_name?.charAt(0) || 'C'}
-                                                    </div>
                                                     <div className="flex flex-col">
                                                         <span className="text-gray-900 font-semibold">{lead.client_name || 'Anonymous Client'}</span>
-                                                        <span className="text-gray-400 text-xs">Standard Enrollment</span>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center space-x-1 text-gray-900 font-medium">
-                                                        <UserCheck className="h-3 w-3 text-blue-500" />
                                                         <span>{lead.work_done_ca_name || 'Unassigned'}</span>
                                                     </div>
                                                     <span className="text-gray-500 text-[11px] ml-4">{lead.ca_mail}</span>
@@ -410,7 +440,6 @@ const ReportPage: React.FC = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center space-x-1 text-gray-700 font-medium">
-                                                        <Briefcase className="h-3 w-3 text-purple-400" />
                                                         <span>{lead.team_lead_name || 'N/A'}</span>
                                                     </div>
                                                     <span className="text-gray-400 text-[10px] ml-4 italic whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{lead.tl_email}</span>
@@ -474,6 +503,45 @@ const ReportPage: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Modal for Missing Leads */}
+            {modalConfig.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                            <h3 className="font-bold text-gray-900">{modalConfig.title}</h3>
+                            <button
+                                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                            >
+                                <X className="h-5 w-5 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+                            <div className="grid grid-cols-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">
+                                <span>Lead ID</span>
+                                <span>Client Name</span>
+                            </div>
+                            {modalConfig.data.map((item) => (
+                                <div key={item.lead_id} className="grid grid-cols-2 p-3 bg-gray-50 rounded-xl border border-gray-100 group hover:border-blue-200 hover:bg-blue-50/50 transition-all">
+                                    <span className="font-bold text-blue-600">{item.lead_id}</span>
+                                    <span className="text-gray-700 font-medium truncate" title={item.client_name}>
+                                        {item.client_name || 'Anonymous Client'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 text-right">
+                            <button
+                                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                                className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-sm active:scale-95 text-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
