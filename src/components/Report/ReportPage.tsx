@@ -43,6 +43,7 @@ interface MergedLeadData extends Partial<LeadDetail> {
     inSummary: boolean;
 }
 
+
 const ReportPage: React.FC = () => {
     const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
     const [loading, setLoading] = useState<boolean>(true);
