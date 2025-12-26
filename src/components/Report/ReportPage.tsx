@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 interface LeadDetail {
+    client_name?: string;
     work_done_ca_name: string;
     ca_mail: string;
     team_lead_name: string;
@@ -138,6 +139,7 @@ const ReportPage: React.FC = () => {
     const filteredData = reportData
         .filter(item =>
             item.lead_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.work_done_ca_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.team_lead_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.ca_mail?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -297,11 +299,14 @@ const ReportPage: React.FC = () => {
 
             {/* Main Content Table */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <h2 className="font-semibold text-gray-900 flex items-center space-x-2">
-                        <span>Lead Assignments & Performance</span>
-                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{filteredData.length} entries</span>
-                    </h2>
+                <div className="p-4 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                        <h2 className="font-bold text-gray-900 flex items-center space-x-2">
+                            <Briefcase className="h-5 w-5 text-blue-600" />
+                            <span>Lead Intelligence & Performance</span>
+                        </h2>
+                        <span className="text-xs text-gray-500 mt-0.5 ml-7">{filteredData.length} active records identified</span>
+                    </div>
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
@@ -328,6 +333,13 @@ const ReportPage: React.FC = () => {
                                 </th>
                                 <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('work_done_ca_name')}>
                                     <div className="flex items-center space-x-1">
+                                        <span>Client Name</span>
+                                        {sortConfig?.key === 'client_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('work_done_ca_name')}>
+                                    <div className="flex items-center space-x-1 text-blue-600">
+                                        <Users className="h-3 w-3" />
                                         <span>Career Associate</span>
                                         {sortConfig?.key === 'work_done_ca_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
                                     </div>
@@ -369,18 +381,38 @@ const ReportPage: React.FC = () => {
                                                 {index + 1}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="font-semibold text-blue-600">{lead.lead_id}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-gray-900 leading-tight">{lead.lead_id}</span>
+                                                    <span className="text-[10px] text-gray-400 font-semibold tracking-tighter uppercase">ID TRACKER</span>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-gray-900 font-medium">{lead.work_done_ca_name || 'N/A'}</span>
-                                                    <span className="text-gray-500 text-xs">{lead.ca_mail}</span>
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                                        {lead.client_name?.charAt(0) || 'C'}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-gray-900 font-semibold">{lead.client_name || 'Anonymous Client'}</span>
+                                                        <span className="text-gray-400 text-xs">Standard Enrollment</span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <span className="text-gray-900 font-medium">{lead.team_lead_name || 'N/A'}</span>
-                                                    <span className="text-gray-500 text-xs">{lead.tl_email}</span>
+                                                    <div className="flex items-center space-x-1 text-gray-900 font-medium">
+                                                        <UserCheck className="h-3 w-3 text-blue-500" />
+                                                        <span>{lead.work_done_ca_name || 'Unassigned'}</span>
+                                                    </div>
+                                                    <span className="text-gray-500 text-[11px] ml-4">{lead.ca_mail}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center space-x-1 text-gray-700 font-medium">
+                                                        <Briefcase className="h-3 w-3 text-purple-400" />
+                                                        <span>{lead.team_lead_name || 'N/A'}</span>
+                                                    </div>
+                                                    <span className="text-gray-400 text-[10px] ml-4 italic whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{lead.tl_email}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
@@ -426,10 +458,13 @@ const ReportPage: React.FC = () => {
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                                         <div className="flex flex-col items-center">
-                                            <FileText className="h-12 w-12 text-gray-200 mb-2" />
-                                            <p>No report data found for this date and search criteria.</p>
+                                            <div className="p-4 bg-gray-50 rounded-full mb-4">
+                                                <FileText className="h-12 w-12 text-gray-200" />
+                                            </div>
+                                            <h3 className="text-lg font-semibold text-gray-900">No Data Matches Found</h3>
+                                            <p className="max-w-xs mx-auto mt-1">Try adjusting your search criteria or selecting a different reporting date.</p>
                                         </div>
                                     </td>
                                 </tr>
