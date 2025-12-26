@@ -289,7 +289,7 @@ function mapToDjangoData(data: ClientSyncData): any {
     linkedin_url: data.linked_in_url || data.linkedin_url,
     sponsorship: data.sponsorship,
     status: data.status,
-    google_drive_resume_link: data.google_drive_resume_link
+    google_drive_resume_link: Array.isArray(data.google_drive_resume_link) ? data.google_drive_resume_link[0] : data.google_drive_resume_link
   };
 }
 
