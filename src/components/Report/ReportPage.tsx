@@ -14,9 +14,9 @@ import {
     FileText,
     ChevronUp,
     ChevronDown,
-    X
+    X,
+    Filter
 } from 'lucide-react';
-
 
 interface LeadDetail {
     client_name?: string;
@@ -61,6 +61,8 @@ const ReportPage: React.FC = () => {
     });
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+    const [filterCA, setFilterCA] = useState<string>('all');
+    const [filterTL, setFilterTL] = useState<string>('all');
     const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; title: string; data: { lead_id: string; client_name?: string }[] }>({
         isOpen: false,
         title: '',
@@ -168,14 +170,23 @@ const ReportPage: React.FC = () => {
         }
     };
 
+    // Get unique values for filters
+    const uniqueCAs = Array.from(new Set(reportData.map(item => item.work_done_ca_name).filter(Boolean))).sort();
+    const uniqueTLs = Array.from(new Set(reportData.map(item => item.team_lead_name).filter(Boolean))).sort();
+
     const filteredData = reportData
-        .filter(item =>
-            item.lead_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.work_done_ca_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.team_lead_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.ca_mail?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .filter(item => {
+            const matchesSearch = item.lead_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.work_done_ca_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.team_lead_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.ca_mail?.toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesCA = filterCA === 'all' || item.work_done_ca_name === filterCA;
+            const matchesTL = filterTL === 'all' || item.team_lead_name === filterTL;
+
+            return matchesSearch && matchesCA && matchesTL;
+        })
         .sort((a, b) => {
             if (!sortConfig) return 0;
 
@@ -357,6 +368,49 @@ const ReportPage: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Active Filters Display */}
+                {(filterCA !== 'all' || filterTL !== 'all' || searchTerm) && (
+                    <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 bg-white border-b border-gray-100">
+                        {searchTerm && (
+                            <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">
+                                <span>Search: "{searchTerm}"</span>
+                                <button onClick={() => setSearchTerm('')} className="hover:bg-blue-200 rounded-full p-0.5">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </div>
+                        )}
+
+                        {filterCA !== 'all' && (
+                            <div className="flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">
+                                <span>CA: {filterCA}</span>
+                                <button onClick={() => setFilterCA('all')} className="hover:bg-indigo-200 rounded-full p-0.5">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </div>
+                        )}
+
+                        {filterTL !== 'all' && (
+                            <div className="flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs">
+                                <span>TL: {filterTL}</span>
+                                <button onClick={() => setFilterTL('all')} className="hover:bg-purple-200 rounded-full p-0.5">
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setFilterCA('all');
+                                setFilterTL('all');
+                            }}
+                            className="text-xs text-gray-500 hover:text-gray-700 underline ml-2"
+                        >
+                            Clear all
+                        </button>
+                    </div>
+                )}
+
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
@@ -407,6 +461,46 @@ const ReportPage: React.FC = () => {
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 text-center">Data Sync Status</th>
+                            </tr>
+                            {/* Filter Row */}
+                            <tr className="bg-white border-t border-gray-200">
+                                <th className="px-6 py-2"></th>
+                                <th className="px-6 py-2"></th>
+                                <th className="px-6 py-2"></th>
+                                <th className="px-6 py-2">
+                                    <div className="relative">
+                                        <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                        <select
+                                            value={filterCA}
+                                            onChange={(e) => setFilterCA(e.target.value)}
+                                            className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
+                                        >
+                                            <option value="all">All CAs</option>
+                                            {uniqueCAs.map(ca => (
+                                                <option key={ca} value={ca}>{ca}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-2">
+                                    <div className="relative">
+                                        <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                        <select
+                                            value={filterTL}
+                                            onChange={(e) => setFilterTL(e.target.value)}
+                                            className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
+                                        >
+                                            <option value="all">All TLs</option>
+                                            {uniqueTLs.map(tl => (
+                                                <option key={tl} value={tl}>{tl}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-2"></th>
+                                <th className="px-6 py-2"></th>
+                                <th className="px-6 py-2"></th>
+                                <th className="px-6 py-2"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
