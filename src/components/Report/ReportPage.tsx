@@ -17,6 +17,7 @@ import {
     X
 } from 'lucide-react';
 
+
 interface LeadDetail {
     client_name?: string;
     work_done_ca_name: string;
@@ -182,8 +183,8 @@ const ReportPage: React.FC = () => {
             let bValue: any;
 
             if (sortConfig.key === 'difference') {
-                aValue = (a.emails_submitted || 0) - (a.summary_count || 0);
-                bValue = (b.emails_submitted || 0) - (b.summary_count || 0);
+                aValue = (a.summary_count || 0) - (a.emails_submitted || 0);
+                bValue = (b.summary_count || 0) - (b.emails_submitted || 0);
             } else {
                 aValue = a[sortConfig.key as keyof MergedLeadData];
                 bValue = b[sortConfig.key as keyof MergedLeadData];
@@ -387,16 +388,16 @@ const ReportPage: React.FC = () => {
                                         {sortConfig?.key === 'team_lead_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('emails_submitted')}>
-                                    <div className="flex items-center justify-center space-x-1">
-                                        <span>CA Management</span>
-                                        {sortConfig?.key === 'emails_submitted' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
                                 <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('summary_count')}>
                                     <div className="flex items-center justify-center space-x-1">
                                         <span>Task Management</span>
                                         {sortConfig?.key === 'summary_count' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('emails_submitted')}>
+                                    <div className="flex items-center justify-center space-x-1">
+                                        <span>CA Management</span>
+                                        {sortConfig?.key === 'emails_submitted' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('difference')}>
@@ -411,7 +412,7 @@ const ReportPage: React.FC = () => {
                         <tbody className="divide-y divide-gray-100">
                             {filteredData.length > 0 ? (
                                 filteredData.map((lead, index) => {
-                                    const diff = (lead.emails_submitted || 0) - (lead.summary_count || 0);
+                                    const diff = (lead.summary_count || 0) - (lead.emails_submitted || 0);
                                     return (
                                         <tr key={lead.lead_id} className="hover:bg-blue-50/30 transition-colors">
                                             <td className="px-6 py-4 text-sm text-gray-500 font-medium">
