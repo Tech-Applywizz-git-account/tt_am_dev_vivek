@@ -492,23 +492,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Failed to sync additional information', details: additionalInfoError.message });
     }
 
-    // ✅ NEW: Sync with Django Project (Option A: Both must succeed)
-    try {
-      const djangoMappedData = mapToDjangoData(clientData);
-      await syncToDjangoProject(djangoMappedData);
-    } catch (djangoError: any) {
-      console.error('Django Sync Error:', djangoError);
-      return res.status(500).json({
-        error: 'Supabase sync succeeded but Django sync failed',
-        details: djangoError.message || 'Unknown Django API error'
-      });
+    // ✅ Smart Django Sync: Only sync if there are Django-relevant fields
+    // Map data to Django format
+    const djangoMappedData = mapToDjangoData(clientData);
+
+    // Filter out undefined/null values to get only meaningful data
+    const cleanedData = Object.fromEntries(
+      Object.entries(djangoMappedData).filter(([_, v]) => v !== undefined && v !== null)
+    );
+
+    // Only sync to Django if there are fields beyond just apw_id
+    let djangoSynced = false;
+    if (Object.keys(cleanedData).length > 1) {
+      try {
+        await syncToDjangoProject(cleanedData);
+        djangoSynced = true;
+        console.log(`Django sync successful for ${applywizzId}`);
+      } catch (djangoError: any) {
+        console.error('Django Sync Error:', djangoError);
+        return res.status(500).json({
+          error: 'Supabase sync succeeded but Django sync failed',
+          details: djangoError.message || 'Unknown Django API error'
+        });
+      }
+    } else {
+      console.log(`Skipping Django sync for ${applywizzId} - only Supabase-specific fields updated`);
     }
 
     // Return success response (only clients table data as requested)
     return res.status(200).json({
-      message: 'Client data synchronized successfully to both Supabase and Django',
+      message: djangoSynced
+        ? 'Client data synchronized successfully to both Supabase and Django'
+        : 'Client data synchronized successfully to Supabase only',
       applywizz_id: applywizzId,
-      client: clientResult[0]
+      client: clientResult[0],
+      djangoSynced
     });
 
   } catch (err) {
