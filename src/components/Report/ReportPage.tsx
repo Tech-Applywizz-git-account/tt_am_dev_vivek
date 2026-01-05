@@ -412,190 +412,192 @@ const ReportPage: React.FC = () => {
                 )}
 
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-50 text-gray-500 text-xs font-semibold uppercase tracking-wider">
-                                <th className="px-6 py-4 w-16">S.No.</th>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('lead_id')}>
-                                    <div className="flex items-center space-x-1">
-                                        <span>Lead ID</span>
-                                        {sortConfig?.key === 'lead_id' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('work_done_ca_name')}>
-                                    <div className="flex items-center space-x-1">
-                                        <span>Client Name</span>
-                                        {sortConfig?.key === 'client_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('work_done_ca_name')}>
-                                    <div className="flex items-center space-x-1 text-blue-600">
-                                        <Users className="h-3 w-3" />
-                                        <span>Career Associate</span>
-                                        {sortConfig?.key === 'work_done_ca_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('team_lead_name')}>
-                                    <div className="flex items-center space-x-1">
-                                        <span>Team Lead</span>
-                                        {sortConfig?.key === 'team_lead_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('summary_count')}>
-                                    <div className="flex items-center justify-center space-x-1">
-                                        <span>Task Management</span>
-                                        {sortConfig?.key === 'summary_count' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('emails_submitted')}>
-                                    <div className="flex items-center justify-center space-x-1">
-                                        <span>CA Management</span>
-                                        {sortConfig?.key === 'emails_submitted' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('difference')}>
-                                    <div className="flex items-center justify-center space-x-1">
-                                        <span>Difference</span>
-                                        {sortConfig?.key === 'difference' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center">Data Sync Status</th>
-                            </tr>
-                            {/* Filter Row */}
-                            <tr className="bg-white border-t border-gray-200">
-                                <th className="px-6 py-2"></th>
-                                <th className="px-6 py-2"></th>
-                                <th className="px-6 py-2"></th>
-                                <th className="px-6 py-2">
-                                    <div className="relative">
-                                        <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
-                                        <select
-                                            value={filterCA}
-                                            onChange={(e) => setFilterCA(e.target.value)}
-                                            className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
-                                        >
-                                            <option value="all">All CAs</option>
-                                            {uniqueCAs.map(ca => (
-                                                <option key={ca} value={ca}>{ca}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </th>
-                                <th className="px-6 py-2">
-                                    <div className="relative">
-                                        <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
-                                        <select
-                                            value={filterTL}
-                                            onChange={(e) => setFilterTL(e.target.value)}
-                                            className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
-                                        >
-                                            <option value="all">All TLs</option>
-                                            {uniqueTLs.map(tl => (
-                                                <option key={tl} value={tl}>{tl}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </th>
-                                <th className="px-6 py-2"></th>
-                                <th className="px-6 py-2"></th>
-                                <th className="px-6 py-2"></th>
-                                <th className="px-6 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filteredData.length > 0 ? (
-                                filteredData.map((lead, index) => {
-                                    const diff = (lead.summary_count || 0) - (lead.emails_submitted || 0);
-                                    return (
-                                        <tr key={lead.lead_id} className="hover:bg-blue-50/30 transition-colors">
-                                            <td className="px-6 py-4 text-sm text-gray-500 font-medium">
-                                                {index + 1}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-gray-900 leading-tight">{lead.lead_id}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-gray-900 font-semibold">{lead.client_name || 'Anonymous Client'}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center space-x-1 text-gray-900 font-medium">
-                                                        <span>{lead.work_done_ca_name || 'Unassigned'}</span>
-                                                    </div>
-                                                    <span className="text-gray-500 text-[11px] ml-4">{lead.ca_mail}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center space-x-1 text-gray-700 font-medium">
-                                                        <span>{lead.team_lead_name || 'N/A'}</span>
-                                                    </div>
-                                                    <span className="text-gray-400 text-[10px] ml-4 italic whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{lead.tl_email}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${(lead.emails_submitted || 0) > 20 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                                                    }`}>
-                                                    {lead.emails_submitted || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${(lead.summary_count || 0) > 0 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
-                                                    }`}>
-                                                    {lead.summary_count || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${diff === 0 ? 'bg-blue-50 text-blue-600' :
-                                                    diff > 0 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
-                                                    }`}>
-                                                    {diff > 0 ? `+${diff}` : diff}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {!lead.inDetailed && (
-                                                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase border border-red-200" title="Missing in CA Management API">
-                                                            Missing CA
-                                                        </span>
-                                                    )}
-                                                    {!lead.inSummary && (
-                                                        <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded uppercase border border-orange-200" title="Missing in Task Management API">
-                                                            Missing Task
-                                                        </span>
-                                                    )}
-                                                    {lead.inDetailed && lead.inSummary && (
-                                                        <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded uppercase border border-green-200">
-                                                            Synced
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            ) : (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
-                                        <div className="flex flex-col items-center">
-                                            <div className="p-4 bg-gray-50 rounded-full mb-4">
-                                                <FileText className="h-12 w-12 text-gray-200" />
-                                            </div>
-                                            <h3 className="text-lg font-semibold text-gray-900">No Data Matches Found</h3>
-                                            <p className="max-w-xs mx-auto mt-1">Try adjusting your search criteria or selecting a different reporting date.</p>
+                <div className="overflow-hidden max-h-[calc(100vh-400px)]">
+                    <div className="overflow-x-auto overflow-y-auto max-h-full">
+                        <table className="w-full text-left">
+                            <thead className="sticky top-0 z-10 bg-white">
+                                <tr className="bg-gray-50 text-gray-500 text-xs font-semibold uppercase tracking-wider">
+                                    <th className="px-6 py-4 w-16">S.No.</th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('lead_id')}>
+                                        <div className="flex items-center space-x-1">
+                                            <span>Lead ID</span>
+                                            {sortConfig?.key === 'lead_id' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
                                         </div>
-                                    </td>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('work_done_ca_name')}>
+                                        <div className="flex items-center space-x-1">
+                                            <span>Client Name</span>
+                                            {sortConfig?.key === 'client_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('work_done_ca_name')}>
+                                        <div className="flex items-center space-x-1 text-blue-600">
+                                            <Users className="h-3 w-3" />
+                                            <span>Career Associate</span>
+                                            {sortConfig?.key === 'work_done_ca_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('team_lead_name')}>
+                                        <div className="flex items-center space-x-1">
+                                            <span>Team Lead</span>
+                                            {sortConfig?.key === 'team_lead_name' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('summary_count')}>
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Task Management</span>
+                                            {sortConfig?.key === 'summary_count' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('emails_submitted')}>
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>CA Management</span>
+                                            {sortConfig?.key === 'emails_submitted' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-center cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => toggleSort('difference')}>
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Difference</span>
+                                            {sortConfig?.key === 'difference' && (sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />)}
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-4 text-center">Data Sync Status</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                {/* Filter Row */}
+                                <tr className="bg-white border-t border-gray-200">
+                                    <th className="px-6 py-2"></th>
+                                    <th className="px-6 py-2"></th>
+                                    <th className="px-6 py-2"></th>
+                                    <th className="px-6 py-2">
+                                        <div className="relative">
+                                            <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                            <select
+                                                value={filterCA}
+                                                onChange={(e) => setFilterCA(e.target.value)}
+                                                className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
+                                            >
+                                                <option value="all">All CAs</option>
+                                                {uniqueCAs.map(ca => (
+                                                    <option key={ca} value={ca}>{ca}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-2">
+                                        <div className="relative">
+                                            <Filter className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+                                            <select
+                                                value={filterTL}
+                                                onChange={(e) => setFilterTL(e.target.value)}
+                                                className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none"
+                                            >
+                                                <option value="all">All TLs</option>
+                                                {uniqueTLs.map(tl => (
+                                                    <option key={tl} value={tl}>{tl}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-2"></th>
+                                    <th className="px-6 py-2"></th>
+                                    <th className="px-6 py-2"></th>
+                                    <th className="px-6 py-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filteredData.length > 0 ? (
+                                    filteredData.map((lead, index) => {
+                                        const diff = (lead.summary_count || 0) - (lead.emails_submitted || 0);
+                                        return (
+                                            <tr key={lead.lead_id} className="hover:bg-blue-50/30 transition-colors">
+                                                <td className="px-6 py-4 text-sm text-gray-500 font-medium">
+                                                    {index + 1}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-gray-900 leading-tight">{lead.lead_id}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-gray-900 font-semibold">{lead.client_name || 'Anonymous Client'}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center space-x-1 text-gray-900 font-medium">
+                                                            <span>{lead.work_done_ca_name || 'Unassigned'}</span>
+                                                        </div>
+                                                        <span className="text-gray-500 text-[11px] ml-4">{lead.ca_mail}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center space-x-1 text-gray-700 font-medium">
+                                                            <span>{lead.team_lead_name || 'N/A'}</span>
+                                                        </div>
+                                                        <span className="text-gray-400 text-[10px] ml-4 italic whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">{lead.tl_email}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${(lead.summary_count || 0) > 0 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                        {lead.summary_count || 0}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${(lead.emails_submitted || 0) > 20 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                        {lead.emails_submitted || 0}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${diff === 0 ? 'bg-blue-50 text-blue-600' :
+                                                        diff > 0 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {diff > 0 ? `+${diff}` : diff}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {!lead.inDetailed && (
+                                                            <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase border border-red-200" title="Missing in CA Management API">
+                                                                Missing CA
+                                                            </span>
+                                                        )}
+                                                        {!lead.inSummary && (
+                                                            <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded uppercase border border-orange-200" title="Missing in Task Management API">
+                                                                Missing Task
+                                                            </span>
+                                                        )}
+                                                        {lead.inDetailed && lead.inSummary && (
+                                                            <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded uppercase border border-green-200">
+                                                                Synced
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                                            <div className="flex flex-col items-center">
+                                                <div className="p-4 bg-gray-50 rounded-full mb-4">
+                                                    <FileText className="h-12 w-12 text-gray-200" />
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-gray-900">No Data Matches Found</h3>
+                                                <p className="max-w-xs mx-auto mt-1">Try adjusting your search criteria or selecting a different reporting date.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
