@@ -381,19 +381,34 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
       'main_subject',
       'graduation_year',
       'experience',
-
-      // Employment Info tab
       'role',
       'work_preferences',
       'alternate_job_roles',
-      'exclude_companies',
       'github_url',
       'linked_in_url',
 
+      // Employment Info tab
+      'is_over_18',
+      'eligible_to_work_in_us',
+      'authorized_without_visa',
+      'require_future_sponsorship',
+      'can_perform_essential_functions',
+      'worked_for_company_before',
+      'discharged_for_policy_violation',
+      'referred_by_agency',
+
       // Background Check tab
+      'convicted_of_felony',
+      'pending_investigation',
+      'willing_background_check',
+      'willing_drug_screen',
+      'failed_or_refused_drug_test',
+      'uses_substances_affecting_duties',
+      'can_provide_legal_docs',
       'is_hispanic_latino',
       'veteran_status',
       'disability_status',
+      'has_relatives_in_company',
     ];
 
     fieldsToCheck.forEach(field => {
@@ -449,19 +464,35 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
       'main_subject': 'education',
       'graduation_year': 'education',
       'experience': 'education',
+      'role': 'education',
+      'work_preferences': 'education',
+      'alternate_job_roles': 'education',
+      'exclude_companies': 'education',
+      'github_url': 'education',
+      'linked_in_url': 'education',
 
       // Employment Info
-      'role': 'employment',
-      'work_preferences': 'employment',
-      'alternate_job_roles': 'employment',
-      'exclude_companies': 'employment',
-      'github_url': 'employment',
-      'linked_in_url': 'employment',
+      'is_over_18': 'employment',
+      'eligible_to_work_in_us': 'employment',
+      'authorized_without_visa': 'employment',
+      'require_future_sponsorship': 'employment',
+      'can_perform_essential_functions': 'employment',
+      'worked_for_company_before': 'employment',
+      'discharged_for_policy_violation': 'employment',
+      'referred_by_agency': 'employment',
 
       // Background Check
+      'convicted_of_felony': 'background',
+      'pending_investigation': 'background',
+      'willing_background_check': 'background',
+      'willing_drug_screen': 'background',
+      'failed_or_refused_drug_test': 'background',
+      'uses_substances_affecting_duties': 'background',
+      'can_provide_legal_docs': 'background',
       'is_hispanic_latino': 'background',
       'veteran_status': 'background',
       'disability_status': 'background',
+      'has_relatives_in_company': 'background',
     };
     return fieldTabMap[field] || 'details';
   };
