@@ -40,7 +40,32 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalJobs, setTotalJobs] = useState(0);
+    const [selectedApplyType, setSelectedApplyType] = useState<string | null>(null);
+    const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
     const pageSize = 50;
+
+    const loadingMessages = {
+        EASY_APPLY: [
+            "Easy applied job coming...",
+            "Scanning for quick wins...",
+            "You are almost there, thanks for the patience!",
+            "Preparing your Easy Apply dashboard...",
+        ],
+        REGULAR: [
+            "External jobs on the way...",
+            "Syncing with external portals...",
+            "You're almost there, stay tuned!",
+            "Just a moment while we fetch your applications...",
+        ],
+        DEFAULT: [
+            "Fetching all applied jobs...",
+            "Curating your application history...",
+            "Almost finished, thank you for waiting!",
+            "Preparing your match list...",
+        ],
+    };
+
+    const currentMessages = selectedApplyType ? (loadingMessages as any)[selectedApplyType] : loadingMessages.DEFAULT;
 
     // Fetch applied jobs
     const fetchAppliedJobs = async (page: number = 1) => {
@@ -53,21 +78,36 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
 
-            const response = await fetch(
-                `${apiUrl}/api/job-links?lead_id=${applywizzId}&page=${page}&page_size=${pageSize}&status=Completed`
-            );
+            let url = `${apiUrl}/api/job-links?lead_id=${applywizzId}&page=${page}&page_size=${pageSize}&status=Completed`;
+
+            if (selectedApplyType === 'EASY_APPLY') {
+                url += `&apply_type=EASY_APPLY`;
+            } else if (selectedApplyType === 'REGULAR') {
+                url += `&apply_type=REGULAR`;
+            }
+
+            const response = await fetch(url);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch applied jobs: ${response.status}`);
             }
 
             const data: PaginatedResponse = await response.json();
-            setJobs(data.jobs || []);
+
+            // Further filter if selectedApplyType is 'REGULAR' (null apply_type)
+            let filteredJobs = data.jobs || [];
+            if (selectedApplyType === 'REGULAR') {
+                filteredJobs = filteredJobs.filter(job => !job.apply_type);
+            } else if (selectedApplyType === 'EASY_APPLY') {
+                filteredJobs = filteredJobs.filter(job => job.apply_type === 'Easy_apply' || job.apply_type === 'EASY_APPLY');
+            }
+
+            setJobs(filteredJobs);
             setCurrentPage(data.pagination?.page || 1);
             setTotalPages(data.pagination?.total_pages || 1);
             setTotalJobs(data.pagination?.total || 0);
@@ -80,8 +120,23 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     };
 
     useEffect(() => {
-        fetchAppliedJobs(currentPage);
-    }, [applywizzId]);
+        setCurrentPage(1);
+        fetchAppliedJobs(1);
+    }, [applywizzId, selectedApplyType]);
+
+    // Cycle loading messages
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (loading) {
+            setLoadingMessageIndex(0);
+            interval = setInterval(() => {
+                setLoadingMessageIndex((prev) => (prev + 1) % currentMessages.length);
+            }, 1500);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [loading, currentMessages.length]);
 
     // Pagination handlers
     const handlePreviousPage = () => {
@@ -320,12 +375,22 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         );
     };
 
-    if (loading && jobs.length === 0) {
+    if (loading) {
         return (
-            <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <div className="flex items-center justify-center py-8">
-                    <Loader2 className="animate-spin mr-2" size={24} />
-                    <span>Loading applied jobs...</span>
+            <div className="bg-white p-6 rounded-lg shadow-md mt-6 animate-pulse">
+                <div className="flex flex-col items-center justify-center py-12">
+                    <div className="relative mb-6">
+                        <Loader2 className="animate-spin text-blue-600" size={48} />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping"></div>
+                        </div>
+                    </div>
+                    <p className="text-lg font-medium text-gray-700 animate-bounce">
+                        {currentMessages[loadingMessageIndex]}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                        We are currently gathering your {selectedApplyType === 'EASY_APPLY' ? 'Easy Apply' : selectedApplyType === 'REGULAR' ? 'External' : 'applied'} records...
+                    </p>
                 </div>
             </div>
         );
@@ -349,10 +414,42 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <CheckCircle className="text-green-600" size={24} />
-                Applied Jobs ({totalJobs})
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <CheckCircle className="text-green-600" size={24} />
+                    Applied Jobs ({totalJobs})
+                </h2>
+
+                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl w-fit">
+                    <button
+                        onClick={() => setSelectedApplyType(null)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedApplyType === null
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        All
+                    </button>
+                    <button
+                        onClick={() => setSelectedApplyType('REGULAR')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedApplyType === 'REGULAR'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        External apply
+                    </button>
+                    <button
+                        onClick={() => setSelectedApplyType('EASY_APPLY')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedApplyType === 'EASY_APPLY'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        Easy apply
+                    </button>
+                </div>
+            </div>
 
             <div className="space-y-4">
                 {jobs.map((job) => renderJobCard(job))}
