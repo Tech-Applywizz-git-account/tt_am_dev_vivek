@@ -38,7 +38,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }

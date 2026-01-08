@@ -64,7 +64,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
@@ -90,7 +90,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
         if (!applywizzId) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&job_type=C2C,W2`);
 
             if (!response.ok) {

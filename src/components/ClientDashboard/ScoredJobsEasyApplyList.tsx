@@ -65,7 +65,7 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
@@ -91,7 +91,7 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
         if (!applywizzId) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
