@@ -38,11 +38,11 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
         // Apply search filter
         const search = searchTerm.toLowerCase();
         return filteredClients.filter(client =>
-            client.full_name.toLowerCase().includes(search) ||
-            client.personal_email.toLowerCase().includes(search) ||
-            client.company_email.toLowerCase().includes(search) ||
+            client.full_name?.toLowerCase().includes(search) ||
+            client.personal_email?.toLowerCase().includes(search) ||
+            client.company_email?.toLowerCase().includes(search) ||
             (client.applywizz_id && client.applywizz_id.toLowerCase().includes(search)) ||
-            (client.job_role_preferences && client.job_role_preferences.some(role => role.toLowerCase().includes(search)))
+            (client.job_role_preferences && client.job_role_preferences.some(role => role?.toLowerCase().includes(search)))
         );
     };
 
