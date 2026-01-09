@@ -218,6 +218,25 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
     );
   }
 
+  // Skeleton Loading Card
+  const SkeletonJobCard = () => (
+    <div className="bg-white rounded-lg p-4 shadow-sm animate-pulse">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="h-5 w-3/4 bg-gray-200 rounded mb-2"></div>
+          <div className="h-4 w-1/2 bg-gray-200 rounded mb-2"></div>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="h-4 w-4 bg-gray-200 rounded"></div>
+            <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="h-8 w-32 bg-gray-200 rounded-md"></div>
+        </div>
+      </div>
+    </div>
+  );
+
   // Helper function to render a job card
   const renderJobCard = (job: JobItem, isEasyApply: boolean = false, date: string = '') => (
     <div
@@ -310,9 +329,9 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
               {isExpanded && (
                 <div className="mt-3 bg-gray-50 p-4 rounded-lg">
                   {jobsLoading[item.date] ? (
-                    <div className="flex justify-center items-center py-4">
-                      <Loader2 className="animate-spin mr-2" size={20} />
-                      <span>Loading jobs...</span>
+                    <div className="space-y-3">
+                      <SkeletonJobCard />
+                      <SkeletonJobCard />
                     </div>
                   ) : tasks.length > 0 ? (
                     <div className="space-y-4">

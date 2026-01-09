@@ -318,12 +318,46 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
         );
     };
 
+
+    // Skeleton Loading Card
+    const SkeletonJobCard = () => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+            <div className="flex items-start gap-6 p-6">
+                <div className="flex-1 flex gap-4">
+                    <div className="flex-shrink-0">
+                        <div className="w-16 h-16 rounded-xl bg-gray-200"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                            <div className="h-4 w-16 bg-gray-200 rounded-full"></div>
+                        </div>
+                        <div className="h-6 w-3/4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-5 w-1/2 bg-gray-200 rounded mb-3"></div>
+                        <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 bg-gray-200 rounded-2xl p-6 w-32 h-40"></div>
+            </div>
+            <div className="px-6 pb-6 flex items-center gap-3">
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+                <div className="flex-1"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+            </div>
+        </div>
+    );
+
     if (loading && Object.keys(summary).length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <div className="flex items-center justify-center py-8">
-                    <Loader2 className="animate-spin mr-2" size={24} />
-                    <span>Loading C2C contract jobs...</span>
+                <div className="flex items-center gap-2 mb-6">
+                    <Loader2 className="animate-spin text-green-600" size={20} />
+                    <span className="text-gray-700 font-medium">Loading C2C jobs...</span>
+                </div>
+                <div className="space-y-4">
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
                 </div>
             </div>
         );
@@ -393,9 +427,9 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                                             {jobs.map((job) => renderJobCard(job, date))}
                                         </div>
                                     ) : (
-                                        <div className="flex items-center justify-center py-8">
-                                            <Loader2 className="animate-spin mr-2" size={20} />
-                                            <span className="text-gray-500">Loading jobs...</span>
+                                        <div className="space-y-4">
+                                            <SkeletonJobCard />
+                                            <SkeletonJobCard />
                                         </div>
                                     )}
                                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, RefreshCw, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Calendar, Linkedin, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -20,7 +20,7 @@ interface JobItem {
 }
 
 interface SummaryResponse {
-    c2cw2_jobs: Record<string, number>;
+    linkedin_jobs: Record<string, number>;
     summary: {
         total: number;
         by_status: Record<string, number>;
@@ -33,7 +33,7 @@ interface DateJobsResponse {
     total: number;
 }
 
-interface C2CW2JobsRegularListProps {
+interface LinkedInEasyApplyRegularListProps {
     applywizzId?: string;
 }
 
@@ -46,7 +46,7 @@ const statusOptions = [
     { value: "Job Not Found", label: "Job Not Found" },
 ];
 
-const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId }) => {
+const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> = ({ applywizzId }) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
@@ -69,14 +69,14 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&job_type=C2C,W2`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=LINKEDIN`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch summary: ${response.status}`);
             }
 
-            const data: SummaryResponse = await response.json();
-            setSummary(data.c2cw2_jobs || {});
+            const data: any = await response.json();
+            setSummary(data.jobs || {});
         } catch (err) {
             console.error("Error fetching summary:", err);
             setError(err instanceof Error ? err.message : "Failed to load summary");
@@ -91,7 +91,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
 
         try {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&job_type=C2C,W2`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&source=LINKEDIN`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch jobs: ${response.status}`);
@@ -99,10 +99,10 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
 
             const data: any = await response.json();
 
-            // API returns "c2c,w2_jobs" array for job_type=C2C,W2
+            // API returns jobs array for source=LINKEDIN
             setJobsData(prev => ({
                 ...prev,
-                [date]: data['c2c,w2_jobs'] || data.jobs || []
+                [date]: data.jobs || []
             }));
         } catch (err) {
             console.error("Error fetching jobs for date:", err);
@@ -187,7 +187,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
         if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-br from-green-900 to-green-800', textColor: 'text-green-400' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-br from-teal-900 to-teal-800', textColor: 'text-teal-400' };
+        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-br from-blue-900 to-blue-800', textColor: 'text-blue-400' };
         return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-br from-yellow-900 to-yellow-800', textColor: 'text-yellow-400' };
     };
 
@@ -213,7 +213,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
         const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company);
         const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null;
-        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=14b8a6&color=fff&size=80&bold=true&rounded=true`;
+        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=0077B5&color=fff&size=80&bold=true&rounded=true`;
         const avatarUrl = faviconUrl || fallbackAvatarUrl;
 
         return (
@@ -238,13 +238,13 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
-                                    <span className="px-2 py-0.5 bg-teal-50 text-teal-700 text-xs font-medium rounded-full">
+                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
                                 )}
-                                <span className="px-2 py-0.5 bg-teal-100 text-teal-800 text-xs font-medium rounded-full flex items-center gap-1">
-                                    <RefreshCw size={12} />
-                                    c2cw2
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                    <Linkedin size={12} />
+                                    linkedin
                                 </span>
                             </div>
 
@@ -293,7 +293,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                     <select
                         value={job.status || 'Pending'}
                         onChange={(e) => handleStatusChange(job.id, e.target.value, date)}
-                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white hover:bg-gray-50 transition-colors"
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-gray-50 transition-colors"
                     >
                         {statusOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -308,7 +308,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                         href={job.url || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                        className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
                     >
                         <ExternalLink size={16} />
                         <span>APPLY NOW</span>
@@ -351,8 +351,8 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
                 <div className="flex items-center gap-2 mb-6">
-                    <Loader2 className="animate-spin text-indigo-600" size={20} />
-                    <span className="text-gray-700 font-medium">Loading C2C,W2 jobs...</span>
+                    <Loader2 className="animate-spin text-blue-600" size={20} />
+                    <span className="text-gray-700 font-medium">Loading LinkedIn jobs...</span>
                 </div>
                 <div className="space-y-4">
                     <SkeletonJobCard />
@@ -376,7 +376,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
     if (dates.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No c2cw2 agency jobs found.</p>
+                <p className="text-gray-500">No linkedin agency jobs found.</p>
             </div>
         );
     }
@@ -384,8 +384,8 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <RefreshCw className="text-teal-600" size={24} />
-                c2cw2 Agency Jobs Summary
+                <Linkedin className="text-blue-600" size={24} />
+                linkedin Agency Jobs Summary
             </h2>
 
             <div className="space-y-2">
@@ -404,17 +404,17 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                         <div key={date}>
                             <div
                                 onClick={() => toggleDateExpansion(date)}
-                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-teal-100" : "bg-teal-50 hover:bg-teal-100"
+                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-blue-100" : "bg-blue-50 hover:bg-blue-100"
                                     }`}
                             >
-                                <div className="flex items-center gap-2 text-teal-900">
+                                <div className="flex items-center gap-2 text-blue-900">
                                     <Calendar size={18} />
                                     <span className="font-medium">{formattedDate}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-teal-700 font-semibold">
+                                <div className="flex items-center gap-3 text-blue-700 font-semibold">
                                     <div className="flex items-center gap-2">
-                                        <RefreshCw size={18} />
-                                        <span>{count} c2cw2 Jobs</span>
+                                        <Linkedin size={18} />
+                                        <span>{count} linkedin Jobs</span>
                                     </div>
                                     {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                 </div>
@@ -442,4 +442,4 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
     );
 };
 
-export default C2CW2JobsRegularList;
+export default LinkedInEasyApplyRegularList;

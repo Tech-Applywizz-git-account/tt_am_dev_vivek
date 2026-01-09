@@ -41,20 +41,19 @@ import AppliedJobsList from './components/ClientDashboard/AppliedJobsList';
 import JobLinksList from './components/ClientDashboard/JobLinksList';
 import ScoredJobsDashboard from './components/ClientDashboard/ScoredJobsDashboard';
 import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegularList';
-import ScoredJobsEasyApplyList from './components/ClientDashboard/ScoredJobsEasyApplyList';
 import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
+import LinkedInEasyApplyDashboard from './components/ClientDashboard/LinkedInEasyApplyDashboard';
+import LinkedInEasyApplyRegularList from './components/ClientDashboard/LinkedInEasyApplyRegularList';
+import IndeedEasyApplyDashboard from './components/ClientDashboard/IndeedEasyApplyDashboard';
+import IndeedEasyApplyRegularList from './components/ClientDashboard/IndeedEasyApplyRegularList';
 import StaffingAgenciesDashboard from './components/ClientDashboard/StaffingAgenciesDashboard';
 import StaffingAgenciesRegularList from './components/ClientDashboard/StaffingAgenciesRegularList';
-import StaffingAgenciesAppliedList from './components/ClientDashboard/StaffingAgenciesAppliedList';
 import C2CJobsDashboard from './components/ClientDashboard/C2CJobsDashboard';
 import C2CJobsRegularList from './components/ClientDashboard/C2CJobsRegularList';
-import C2CJobsAppliedList from './components/ClientDashboard/C2CJobsAppliedList';
 import W2JobsDashboard from './components/ClientDashboard/W2JobsDashboard';
 import W2JobsRegularList from './components/ClientDashboard/W2JobsRegularList';
-import W2JobsAppliedList from './components/ClientDashboard/W2JobsAppliedList';
 import C2CW2JobsDashboard from './components/ClientDashboard/C2CW2JobsDashboard';
 import C2CW2JobsRegularList from './components/ClientDashboard/C2CW2JobsRegularList';
-import C2CW2JobsAppliedList from './components/ClientDashboard/C2CW2JobsAppliedList';
 import { useAccount } from './contexts/AccountContext';
 import ReportPage from './components/Report/ReportPage';
 
@@ -1958,28 +1957,25 @@ function App() {
           </div>
         );
 
-      case 'easy-apply':
+      case 'linkedin-easy-apply':
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Easy Apply</h1>
+              <h1 className="text-2xl font-bold text-gray-900">LinkedIn Easy Apply</h1>
             </div>
-            {currentUser?.role === 'client' ? (
-              optedJobLinks ? (
-                <ScoredJobsEasyApplyList applywizzId={applywizzId} />
-              ) : (
-                <EasyApplySummaryList
-                  data={clientDashboardData}
-                  loading={clientDashboardLoading}
-                  error={clientDashboardError}
-                  applywizzId={applywizzId}
-                />
-              )
-            ) : (
-              <div className="bg-white p-4 rounded-lg shadow">
-                <p className="text-gray-500">Not available for your role.</p>
-              </div>
-            )}
+            <LinkedInEasyApplyDashboard applywizzId={applywizzId} />
+            <LinkedInEasyApplyRegularList applywizzId={applywizzId} />
+          </div>
+        );
+
+      case 'indeed-easy-apply':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Indeed Easy Apply</h1>
+            </div>
+            <IndeedEasyApplyDashboard applywizzId={applywizzId} />
+            <IndeedEasyApplyRegularList applywizzId={applywizzId} />
           </div>
         );
 
@@ -2037,7 +2033,6 @@ function App() {
             </div>
             <StaffingAgenciesDashboard applywizzId={applywizzId} />
             <StaffingAgenciesRegularList applywizzId={applywizzId} />
-            <StaffingAgenciesAppliedList applywizzId={applywizzId} />
           </div>
         );
 
@@ -2050,7 +2045,6 @@ function App() {
             </div>
             <C2CJobsDashboard applywizzId={applywizzId} />
             <C2CJobsRegularList applywizzId={applywizzId} />
-            <C2CJobsAppliedList applywizzId={applywizzId} />
           </div>
         );
 
@@ -2063,7 +2057,6 @@ function App() {
             </div>
             <W2JobsDashboard applywizzId={applywizzId} />
             <W2JobsRegularList applywizzId={applywizzId} />
-            <W2JobsAppliedList applywizzId={applywizzId} />
           </div>
         );
 
@@ -2076,7 +2069,6 @@ function App() {
             </div>
             <C2CW2JobsDashboard applywizzId={applywizzId} />
             <C2CW2JobsRegularList applywizzId={applywizzId} />
-            <C2CW2JobsAppliedList applywizzId={applywizzId} />
           </div>
         );
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle, MapPin, ExternalLink, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle, MapPin, ExternalLink, Loader2, ChevronLeft, ChevronRight, Linkedin, Briefcase, Building2, DollarSign, RefreshCw, ChevronDown } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -40,32 +40,28 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalJobs, setTotalJobs] = useState(0);
-    const [selectedApplyType, setSelectedApplyType] = useState<string | null>(null);
+    const [selectedFilter, setSelectedFilter] = useState<string>('all');
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
     const pageSize = 50;
 
-    const loadingMessages = {
-        EASY_APPLY: [
-            "Easy applied job coming...",
-            "Scanning for quick wins...",
-            "You are almost there, thanks for the patience!",
-            "Preparing your Easy Apply dashboard...",
-        ],
-        REGULAR: [
-            "External jobs on the way...",
-            "Syncing with external portals...",
-            "You're almost there, stay tuned!",
-            "Just a moment while we fetch your applications...",
-        ],
-        DEFAULT: [
-            "Fetching all applied jobs...",
-            "Curating your application history...",
-            "Almost finished, thank you for waiting!",
-            "Preparing your match list...",
-        ],
-    };
+    const filterOptions = [
+        { value: 'all', label: 'All Applied Jobs', icon: CheckCircle },
+        { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
+        { value: 'indeed', label: 'Indeed', icon: Briefcase },
+        { value: 'staffing', label: 'Staffing Agencies', icon: Building2 },
+        { value: 'c2c', label: 'C2C', icon: DollarSign },
+        { value: 'w2', label: 'W2', icon: Briefcase },
+        { value: 'c2c-w2', label: 'C2C,W2', icon: RefreshCw },
+    ];
 
-    const currentMessages = selectedApplyType ? (loadingMessages as any)[selectedApplyType] : loadingMessages.DEFAULT;
+    const loadingMessages = [
+        "Fetching applied jobs...",
+        "Curating your application history...",
+        "Almost finished, thank you for waiting!",
+        "Preparing your job list...",
+    ];
+
+    const currentMessages = loadingMessages;
 
     // Fetch applied jobs
     const fetchAppliedJobs = async (page: number = 1) => {
@@ -85,10 +81,19 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
             let url = `${apiUrl}/api/job-links?lead_id=${applywizzId}&page=${page}&page_size=${pageSize}&status=Completed`;
 
-            if (selectedApplyType === 'EASY_APPLY') {
-                url += `&apply_type=EASY_APPLY`;
-            } else if (selectedApplyType === 'REGULAR') {
-                url += `&apply_type=REGULAR`;
+            // Add filter based on selection
+            if (selectedFilter === 'linkedin') {
+                url += `&source=LINKEDIN`;
+            } else if (selectedFilter === 'indeed') {
+                url += `&source=INDEED`;
+            } else if (selectedFilter === 'staffing') {
+                url += `&industry_type=true`;
+            } else if (selectedFilter === 'c2c') {
+                url += `&job_type=C2C`;
+            } else if (selectedFilter === 'w2') {
+                url += `&job_type=W2`;
+            } else if (selectedFilter === 'c2c-w2') {
+                url += `&job_type=C2C,W2`;
             }
 
             const response = await fetch(url);
@@ -99,15 +104,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
             const data: PaginatedResponse = await response.json();
 
-            // Further filter if selectedApplyType is 'REGULAR' (null apply_type)
-            let filteredJobs = data.jobs || [];
-            if (selectedApplyType === 'REGULAR') {
-                filteredJobs = filteredJobs.filter(job => !job.apply_type);
-            } else if (selectedApplyType === 'EASY_APPLY') {
-                filteredJobs = filteredJobs.filter(job => job.apply_type === 'Easy_apply' || job.apply_type === 'EASY_APPLY');
-            }
-
-            setJobs(filteredJobs);
+            setJobs(data.jobs || []);
             setCurrentPage(data.pagination?.page || 1);
             setTotalPages(data.pagination?.total_pages || 1);
             setTotalJobs(data.pagination?.total || 0);
@@ -122,7 +119,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     useEffect(() => {
         setCurrentPage(1);
         fetchAppliedJobs(1);
-    }, [applywizzId, selectedApplyType]);
+    }, [applywizzId, selectedFilter]);
 
     // Cycle loading messages
     useEffect(() => {
@@ -375,22 +372,83 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         );
     };
 
+    // Skeleton Loading Card
+    const SkeletonJobCard = () => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+            <div className="flex items-start gap-6 p-6">
+                {/* Left: Company Avatar & Job Info */}
+                <div className="flex-1 flex gap-4">
+                    {/* Avatar Skeleton */}
+                    <div className="flex-shrink-0">
+                        <div className="w-16 h-16 rounded-xl bg-gray-200"></div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        {/* Tags Skeleton */}
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                            <div className="h-4 w-16 bg-gray-200 rounded-full"></div>
+                        </div>
+
+                        {/* Title Skeleton */}
+                        <div className="h-6 w-3/4 bg-gray-200 rounded mb-2"></div>
+
+                        {/* Company Skeleton */}
+                        <div className="h-5 w-1/2 bg-gray-200 rounded mb-3"></div>
+
+                        {/* Location Skeleton */}
+                        <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+
+                {/* Right: Match Score Skeleton */}
+                <div className="flex-shrink-0 bg-gray-200 rounded-2xl p-6 w-32 h-40"></div>
+            </div>
+
+            {/* Bottom: Actions Skeleton */}
+            <div className="px-6 pb-6 flex items-center gap-3">
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+                <div className="flex-1"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+            </div>
+        </div>
+    );
+
     if (loading) {
         return (
-            <div className="bg-white p-6 rounded-lg shadow-md mt-6 animate-pulse">
-                <div className="flex flex-col items-center justify-center py-12">
-                    <div className="relative mb-6">
-                        <Loader2 className="animate-spin text-blue-600" size={48} />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping"></div>
-                        </div>
+            <div className="bg-white p-4 rounded-lg shadow mt-6">
+                {/* Header with filter info and dropdown */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    {/* Left: Loading text */}
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="text-blue-600 animate-spin" size={20} />
+                        <p className="text-gray-700 font-medium">
+                            Loading applied jobs...
+                        </p>
                     </div>
-                    <p className="text-lg font-medium text-gray-700 animate-bounce">
-                        {currentMessages[loadingMessageIndex]}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">
-                        We are currently gathering your {selectedApplyType === 'EASY_APPLY' ? 'Easy Apply' : selectedApplyType === 'REGULAR' ? 'External' : 'applied'} records...
-                    </p>
+
+                    {/* Right: Filter Dropdown (still functional during loading) */}
+                    <div className="relative">
+                        <select
+                            value={selectedFilter}
+                            onChange={(e) => setSelectedFilter(e.target.value)}
+                            className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm min-w-[200px]"
+                        >
+                            {filterOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                    </div>
+                </div>
+
+                {/* Skeleton Loading Cards */}
+                <div className="space-y-4">
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
                 </div>
             </div>
         );
@@ -404,58 +462,64 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         );
     }
 
-    if (jobs.length === 0) {
-        return (
-            <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No applied jobs found.</p>
-            </div>
-        );
-    }
 
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
+            {/* Header with filter info and dropdown */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <CheckCircle className="text-green-600" size={24} />
-                    Applied Jobs ({totalJobs})
-                </h2>
+                {/* Left: Filter description */}
+                <div className="flex items-center gap-2">
+                    <CheckCircle className="text-green-600" size={20} />
+                    <p className="text-gray-700 font-medium">
+                        {totalJobs === 0 ? (
+                            <>No applied jobs found</>
+                        ) : (
+                            <>
+                                You have applied to <span className="font-bold text-blue-600">{totalJobs}</span> {totalJobs === 1 ? 'job' : 'jobs'}
+                                {selectedFilter !== 'all' && (
+                                    <> in <span className="font-bold text-blue-600">
+                                        {filterOptions.find(opt => opt.value === selectedFilter)?.label}
+                                    </span></>
+                                )}
+                            </>
+                        )}
+                    </p>
+                </div>
 
-                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl w-fit">
-                    <button
-                        onClick={() => setSelectedApplyType(null)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedApplyType === null
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                            }`}
+                {/* Right: Filter Dropdown */}
+                <div className="relative">
+                    <select
+                        value={selectedFilter}
+                        onChange={(e) => setSelectedFilter(e.target.value)}
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm min-w-[200px]"
                     >
-                        All
-                    </button>
-                    <button
-                        onClick={() => setSelectedApplyType('REGULAR')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedApplyType === 'REGULAR'
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                    >
-                        External apply
-                    </button>
-                    <button
-                        onClick={() => setSelectedApplyType('EASY_APPLY')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedApplyType === 'EASY_APPLY'
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                    >
-                        Easy apply
-                    </button>
+                        {filterOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                 </div>
             </div>
 
-            <div className="space-y-4">
-                {jobs.map((job) => renderJobCard(job))}
-            </div>
+            {jobs.length === 0 ? (
+                <div className="text-center py-12">
+                    <CheckCircle className="mx-auto text-gray-300 mb-4" size={48} />
+                    <p className="text-gray-500 text-lg font-medium">No applied jobs found</p>
+                    <p className="text-gray-400 text-sm mt-2">
+                        Try selecting a different filter or apply to some jobs first.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div className="space-y-4">
+                        {jobs.map((job) => renderJobCard(job))}
+                    </div>
 
-            {totalPages > 1 && renderPagination()}
+                    {totalPages > 1 && renderPagination()}
+                </>
+            )}
         </div>
     );
 };
