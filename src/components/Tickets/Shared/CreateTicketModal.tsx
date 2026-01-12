@@ -328,7 +328,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       console.log("client email", clientEmail.data?.company_email);
       // Send email notification 
       if (user.role === 'client') {
-        await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -366,7 +366,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           })
         });
         if (amEmail) {
-          await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+          await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -407,7 +407,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         }
       }
       if (ticketType === "volume_shortfall") {
-        await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -449,7 +449,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         });
       } else if (ticketType === "data_mismatch") {  // added catlEmail  to keep in loop 
         if (caEmail) {
-          await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+          await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -492,7 +492,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
         }
         if (catlEmail) {
-          await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+          await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -535,7 +535,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         }
       } else if (ticketType === "resume_update") {  // 
         // Logic for resume_update email notifications can be added here
-        await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -575,7 +575,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     `
           })
         });
-        await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -612,7 +612,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     `
           })
         });
-        await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

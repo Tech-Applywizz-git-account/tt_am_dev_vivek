@@ -522,7 +522,7 @@ function App() {
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+    await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -579,7 +579,7 @@ function App() {
       };
 
       // Send email with attachment using the send-email-a API
-      const response = await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email-a", {
+      const response = await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email-a`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1008,7 +1008,7 @@ function App() {
           : fetchedClientData.company_email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
 
         // Call the Fermion API to create the user
-        const fermionResponse = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
+        const fermionResponse = await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/create-fermion-user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

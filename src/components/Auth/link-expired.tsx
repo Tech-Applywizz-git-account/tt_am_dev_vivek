@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from '@/lib/supabaseClient';
 
-import {toast} from 'react-toastify';
+import { toast } from 'react-toastify';
 
 export default function LinkExpired() {
   const [email, setEmail] = useState("");
@@ -52,7 +52,7 @@ export default function LinkExpired() {
     setLoading(true);
     try {
       // ✅ Resend verification with same redirect format
-      const redirectUrl = `https://ticketingtoolapplywizz.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(email)}`;
+      const redirectUrl = `${import.meta.env.VITE_TICKETING_TOOL_API_URL}/EmailVerifyRedirect?email=${encodeURIComponent(email)}`;
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,

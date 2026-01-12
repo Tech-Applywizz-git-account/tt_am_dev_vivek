@@ -69,7 +69,7 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=LINKEDIN`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch summary: ${response.status}`);
@@ -91,7 +91,7 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
 
         try {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&source=LINKEDIN`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&source=LINKEDIN&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch jobs: ${response.status}`);

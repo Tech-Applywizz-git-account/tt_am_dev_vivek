@@ -42,7 +42,7 @@ const IndeedEasyApplyDashboard: React.FC<IndeedEasyApplyDashboardProps> = ({ app
                 throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=Indeed`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=Indeed&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch summary: ${response.status} ${response.statusText}`);
