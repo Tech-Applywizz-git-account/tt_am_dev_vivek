@@ -51,7 +51,8 @@ const LinkedInEasyApplyDashboard: React.FC<LinkedInEasyApplyDashboardProps> = ({
             const data = await response.json();
 
             // Transform data for chart
-            const linkedinJobs = data.jobs || {};
+            // When using apply_type=EASY_APPLY, the API returns easy_apply_jobs instead of jobs
+            const linkedinJobs = data.easy_apply_jobs || {};
 
             const formatted: ChartItem[] = Object.keys(linkedinJobs).map(date => ({
                 date,

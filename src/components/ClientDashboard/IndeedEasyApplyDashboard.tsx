@@ -42,7 +42,7 @@ const IndeedEasyApplyDashboard: React.FC<IndeedEasyApplyDashboardProps> = ({ app
                 throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=Indeed&apply_type=EASY_APPLY`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=INDEED&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch summary: ${response.status} ${response.statusText}`);
@@ -51,11 +51,12 @@ const IndeedEasyApplyDashboard: React.FC<IndeedEasyApplyDashboardProps> = ({ app
             const data = await response.json();
 
             // Transform data for chart
-            const IndeedJobs = data.jobs || {};
+            // When using apply_type=EASY_APPLY, the API returns easy_apply_jobs instead of jobs
+            const indeedJobs = data.easy_apply_jobs || {};
 
-            const formatted: ChartItem[] = Object.keys(IndeedJobs).map(date => ({
+            const formatted: ChartItem[] = Object.keys(indeedJobs).map(date => ({
                 date,
-                IndeedCount: Number(IndeedJobs[date] || 0)
+                IndeedCount: Number(indeedJobs[date] || 0)
             })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
             setChartData(formatted);

@@ -76,7 +76,9 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
             }
 
             const data: any = await response.json();
-            setSummary(data.jobs || {});
+            
+            // When using apply_type=EASY_APPLY, the API returns easy_apply_jobs instead of jobs
+            setSummary(data.easy_apply_jobs || {});
         } catch (err) {
             console.error("Error fetching summary:", err);
             setError(err instanceof Error ? err.message : "Failed to load summary");
@@ -99,10 +101,10 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
 
             const data: any = await response.json();
 
-            // API returns jobs array for source=LINKEDIN
+            // When using apply_type=EASY_APPLY, the API returns easy_apply_jobs instead of jobs
             setJobsData(prev => ({
                 ...prev,
-                [date]: data.jobs || []
+                [date]: data.easy_apply_jobs || []
             }));
         } catch (err) {
             console.error("Error fetching jobs for date:", err);
@@ -186,9 +188,9 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
 
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-br from-green-900 to-green-800', textColor: 'text-green-400' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-br from-blue-900 to-blue-800', textColor: 'text-blue-400' };
-        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-br from-yellow-900 to-yellow-800', textColor: 'text-yellow-400' };
+        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
+        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
+        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
     };
 
     const getCompanyDomain = (companyName: string): string | null => {
@@ -424,7 +426,9 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
                                 <div className="mt-3 bg-gray-50 p-4 rounded-lg">
                                     {jobs.length > 0 ? (
                                         <div className="space-y-4">
-                                            {jobs.map((job) => renderJobCard(job, date))}
+                                            {jobs
+                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                .map((job) => renderJobCard(job, date))}
                                         </div>
                                     ) : (
                                         <div className="space-y-4">

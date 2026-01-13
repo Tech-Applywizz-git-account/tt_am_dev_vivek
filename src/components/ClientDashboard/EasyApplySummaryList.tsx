@@ -241,9 +241,9 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
     // Helper: Get match quality based on score
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', color: 'green', bgColor: 'bg-gradient-to-br from-green-900 to-green-800', textColor: 'text-green-400' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', color: 'blue', bgColor: 'bg-gradient-to-br from-blue-900 to-blue-800', textColor: 'text-blue-400' };
-        return { label: 'FAIR MATCH', color: 'yellow', bgColor: 'bg-gradient-to-br from-yellow-900 to-yellow-800', textColor: 'text-yellow-400' };
+        if (percentage >= 90) return { label: 'STRONG MATCH', color: 'green', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
+        if (percentage >= 70) return { label: 'GOOD MATCH', color: 'blue', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
+        return { label: 'FAIR MATCH', color: 'yellow', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
     };
 
     // Helper: Get company initials
@@ -588,7 +588,9 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
                                         </div>
                                     ) : easyapply.length > 0 ? (
                                         <div className="space-y-4">
-                                            {easyapply.map((job) => renderJobCard(job, true, item.date))}
+                                            {easyapply
+                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                .map((job) => renderJobCard(job, true, item.date))}
                                         </div>
                                     ) : (
                                         <p className="text-gray-500 text-sm">No easy apply jobs for this date.</p>
