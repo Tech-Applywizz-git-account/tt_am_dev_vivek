@@ -1957,6 +1957,27 @@ function App() {
           </div>
         );
 
+      case 'easy-apply':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Easy Apply</h1>
+            </div>
+            {currentUser?.role === 'client' ? (              
+                <EasyApplySummaryList
+                  data={clientDashboardData}
+                  loading={clientDashboardLoading}
+                  error={clientDashboardError}
+                  applywizzId={applywizzId}
+                />
+            ) : (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <p className="text-gray-500">Not available for your role.</p>
+              </div>
+            )}
+          </div>
+        );
+
       case 'linkedin-easy-apply':
         return (
           <div className="space-y-6">

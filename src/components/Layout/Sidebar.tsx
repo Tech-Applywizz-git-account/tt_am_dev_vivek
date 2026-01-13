@@ -66,16 +66,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       show: user.role === 'client',
     },
     {
+      id: 'easy-apply',
+      label: 'Easy Apply',
+      icon: Zap,
+      show: !optedJobLinks,
+    },
+    {
       id: 'linkedin-easy-apply',
       label: 'Quick Apply via LinkedIn',
       icon: Linkedin,
-      show: user.role === 'client',
+      show: optedJobLinks,
     },
     {
       id: 'indeed-easy-apply',
       label: 'Quick Apply via Indeed',
       icon: Briefcase,
-      show: user.role === 'client',
+      show: optedJobLinks,
     },
     {
       id: 'staffing-agencies',
