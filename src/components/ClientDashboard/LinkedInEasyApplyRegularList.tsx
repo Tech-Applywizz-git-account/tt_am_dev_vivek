@@ -239,15 +239,17 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
-                                {job.source && (
+                                {/* {job.source && (
                                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
+                                )} */}
+                                {job.source && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                        <Linkedin size={12} />
+                                        linkedin
+                                    </span>
                                 )}
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
-                                    <Linkedin size={12} />
-                                    linkedin
-                                </span>
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">

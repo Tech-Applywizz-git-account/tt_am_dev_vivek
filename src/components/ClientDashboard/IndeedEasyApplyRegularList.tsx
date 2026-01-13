@@ -243,10 +243,10 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
                                         {job.source}
                                     </span>
                                 )}
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                {/* <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
                                     <Briefcase size={12} />
                                     Indeed
-                                </span>
+                                </span> */}
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
