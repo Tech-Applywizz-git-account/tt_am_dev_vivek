@@ -330,13 +330,13 @@ export const RUTicketEditModal: React.FC<TicketEditModalProps> = ({
 
       // Insert comment with status at time
       // if (comment.trim() !== '') {
-       const { error:verr } = await supabase.from('ticket_comments').update(
-          {
-            show_to_client: true,
-          }).eq('ticket_id', ticket.id).eq('ticketStatusAtTime','forwarded');
+      const { error: verr } = await supabase.from('ticket_comments').update(
+        {
+          show_to_client: true,
+        }).eq('ticket_id', ticket.id).eq('ticketStatusAtTime', 'forwarded');
       // }
 
-      console.log("verr",verr);
+      console.log("verr", verr);
       // Update ticket status
       const { error } = await supabase.from('tickets').update({
         status: 'pending_client_review',
@@ -359,7 +359,7 @@ export const RUTicketEditModal: React.FC<TicketEditModalProps> = ({
       setUserFile(null);
       onClose(); // close modal
       if (clientEmail) {
-        await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -376,7 +376,7 @@ export const RUTicketEditModal: React.FC<TicketEditModalProps> = ({
                 <h2 style="color:#1E90FF;">Hi ${clientName} (${clientEmail}),</h2>
                 <p>Our team has responded to your ApplyWizz ticket ${ticket.short_code} — ${ticket.title}.</p>
                 <p>We've updated your resume. Review it and if you're satisfied, conform it. If not, click on need some more changes.</p>
-                <p>You can manage your ticket here: <a href="https://ticketingtoolapplywizz.vercel.app/" target="_blank">ApplyWizz Ticketing Tool</a></p>
+                <p>You can manage your ticket here: <a href="${import.meta.env.VITE_TICKETING_TOOL_API_URL}/" target="_blank">ApplyWizz Ticketing Tool</a></p>
                 <p style="background-color:#FFF3CD;padding:10px;border-left:4px solid #FFC107;">Kindly note that this ticket is now in the system for tracking and resolution. <br/>Updates will be shared as progress is made.</p>     
                 <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
                 <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
@@ -825,7 +825,7 @@ export const RUTicketEditModal: React.FC<TicketEditModalProps> = ({
       onClose();
       if (emails && emails.length > 0) {
         emails.forEach(async (email) => {
-          await fetch("https://ticketingtoolapplywizz.vercel.app/api/send-email", {
+          await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -843,7 +843,7 @@ export const RUTicketEditModal: React.FC<TicketEditModalProps> = ({
                 <p>Client name : ${clientName}</p>
                 <p>Client email : ${clientEmail}</p>
                 <p>Please apply with updated resume.</p>
-                <p>You can find updated resume in ticket tool : <a href="https://ticketingtoolapplywizz.vercel.app/" target="_blank">ApplyWizz Ticketing Tool</a></p>
+                <p>You can find updated resume in ticket tool : <a href="${import.meta.env.VITE_TICKETING_TOOL_API_URL}/" target="_blank">ApplyWizz Ticketing Tool</a></p>
                 <p style="background-color:#FFF3CD;padding:10px;border-left:4px solid #FFC107;">Kindly note that this ticket is now in the system for tracking and resolution. <br/>Updates will be shared as progress is made.</p>     
                 <p>Thanks for your patience,<br/>- ApplyWizz Support</p>                
                 <p>Best regards,<br/> <strong>ApplyWizz Ticketing Tool Support Team.</strong></p> 
@@ -852,18 +852,18 @@ export const RUTicketEditModal: React.FC<TicketEditModalProps> = ({
                 </body>
             </html>
           `
-        })
-      });
-    });
-  }
-  onUpdate?.();
-} catch (error) {
-  console.error("Forward to CATL error:", error);
-  alert("Unexpected error during resolution.");
-} finally {
-  setIsSubmittingComment(false);
-}
-};
+            })
+          });
+        });
+      }
+      onUpdate?.();
+    } catch (error) {
+      console.error("Forward to CATL error:", error);
+      alert("Unexpected error during resolution.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   // If the modal is not open or there is no ticket, return null
   if (!isOpen || !ticket) return null;

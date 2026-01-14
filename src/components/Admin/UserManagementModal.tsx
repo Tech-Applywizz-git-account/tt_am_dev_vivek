@@ -38,7 +38,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     password: '',
     teamLead: '',
   });
-  
+
 
   // NEW: Fetch users when modal opens or tab changes to list
   useEffect(() => {
@@ -82,7 +82,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     try {
       // console.log("Creating user with data:", userData);
       // ✅ 1. Build verification URL with email parameter
-      const redirectUrl = `https://ticketingtoolapplywizz.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
+      const redirectUrl = `${import.meta.env.VITE_TICKETING_TOOL_API_URL}/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
 
       // ✅ 2. Sign up user with redirect
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -107,7 +107,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       if (userData.role === 'career_associate') {
         try {
           const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/associate-create`;
-          
+
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -178,7 +178,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Check if email has changed
     if (selectedUser && formData.email !== selectedUser.email) {
       setPendingEmailUpdate(formData.email);
@@ -230,7 +230,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
       // Refresh user list
       await fetchUsers();
-      
+
       // Reset form after 3 seconds
       setTimeout(() => {
         resetForm();
@@ -238,7 +238,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         setEmailUpdateSuccess('');
         setActiveTab('list');
       }, 3000);
-      
+
     } catch (err: any) {
       setError(`Email update failed: ${err.message}`);
     } finally {
@@ -597,120 +597,120 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   return (
     <>
-    {/* Email Update Confirmation Dialog */}
-    {showEmailUpdateDialog && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-        <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
-          <div className="flex items-center space-x-3 mb-4">
-            <Mail className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-bold text-gray-900">Confirm Email Change</h3>
-          </div>
-          
-          <div className="space-y-4 mb-6">
-            <p className="text-gray-700">
-              Are you sure you want to change this user's email address?
-            </p>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>User:</strong> {selectedUser?.name}
-              </p>
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Current Email:</strong> {selectedUser?.email}
-              </p>
-              <p className="text-sm text-gray-900">
-                <strong>New Email:</strong> {pendingEmailUpdate}
-              </p>
+      {/* Email Update Confirmation Dialog */}
+      {showEmailUpdateDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center space-x-3 mb-4">
+              <Mail className="h-6 w-6 text-blue-600" />
+              <h3 className="text-lg font-bold text-gray-900">Confirm Email Change</h3>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-sm text-green-800">
-                ✅ The email will be updated immediately. No verification required.
+            <div className="space-y-4 mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to change this user's email address?
               </p>
-              <p className="text-sm text-green-800 mt-1">
-                The user can log in with <strong>{pendingEmailUpdate}</strong> right away.
-              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>User:</strong> {selectedUser?.name}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Current Email:</strong> {selectedUser?.email}
+                </p>
+                <p className="text-sm text-gray-900">
+                  <strong>New Email:</strong> {pendingEmailUpdate}
+                </p>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  ✅ The email will be updated immediately. No verification required.
+                </p>
+                <p className="text-sm text-green-800 mt-1">
+                  The user can log in with <strong>{pendingEmailUpdate}</strong> right away.
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={cancelEmailUpdate}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={confirmEmailUpdate}
-              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              Confirm & Update Email
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">User Management</h2>
-            <p className="text-sm text-gray-600">Manage system users, roles, and permissions</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            disabled={loading}
-            title="Close"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
-            <button
-              onClick={() => setActiveTab('list')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'list'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              disabled={loading}
-            >
-              User List ({users.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('create')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'create'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              disabled={loading}
-            >
-              Create User
-            </button>
-            {activeTab === 'edit' && (
+            <div className="flex justify-end space-x-3">
               <button
-                className="py-4 px-1 border-b-2 border-blue-500 text-blue-600 font-medium text-sm"
+                type="button"
+                onClick={cancelEmailUpdate}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                Edit User "**This FETURE IS NOT WORKING "
+                Cancel
               </button>
-            )}
-          </nav>
+              <button
+                type="button"
+                onClick={confirmEmailUpdate}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Confirm & Update Email
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
-        <div className="p-6">
-          {activeTab === 'list' && renderUserList()}
-          {activeTab === 'create' && renderUserForm(false)}
-          {activeTab === 'edit' && renderUserForm(true)}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">User Management</h2>
+              <p className="text-sm text-gray-600">Manage system users, roles, and permissions</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={loading}
+              title="Close"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab('list')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'list'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                disabled={loading}
+              >
+                User List ({users.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('create')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'create'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                disabled={loading}
+              >
+                Create User
+              </button>
+              {activeTab === 'edit' && (
+                <button
+                  className="py-4 px-1 border-b-2 border-blue-500 text-blue-600 font-medium text-sm"
+                >
+                  Edit User "**This FETURE IS NOT WORKING "
+                </button>
+              )}
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {activeTab === 'list' && renderUserList()}
+            {activeTab === 'create' && renderUserForm(false)}
+            {activeTab === 'edit' && renderUserForm(true)}
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 };

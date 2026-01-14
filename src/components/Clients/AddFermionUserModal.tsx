@@ -25,7 +25,7 @@ export const AddFermionUserModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('https://ticketingtoolapplywizz.vercel.app/api/create-fermion-user', {
+            const response = await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/create-fermion-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)

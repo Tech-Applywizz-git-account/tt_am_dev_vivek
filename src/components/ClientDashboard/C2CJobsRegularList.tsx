@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Zap, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Calendar, DollarSign, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -16,25 +16,24 @@ interface JobItem {
     generated_at: string;
     apply_type: string | null;
     role_name: number;
+    is_c2c_or_w2: string | null;
 }
 
 interface SummaryResponse {
-    easy_apply_jobs: Record<string, number>;
+    c2c_jobs: Record<string, number>;
     summary: {
         total: number;
         by_status: Record<string, number>;
-        by_apply_type: Record<string, number>;
     };
 }
 
 interface DateJobsResponse {
-    easyapply?: JobItem[];
-    jobs?: JobItem[];
+    jobs: JobItem[];
     date: string;
     total: number;
 }
 
-interface ScoredJobsEasyApplyListProps {
+interface C2CJobsRegularListProps {
     applywizzId?: string;
 }
 
@@ -47,7 +46,7 @@ const statusOptions = [
     { value: "Job Not Found", label: "Job Not Found" },
 ];
 
-const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ applywizzId }) => {
+const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
@@ -65,19 +64,19 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&apply_type=EASY_APPLY`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&job_type=C2C`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch summary: ${response.status}`);
             }
 
             const data: SummaryResponse = await response.json();
-            setSummary(data.easy_apply_jobs || {});
+            setSummary(data.c2c_jobs || {});
         } catch (err) {
             console.error("Error fetching summary:", err);
             setError(err instanceof Error ? err.message : "Failed to load summary");
@@ -91,21 +90,19 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
         if (!applywizzId) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&apply_type=EASY_APPLY`);
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&job_type=C2C`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch jobs: ${response.status}`);
             }
 
-            const data: DateJobsResponse = await response.json();
+            const data: any = await response.json();
 
-            // Get easy apply jobs from response
-            const easyApplyJobs = data.easyapply || data.jobs || [];
-
+            // API returns c2c_jobs array for job_type=C2C
             setJobsData(prev => ({
                 ...prev,
-                [date]: easyApplyJobs
+                [date]: data.c2c_jobs || data.jobs || []
             }));
         } catch (err) {
             console.error("Error fetching jobs for date:", err);
@@ -116,11 +113,12 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
         fetchSummary();
     }, [applywizzId]);
 
-    // Toggle date expansion
+    // Toggle date expansion and fetch jobs if needed
     const toggleDateExpansion = (date: string) => {
         const isCurrentlyExpanded = expandedDate === date;
         setExpandedDate(isCurrentlyExpanded ? null : date);
 
+        // Fetch jobs if not already fetched and expanding
         if (!isCurrentlyExpanded && !jobsData[date]) {
             fetchJobsForDate(date);
         }
@@ -159,7 +157,14 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
             console.error("Error updating status:", err);
 
             // Revert on error
-            fetchJobsForDate(date);
+            setJobsData(prev => {
+                const revertedJobs = { ...prev };
+                if (revertedJobs[date]) {
+                    // Refetch to get correct state
+                    fetchJobsForDate(date);
+                }
+                return revertedJobs;
+            });
         }
     };
 
@@ -181,9 +186,9 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
 
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-br from-green-900 to-green-800', textColor: 'text-green-400' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-br from-blue-900 to-blue-800', textColor: 'text-blue-400' };
-        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-br from-yellow-900 to-yellow-800', textColor: 'text-yellow-400' };
+        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
+        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
+        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
     };
 
     const getCompanyDomain = (companyName: string): string | null => {
@@ -208,12 +213,13 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
         const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company);
         const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null;
-        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=4F46E5&color=fff&size=80&bold=true&rounded=true`;
+        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=a855f7&color=fff&size=80&bold=true&rounded=true`;
         const avatarUrl = faviconUrl || fallbackAvatarUrl;
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
                 <div className="flex items-start gap-6 p-6">
+                    {/* Left: Company Avatar & Job Info */}
                     <div className="flex-1 flex gap-4">
                         <div className="flex-shrink-0">
                             <img
@@ -232,10 +238,14 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
-                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
+                                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
                                 )}
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                    <DollarSign size={12} />
+                                    C2C
+                                </span>
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
@@ -257,6 +267,7 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
                         </div>
                     </div>
 
+                    {/* Right: Match Score Card */}
                     <div className={`flex-shrink-0 ${matchData.bgColor} rounded-2xl p-6 w-32 flex flex-col items-center justify-center shadow-lg`}>
                         <div className="relative w-20 h-20 mb-3">
                             <svg className="w-20 h-20 transform -rotate-90">
@@ -277,11 +288,12 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
                     </div>
                 </div>
 
+                {/* Bottom: Actions */}
                 <div className="px-6 pb-6 flex items-center gap-3">
                     <select
                         value={job.status || 'Pending'}
                         onChange={(e) => handleStatusChange(job.id, e.target.value, date)}
-                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white hover:bg-gray-50 transition-colors"
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white hover:bg-gray-50 transition-colors"
                     >
                         {statusOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -296,7 +308,7 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
                         href={job.url || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                        className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
                     >
                         <ExternalLink size={16} />
                         <span>APPLY NOW</span>
@@ -306,12 +318,46 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
         );
     };
 
+
+    // Skeleton Loading Card
+    const SkeletonJobCard = () => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+            <div className="flex items-start gap-6 p-6">
+                <div className="flex-1 flex gap-4">
+                    <div className="flex-shrink-0">
+                        <div className="w-16 h-16 rounded-xl bg-gray-200"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                            <div className="h-4 w-16 bg-gray-200 rounded-full"></div>
+                        </div>
+                        <div className="h-6 w-3/4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-5 w-1/2 bg-gray-200 rounded mb-3"></div>
+                        <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 bg-gray-200 rounded-2xl p-6 w-32 h-40"></div>
+            </div>
+            <div className="px-6 pb-6 flex items-center gap-3">
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+                <div className="flex-1"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+            </div>
+        </div>
+    );
+
     if (loading && Object.keys(summary).length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <div className="flex items-center justify-center py-8">
-                    <Loader2 className="animate-spin mr-2" size={24} />
-                    <span>Loading easy apply jobs...</span>
+                <div className="flex items-center gap-2 mb-6">
+                    <Loader2 className="animate-spin text-green-600" size={20} />
+                    <span className="text-gray-700 font-medium">Loading C2C jobs...</span>
+                </div>
+                <div className="space-y-4">
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
                 </div>
             </div>
         );
@@ -330,7 +376,7 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
     if (dates.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No easy apply jobs found.</p>
+                <p className="text-gray-500">No C2C contract jobs found.</p>
             </div>
         );
     }
@@ -338,8 +384,8 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Zap className="text-green-600" size={24} />
-                Easy Apply Summary
+                <DollarSign className="text-purple-600" size={24} />
+                C2C Contract Jobs Summary
             </h2>
 
             <div className="space-y-2">
@@ -358,17 +404,17 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
                         <div key={date}>
                             <div
                                 onClick={() => toggleDateExpansion(date)}
-                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-green-100" : "bg-green-50 hover:bg-green-100"
+                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-purple-100" : "bg-purple-50 hover:bg-purple-100"
                                     }`}
                             >
-                                <div className="flex items-center gap-2 text-green-900">
+                                <div className="flex items-center gap-2 text-purple-900">
                                     <Calendar size={18} />
                                     <span className="font-medium">{formattedDate}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-green-700 font-semibold">
+                                <div className="flex items-center gap-3 text-purple-700 font-semibold">
                                     <div className="flex items-center gap-2">
-                                        <Zap size={18} />
-                                        <span>{count} Easy Apply</span>
+                                        <DollarSign size={18} />
+                                        <span>{count} C2C Jobs</span>
                                     </div>
                                     {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                 </div>
@@ -378,12 +424,14 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
                                 <div className="mt-3 bg-gray-50 p-4 rounded-lg">
                                     {jobs.length > 0 ? (
                                         <div className="space-y-4">
-                                            {jobs.map((job) => renderJobCard(job, date))}
+                                            {jobs
+                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                .map((job) => renderJobCard(job, date))}
                                         </div>
                                     ) : (
-                                        <div className="flex items-center justify-center py-8">
-                                            <Loader2 className="animate-spin mr-2" size={20} />
-                                            <span className="text-gray-500">Loading jobs...</span>
+                                        <div className="space-y-4">
+                                            <SkeletonJobCard />
+                                            <SkeletonJobCard />
                                         </div>
                                     )}
                                 </div>
@@ -396,4 +444,4 @@ const ScoredJobsEasyApplyList: React.FC<ScoredJobsEasyApplyListProps> = ({ apply
     );
 };
 
-export default ScoredJobsEasyApplyList;
+export default C2CJobsRegularList;

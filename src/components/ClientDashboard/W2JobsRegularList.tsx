@@ -16,14 +16,14 @@ interface JobItem {
     generated_at: string;
     apply_type: string | null;
     role_name: number;
+    industry_type: string | null;
 }
 
 interface SummaryResponse {
-    regular_jobs: Record<string, number>;
+    w2_jobs: Record<string, number>;
     summary: {
         total: number;
         by_status: Record<string, number>;
-        by_apply_type: Record<string, number>;
     };
 }
 
@@ -33,7 +33,7 @@ interface DateJobsResponse {
     total: number;
 }
 
-interface ScoredJobsRegularListProps {
+interface W2JobsRegularListProps {
     applywizzId?: string;
 }
 
@@ -46,7 +46,7 @@ const statusOptions = [
     { value: "Job Not Found", label: "Job Not Found" },
 ];
 
-const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizzId }) => {
+const W2JobsRegularList: React.FC<W2JobsRegularListProps> = ({ applywizzId }) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
@@ -69,14 +69,14 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&apply_type=REGULAR`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&job_type=W2`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch summary: ${response.status}`);
             }
 
             const data: SummaryResponse = await response.json();
-            setSummary(data.regular_jobs || {});
+            setSummary(data.w2_jobs || {});
         } catch (err) {
             console.error("Error fetching summary:", err);
             setError(err instanceof Error ? err.message : "Failed to load summary");
@@ -91,23 +91,18 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
 
         try {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&job_type=W2`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch jobs: ${response.status}`);
             }
 
-            const data: DateJobsResponse = await response.json();
+            const data: any = await response.json();
 
-            // Filter to show only regular jobs (not easy apply)
-            const regularJobs = data.jobs.filter(job =>
-                !job.apply_type ||
-                (job.apply_type !== "EASY_APPLY" && job.apply_type !== "easy_apply")
-            );
-
+            // API returns w2_jobs array for job_type=W2
             setJobsData(prev => ({
                 ...prev,
-                [date]: regularJobs
+                [date]: data.w2_jobs || data.jobs || []
             }));
         } catch (err) {
             console.error("Error fetching jobs for date:", err);
@@ -218,7 +213,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company);
         const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null;
-        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=4F46E5&color=fff&size=80&bold=true&rounded=true`;
+        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=3b82f6&color=fff&size=80&bold=true&rounded=true`;
         const avatarUrl = faviconUrl || fallbackAvatarUrl;
 
         return (
@@ -247,6 +242,10 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                                         {job.source}
                                     </span>
                                 )}
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                    <Briefcase size={12} />
+                                    w2
+                                </span>
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
@@ -309,7 +308,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                         href={job.url || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                        className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
                     >
                         <ExternalLink size={16} />
                         <span>APPLY NOW</span>
@@ -318,6 +317,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
             </div>
         );
     };
+
 
     // Skeleton Loading Card
     const SkeletonJobCard = () => (
@@ -351,8 +351,8 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
                 <div className="flex items-center gap-2 mb-6">
-                    <Loader2 className="animate-spin text-blue-600" size={20} />
-                    <span className="text-gray-700 font-medium">Loading jobs...</span>
+                    <Loader2 className="animate-spin text-purple-600" size={20} />
+                    <span className="text-gray-700 font-medium">Loading W2 jobs...</span>
                 </div>
                 <div className="space-y-4">
                     <SkeletonJobCard />
@@ -376,7 +376,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
     if (dates.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No jobs found.</p>
+                <p className="text-gray-500">No w2 agency jobs found.</p>
             </div>
         );
     }
@@ -385,7 +385,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         <div className="bg-white p-4 rounded-lg shadow mt-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Briefcase className="text-blue-600" size={24} />
-                Career Portal Jobs Summary
+                w2 Agency Jobs Summary
             </h2>
 
             <div className="space-y-2">
@@ -414,7 +414,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                                 <div className="flex items-center gap-3 text-blue-700 font-semibold">
                                     <div className="flex items-center gap-2">
                                         <Briefcase size={18} />
-                                        <span>{count} Jobs</span>
+                                        <span>{count} w2 Jobs</span>
                                     </div>
                                     {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                 </div>
@@ -444,4 +444,4 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
     );
 };
 
-export default ScoredJobsRegularList;
+export default W2JobsRegularList;

@@ -241,9 +241,9 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
     // Helper: Get match quality based on score
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', color: 'green', bgColor: 'bg-gradient-to-br from-green-900 to-green-800', textColor: 'text-green-400' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', color: 'blue', bgColor: 'bg-gradient-to-br from-blue-900 to-blue-800', textColor: 'text-blue-400' };
-        return { label: 'FAIR MATCH', color: 'yellow', bgColor: 'bg-gradient-to-br from-yellow-900 to-yellow-800', textColor: 'text-yellow-400' };
+        if (percentage >= 90) return { label: 'STRONG MATCH', color: 'green', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
+        if (percentage >= 70) return { label: 'GOOD MATCH', color: 'blue', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
+        return { label: 'FAIR MATCH', color: 'yellow', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
     };
 
     // Helper: Get company initials
@@ -360,6 +360,34 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
 
         return null;
     };
+
+    // Skeleton Loading Card
+    const SkeletonJobCard = () => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+            <div className="flex items-start gap-6 p-6">
+                <div className="flex-1 flex gap-4">
+                    <div className="flex-shrink-0">
+                        <div className="w-16 h-16 rounded-xl bg-gray-200"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                            <div className="h-4 w-16 bg-gray-200 rounded-full"></div>
+                        </div>
+                        <div className="h-6 w-3/4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-5 w-1/2 bg-gray-200 rounded mb-3"></div>
+                        <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 bg-gray-200 rounded-2xl p-6 w-32 h-40"></div>
+            </div>
+            <div className="px-6 pb-6 flex items-center gap-3">
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+                <div className="flex-1"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+            </div>
+        </div>
+    );
 
     // Helper function to render a job card with modern design
     const renderJobCard = (job: JobItem, isEasyApply: boolean = false, date: string = '') => {
@@ -554,13 +582,15 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
                             {isExpanded && (
                                 <div className="mt-3 bg-gray-50 p-4 rounded-lg">
                                     {jobsLoading[item.date] ? (
-                                        <div className="flex justify-center items-center py-4">
-                                            <Loader2 className="animate-spin mr-2" size={20} />
-                                            <span>Loading jobs...</span>
+                                        <div className="space-y-4">
+                                            <SkeletonJobCard />
+                                            <SkeletonJobCard />
                                         </div>
                                     ) : easyapply.length > 0 ? (
                                         <div className="space-y-4">
-                                            {easyapply.map((job) => renderJobCard(job, true, item.date))}
+                                            {easyapply
+                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                .map((job) => renderJobCard(job, true, item.date))}
                                         </div>
                                     ) : (
                                         <p className="text-gray-500 text-sm">No easy apply jobs for this date.</p>
