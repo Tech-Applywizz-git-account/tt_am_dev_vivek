@@ -172,7 +172,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
   // Check if applywizz_id exists and follows the AWL-X to AWL-XXXXX pattern (1-5 digits)
   if (!applywizzId) {
     errors.push('ApplyWizz ID is required');
-  } else if (!/^AWL-\d{1,5}$/.test(applywizzId) || !/^JB-\d{1,5}$/.test(applywizzId)) {
+  } else if (!/^AWL-\d{1,5}$/.test(applywizzId) && !/^JB-\d{1,5}$/.test(applywizzId)) {
     errors.push('ApplyWizz ID must follow the pattern AWL-X to AWL-XXXXX where X is a digit (1-5 digits)');
   } 
 
