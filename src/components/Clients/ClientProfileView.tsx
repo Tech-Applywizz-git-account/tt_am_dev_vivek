@@ -294,14 +294,21 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
       const apiUrl = import.meta.env.VITE_TICKETING_TOOL_API_URL || '';
       const endpoint = apiUrl ? `${apiUrl}/api/sync-client` : '/api/sync-client';
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SYNC_API_KEY || ''}`,
-        },
-        body: JSON.stringify(syncData),
-      });
+          // Prepare headers - only include Authorization if API key is set
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+
+          const apiKey = import.meta.env.VITE_SYNC_API_KEY;
+          if (apiKey) {
+            headers['Authorization'] = `Bearer ${apiKey}`;
+          }
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(syncData),
+          });
 
       const result = await response.json();
 
