@@ -5,7 +5,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEFAULT_ONBOARDED_BY_ID = process.env.VITE_DEFAULT_ONBOARDED_BY_ID;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
-const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL2;
+const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing Supabase environment variables');
@@ -449,11 +449,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             plan: "Standard",
         };
 
-        // Sync to Django
+        // Sync to Django (REQUIRED - will rollback all changes if this fails)
+        let karmafyUserId = null;
+        let karmafyLeadId = null;
+
         try {
-            await syncToDjangoProject(djangoPayload);
+            const djangoResponse = await syncToDjangoProject(djangoPayload);
+
+            // Extract user_id and lead_id from Django response
+            if (djangoResponse && djangoResponse.user_id) {
+                karmafyUserId = djangoResponse.user_id;
+            }
+            if (djangoResponse && djangoResponse.lead_id) {
+                karmafyLeadId = djangoResponse.lead_id;
+            }
+
+            console.log('✅ Django sync successful for', clientData.applywizz_id, {
+                karmafy_user_id: karmafyUserId,
+                karmafy_lead_id: karmafyLeadId
+            });
         } catch (djangoError: any) {
-            console.error('Django sync error:', djangoError);
+            console.error('❌ Django sync error:', djangoError);
             // Rollback all changes
             await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
             await supabaseAdmin.from('users').delete().eq('id', userData.user.id);
@@ -470,7 +486,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: 'Client onboarded successfully',
             applywizz_id: clientData.applywizz_id,
             client_id: clientId,
-            user_id: userData.user.id
+            user_id: userData.user.id,
+            ...(karmafyUserId && { karmafy_user_id: karmafyUserId }),
+            ...(karmafyLeadId && { karmafy_lead_id: karmafyLeadId })
         });
 
     } catch (err: any) {
