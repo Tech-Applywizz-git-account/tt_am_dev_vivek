@@ -6,6 +6,8 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
 const DEFAULT_ONBOARDED_BY_ID = process.env.VITE_DEFAULT_ONBOARDED_BY_ID;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
 const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL2;
+const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
+const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing Supabase environment variables');
@@ -16,7 +18,11 @@ if (!DEFAULT_ONBOARDED_BY_ID) {
 }
 
 if (!EXTERNAL_API_URL) {
-    throw new Error('Missing VITE_EXTERNAL_API_URL environment variable');
+    throw new Error('Missing VITE_EXTERNAL_API_URL2 environment variable');
+}
+
+if (!KARMAFY_USERNAME || !KARMAFY_PASSWORD) {
+    throw new Error('Missing VITE_KARMAFY_USERNAME or VITE_KARMAFY_PASSWORD environment variable');
 }
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -185,6 +191,32 @@ async function syncToDjangoProject(data: any) {
 
     if (!response.ok) {
         throw new Error(result.error || `Django API failed with status ${response.status}`);
+    }
+
+    return result;
+}
+
+// Extract Lead Data from Karmafy
+async function extractLeadData(leadId: number) {
+    const EXTRACT_API_URL = `${EXTERNAL_API_URL}/api/v1/leads/${leadId}/extract-data/`;
+
+    // Create Basic Auth header
+    const authString = `${KARMAFY_USERNAME}:${KARMAFY_PASSWORD}`;
+    const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
+
+    const response = await fetch(EXTRACT_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+        },
+        body: JSON.stringify({}) // Empty body as required by POST
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(result.error || `Lead extraction failed with status ${response.status}`);
     }
 
     return result;
@@ -468,6 +500,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 karmafy_user_id: karmafyUserId,
                 karmafy_lead_id: karmafyLeadId
             });
+
+            // Extract lead data (optional - don't fail if this doesn't work)
+            if (karmafyLeadId) {
+                try {
+                    await extractLeadData(karmafyLeadId);
+                    console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
+                } catch (extractError: any) {
+                    console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
+                    // Don't rollback - client is already created
+                    // This can be retried later via a background job
+                }
+            }
         } catch (djangoError: any) {
             console.error('❌ Django sync error:', djangoError);
             // Rollback all changes
