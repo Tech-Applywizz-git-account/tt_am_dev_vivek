@@ -87,9 +87,9 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No.</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preferences</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarded</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarded</th> */}
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View Applications</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
@@ -106,7 +106,7 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                                             <div className="text-sm text-gray-500">{client.company_email}</div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    {/* <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
                                         <div className="text-sm text-gray-500">{client.callable_phone}</div>
                                     </td>
@@ -123,7 +123,7 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                                         <div className="text-sm text-gray-900">
                                             {format(new Date(client.created_at), 'yyyy-MM-dd')}
                                         </div>
-                                    </td>
+                                    </td> */}
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <button
                                             onClick={() => handleViewClientApplications(client)}

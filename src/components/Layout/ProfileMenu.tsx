@@ -1,7 +1,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
-import { User as UserIcon, X, LogOut } from "lucide-react";
+import { User as UserIcon, X, LogOut, Key } from "lucide-react";
 import type { User } from "../../types";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 
 type Props = { user: User; onLogout: () => void };
 
@@ -27,6 +28,7 @@ function useOutsideClose<T extends HTMLElement>(open: boolean, onClose: () => vo
 
 export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
   const [open, setOpen] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const ref = useOutsideClose<HTMLDivElement>(open, () => setOpen(false));
 
   return (
@@ -68,7 +70,17 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
           </div>
 
           {/* Actions */}
-          <div className="p-2">
+          <div className="p-2 space-y-2">
+            <button
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+              onClick={() => {
+                setOpen(false);
+                setShowChangePasswordModal(true);
+              }}
+            >
+              <Key className="h-4 w-4" />
+              Change Password
+            </button>
             <button
               className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
               onClick={() => {
@@ -82,6 +94,13 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
           </div>
         </div>
       )}
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        userEmail={user.email}
+      />
     </div>
   );
 };
