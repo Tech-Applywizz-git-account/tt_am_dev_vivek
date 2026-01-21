@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, DollarSign, Building, Monitor } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -17,6 +17,14 @@ interface JobItem {
     apply_type: string | null;
     role_name: number;
     industry_type: string | null;
+    company_logo_url?: string | null;
+    posted_by_profile?: string | null;
+    contract_type?: string | null;
+    company_url?: string | null;
+    experience_level?: string | null;
+    salary?: string | null;
+    work_type?: string | null;
+    poster_full_name?: string | null;
 }
 
 interface SummaryResponse {
@@ -263,6 +271,39 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
                                         <MapPin size={16} className="text-gray-400" />
                                         <span>{job.location}</span>
                                     </div>
+                                )}
+                            </div>
+
+                            {/* New fields section */}
+                            <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
+                                {job.company_url && (
+                                    <a
+                                        href={job.company_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline"
+                                    >
+                                        <Building size={16} />
+                                        <span>{new URL(job.company_url).hostname.replace('www.', '')}</span>
+                                    </a>
+                                )}
+                                {job.experience_level && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                        <Briefcase size={12} />
+                                        {job.experience_level}
+                                    </span>
+                                )}
+                                {job.salary && (
+                                    <div className="flex items-center gap-1.5 text-gray-600">
+                                        <DollarSign size={16} className="text-gray-400" />
+                                        <span>Salary: {job.salary}</span>
+                                    </div>
+                                )}
+                                {job.work_type && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
+                                        <Monitor size={12} />
+                                        {job.work_type}
+                                    </span>
                                 )}
                             </div>
                         </div>
