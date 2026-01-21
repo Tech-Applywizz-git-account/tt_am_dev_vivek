@@ -5,7 +5,9 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEFAULT_ONBOARDED_BY_ID = process.env.VITE_DEFAULT_ONBOARDED_BY_ID;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
-const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL;
+const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL2;
+const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
+const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing Supabase environment variables');
@@ -16,7 +18,11 @@ if (!DEFAULT_ONBOARDED_BY_ID) {
 }
 
 if (!EXTERNAL_API_URL) {
-    throw new Error('Missing VITE_EXTERNAL_API_URL environment variable');
+    throw new Error('Missing VITE_EXTERNAL_API_URL2 environment variable');
+}
+
+if (!KARMAFY_USERNAME || !KARMAFY_PASSWORD) {
+    throw new Error('Missing VITE_KARMAFY_USERNAME or VITE_KARMAFY_PASSWORD environment variable');
 }
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -185,6 +191,32 @@ async function syncToDjangoProject(data: any) {
 
     if (!response.ok) {
         throw new Error(result.error || `Django API failed with status ${response.status}`);
+    }
+
+    return result;
+}
+
+// Extract Lead Data from Karmafy
+async function extractLeadData(leadId: number) {
+    const EXTRACT_API_URL = `${EXTERNAL_API_URL}/api/v1/leads/${leadId}/extract-data/`;
+
+    // Create Basic Auth header
+    const authString = `${KARMAFY_USERNAME}:${KARMAFY_PASSWORD}`;
+    const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
+
+    const response = await fetch(EXTRACT_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+        },
+        body: JSON.stringify({}) // Empty body as required by POST
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(result.error || `Lead extraction failed with status ${response.status}`);
     }
 
     return result;
@@ -449,11 +481,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             plan: "Standard",
         };
 
-        // Sync to Django
+        // Sync to Django (REQUIRED - will rollback all changes if this fails)
+        let karmafyUserId = null;
+        let karmafyLeadId = null;
+
         try {
-            await syncToDjangoProject(djangoPayload);
+            const djangoResponse = await syncToDjangoProject(djangoPayload);
+
+            // Extract user_id and lead_id from Django response
+            if (djangoResponse && djangoResponse.user_id) {
+                karmafyUserId = djangoResponse.user_id;
+            }
+            if (djangoResponse && djangoResponse.lead_id) {
+                karmafyLeadId = djangoResponse.lead_id;
+            }
+
+            console.log('✅ Django sync successful for', clientData.applywizz_id, {
+                karmafy_user_id: karmafyUserId,
+                karmafy_lead_id: karmafyLeadId
+            });
+
+            // Extract lead data (optional - don't fail if this doesn't work)
+            if (karmafyLeadId) {
+                try {
+                    await extractLeadData(karmafyLeadId);
+                    console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
+                } catch (extractError: any) {
+                    console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
+                    // Don't rollback - client is already created
+                    // This can be retried later via a background job
+                }
+            }
         } catch (djangoError: any) {
-            console.error('Django sync error:', djangoError);
+            console.error('❌ Django sync error:', djangoError);
             // Rollback all changes
             await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
             await supabaseAdmin.from('users').delete().eq('id', userData.user.id);
@@ -470,7 +530,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: 'Client onboarded successfully',
             applywizz_id: clientData.applywizz_id,
             client_id: clientId,
-            user_id: userData.user.id
+            user_id: userData.user.id,
+            ...(karmafyUserId && { karmafy_user_id: karmafyUserId }),
+            ...(karmafyLeadId && { karmafy_lead_id: karmafyLeadId })
         });
 
     } catch (err: any) {

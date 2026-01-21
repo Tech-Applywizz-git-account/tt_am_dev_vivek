@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'easy-apply',
       label: 'Easy Apply',
       icon: Zap,
-      show: !optedJobLinks,
+      show: (user.role === 'client') && (!optedJobLinks),
     },
     {
       id: 'linkedin-easy-apply',
