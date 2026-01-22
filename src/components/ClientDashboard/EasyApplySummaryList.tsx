@@ -159,7 +159,7 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
                 throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
             }
 
-            const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}&date=${date}&apply_type=EASY_APPLY`);
+            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch job data from external API: ${response.status} ${response.statusText}`);
