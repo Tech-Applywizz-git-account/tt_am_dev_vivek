@@ -218,8 +218,8 @@ function App() {
   const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
-  // Get selectedAccountId from context for multi-account support
-  const { selectedAccountId } = useAccount();
+  // Get selectedAccountId and clearSelection from context for multi-account support
+  const { selectedAccountId, clearSelection } = useAccount();
 
   useEffect(() => {
     fetchData();
@@ -372,7 +372,8 @@ function App() {
   // Fetch client dashboard data when user changes
   useEffect(() => {
     const fetchClientDashboardData = async () => {
-      if (!currentUser?.email || currentUser?.role !== 'client' || optedJobLinks) {
+      // Early return if not a client
+      if (!currentUser?.email || currentUser?.role !== 'client') {
         setClientDashboardData([]);
         setApplywizzId(undefined);
         return;
@@ -383,6 +384,7 @@ function App() {
 
       try {
         // Get the applywizz_id from Supabase based on the user's email
+        // This is needed for ALL clients (both regular and opted_job_links)
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
           .select('applywizz_id,opted_job_links')
@@ -400,12 +402,12 @@ function App() {
         const activeClient = clientData[0];
         console.log("activeClient data:", activeClient);
 
-        // Set applywizzId for BOTH client types
+        // Set applywizzId for BOTH client types (regular and opted_job_links)
         const fetchedApplywizzId = activeClient.applywizz_id;
         setApplywizzId(fetchedApplywizzId);
         console.log("fetchedApplywizzId:", fetchedApplywizzId);
 
-        // Only fetch summary data for regular clients
+        // Only fetch summary data for regular clients (not opted_job_links)
         // Scored jobs clients (opted_job_links = true) fetch their own data in components
         if (!activeClient.opted_job_links) {
           // Fetch the actual data from the external API for regular clients
@@ -437,7 +439,9 @@ function App() {
 
           setClientDashboardData(formattedData);
         } else {
+          // For opted_job_links clients, clear dashboard data but keep applywizzId
           console.log("Scored jobs client detected - components will fetch their own data");
+          setClientDashboardData([]);
         }
       } catch (err) {
         console.error("Error fetching client dashboard data:", err);
@@ -498,10 +502,37 @@ function App() {
   // console.log('Logged in user:', currentUser?.name, currentUser?.role);
 
   // Function to handle logout
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('currentUser');
-    setActiveView('dashboard');
+  const handleLogout = async () => {
+    try {
+      // 1. Clear React state first
+      setCurrentUser(null);
+      setActiveView('dashboard');
+
+      // 2. Clear account selection using context (handles selectedAccountId in localStorage)
+      clearSelection();
+
+      // 3. Clear all other localStorage items
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('applywizz_user_email');
+
+      // 4. Clear all sessionStorage items
+      sessionStorage.removeItem('activeView');
+      sessionStorage.removeItem('signup_email');
+
+      // 5. Sign out from Supabase (clears auth tokens and session)
+      // This is CRITICAL for security - prevents session hijacking
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Error signing out from Supabase:', error.message);
+        // Continue with logout even if Supabase signOut fails
+      }
+
+      console.log('✅ User logged out successfully - all auth data cleared');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Even if there's an error, we've cleared the critical data
+    }
   };
 
   const getVisibleTickets = (): Ticket[] => {
@@ -1963,13 +1994,13 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Easy Apply</h1>
             </div>
-            {currentUser?.role === 'client' ? (              
-                <EasyApplySummaryList
-                  data={clientDashboardData}
-                  loading={clientDashboardLoading}
-                  error={clientDashboardError}
-                  applywizzId={applywizzId}
-                />
+            {currentUser?.role === 'client' ? (
+              <EasyApplySummaryList
+                data={clientDashboardData}
+                loading={clientDashboardLoading}
+                error={clientDashboardError}
+                applywizzId={applywizzId}
+              />
             ) : (
               <div className="bg-white p-4 rounded-lg shadow">
                 <p className="text-gray-500">Not available for your role.</p>

@@ -26,7 +26,7 @@ interface Props {
   selectedTicket: Ticket | null;
   selectedClient: Client | null;
   setSelectedClient: (val: Client | null) => void;
-  handleLogout: () => void;
+  handleLogout: () => void | Promise<void>;
   handleCreateTicket: (data: any) => void;
   handleUpdateClient: (data: Client) => void;
   handleUpdateUser: (userId: string, data: any) => void;
@@ -68,7 +68,7 @@ const AppLayout: React.FC<Props> = ({
   const showSidebar = !(currentUser.role === 'client' && optedJobLinks);
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={currentUser} onLogout={handleLogout} onViewLabResults={onViewLabResults} />
+      <Navbar user={currentUser} onLogout={handleLogout} onViewLabResults={onViewLabResults} optedJobLinks={optedJobLinks} />
 
       <div className="flex">
         <Sidebar
