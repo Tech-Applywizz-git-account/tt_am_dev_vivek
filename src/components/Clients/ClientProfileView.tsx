@@ -931,7 +931,7 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
             )}
 
             {/* Edit Mode Buttons */}
-            {!isEditMode ? (
+            {/* {!isEditMode ? (
               <button
                 onClick={handleEnterEditMode}
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all font-medium shadow-md hover:shadow-lg flex items-center gap-2"
@@ -971,7 +971,7 @@ export function ClientProfileView({ currentUser, isOpen, onClose, isModal = true
                   Cancel
                 </button>
               </div>
-            )}
+            )} */}
 
             {/* Close Button */}
             {isModal && (

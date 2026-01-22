@@ -1,10 +1,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
-import { User as UserIcon, X, LogOut, Key } from "lucide-react";
+import { User as UserIcon, X, LogOut, Key, Eye } from "lucide-react";
 import type { User } from "../../types";
 import { ChangePasswordModal } from "./ChangePasswordModal";
+import { UserProfileViewModal } from "./UserProfileViewModal";
 
-type Props = { user: User; onLogout: () => void };
+type Props = { user: User; onLogout: () => void | Promise<void>; optedJobLinks?: boolean };
 
 function useOutsideClose<T extends HTMLElement>(open: boolean, onClose: () => void) {
   const ref = useRef<T | null>(null);
@@ -26,9 +27,10 @@ function useOutsideClose<T extends HTMLElement>(open: boolean, onClose: () => vo
   return ref;
 }
 
-export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
+export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) => {
   const [open, setOpen] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showViewProfileModal, setShowViewProfileModal] = useState(false);
   const ref = useOutsideClose<HTMLDivElement>(open, () => setOpen(false));
 
   return (
@@ -71,6 +73,19 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
 
           {/* Actions */}
           <div className="p-2 space-y-2">
+            {/* View Profile - Only for clients */}
+            {user.role === 'client' && (optedJobLinks) && (
+              <button
+                className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+                onClick={() => {
+                  setOpen(false);
+                  setShowViewProfileModal(true);
+                }}
+              >
+                <Eye className="h-4 w-4" />
+                View Profile
+              </button>
+            )}
             <button
               className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
               onClick={() => {
@@ -101,6 +116,15 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout }) => {
         onClose={() => setShowChangePasswordModal(false)}
         userEmail={user.email}
       />
+
+      {/* View Profile Modal - Only for clients */}
+      {user.role === 'client' && (
+        <UserProfileViewModal
+          isOpen={showViewProfileModal}
+          onClose={() => setShowViewProfileModal(false)}
+          userEmail={user.email}
+        />
+      )}
     </div>
   );
 };
