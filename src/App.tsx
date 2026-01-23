@@ -2015,7 +2015,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">LinkedIn Easy Apply</h1>
             </div>
-            <LinkedInEasyApplyDashboard applywizzId={applywizzId} />
+            {/* <LinkedInEasyApplyDashboard applywizzId={applywizzId} /> */}
             <LinkedInEasyApplyRegularList applywizzId={applywizzId} />
           </div>
         );
@@ -2026,7 +2026,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Indeed Easy Apply</h1>
             </div>
-            <IndeedEasyApplyDashboard applywizzId={applywizzId} />
+            {/* <IndeedEasyApplyDashboard applywizzId={applywizzId} /> */}
             <IndeedEasyApplyRegularList applywizzId={applywizzId} />
           </div>
         );
@@ -2063,11 +2063,11 @@ function App() {
               <h1 className="text-2xl font-bold text-gray-900">Applied Jobs</h1>
             </div>
             {currentUser?.role === 'client' ? (
-              optedJobLinks ? (
+              // optedJobLinks ? (
                 <ScoredJobsAppliedList applywizzId={applywizzId} />
-              ) : (
-                <AppliedJobsList applywizzId={applywizzId} />
-              )
+              // ) : (
+              //   <AppliedJobsList applywizzId={applywizzId} />
+              // )
             ) : (
               <div className="bg-white p-4 rounded-lg shadow">
                 <p className="text-gray-500">Not available for your role.</p>
@@ -2083,7 +2083,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Staffing Agencies</h1>
             </div>
-            <StaffingAgenciesDashboard applywizzId={applywizzId} />
+            {/* <StaffingAgenciesDashboard applywizzId={applywizzId} /> */}
             <StaffingAgenciesRegularList applywizzId={applywizzId} />
           </div>
         );
@@ -2095,7 +2095,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">C2C Contract Jobs</h1>
             </div>
-            <C2CJobsDashboard applywizzId={applywizzId} />
+            {/* <C2CJobsDashboard applywizzId={applywizzId} /> */}
             <C2CJobsRegularList applywizzId={applywizzId} />
           </div>
         );
@@ -2107,7 +2107,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">W2 Contract Jobs</h1>
             </div>
-            <W2JobsDashboard applywizzId={applywizzId} />
+            {/* <W2JobsDashboard applywizzId={applywizzId} /> */}
             <W2JobsRegularList applywizzId={applywizzId} />
           </div>
         );
@@ -2119,7 +2119,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">C2C,W2 Contract Jobs</h1>
             </div>
-            <C2CW2JobsDashboard applywizzId={applywizzId} />
+            {/* <C2CW2JobsDashboard applywizzId={applywizzId} /> */}
             <C2CW2JobsRegularList applywizzId={applywizzId} />
           </div>
         );
