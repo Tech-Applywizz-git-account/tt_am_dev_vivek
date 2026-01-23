@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { X, User as UserIcon, Mail, Phone, MapPin, Briefcase, DollarSign, FileText, Github, Linkedin, Download } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { X, User as UserIcon, Mail, Phone, MapPin, Briefcase, DollarSign, FileText, Github, Linkedin, Download, Upload } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'react-toastify';
 import { useAccount } from '../../contexts/AccountContext';
+import { uploadResumeToS3 } from '../../services/s3Service';
 
 interface UserProfileViewModalProps {
     isOpen: boolean;
@@ -55,6 +56,8 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
     const [loading, setLoading] = useState(false);
     const [profileData, setProfileData] = useState<ProfileData | null>(null);
     const [accounts, setAccounts] = useState<ClientAccount[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Use AccountContext for persistent account selection
     const { selectedAccountId, setSelectedAccountId } = useAccount();
@@ -165,8 +168,101 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                 window.open(resumePath, '_blank', 'noopener,noreferrer');
             } else {
                 // Otherwise, construct the S3 URL
-                const s3Url = `https://applywizz-prod.s3.us-east-2.amazonaws.com/${resumePath}`;
+                const s3Url = `https://applywizz-dev.s3.us-east-2.amazonaws.com/${resumePath}`;
                 window.open(s3Url, '_blank', 'noopener,noreferrer');
+            }
+        }
+    };
+
+    // Handle resume change button click
+    const handleChangeResumeClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    // Handle file selection
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error('Please upload a PDF or Word document');
+            return;
+        }
+
+        // Validate file size (5MB max)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            toast.error('File size must be less than 5MB');
+            return;
+        }
+
+        // Get the current applywizz_id
+        const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+        if (!selectedAccount?.applywizz_id) {
+            toast.error('Unable to identify user account');
+            return;
+        }
+
+        setUploading(true);
+        const toastId = toast.loading('Uploading resume...');
+
+        try {
+            // Step 1: Upload to S3
+            const s3Key = await uploadResumeToS3(file, selectedAccount.applywizz_id);
+
+            // Step 2: Construct full S3 URL
+            const bucket = import.meta.env.VITE_AWS_S3_BUCKET || 'applywizz-dev';
+            const region = import.meta.env.VITE_AWS_REGION || 'us-east-2';
+            const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
+
+            // Step 3: Sync to Supabase and Django via /api/sync-client
+            const apiUrl = import.meta.env.VITE_TICKETING_TOOL_API_URL || '';
+            const syncEndpoint = apiUrl ? `${apiUrl}/api/sync-client` : '/api/sync-client';
+            const syncApiKey = import.meta.env.VITE_SYNC_API_KEY;
+
+            const syncResponse = await fetch(syncEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${syncApiKey}`
+                },
+                body: JSON.stringify({
+                    applywizz_id: selectedAccount.applywizz_id,
+                    resume_path: s3Key,
+                    resume_url: s3Url
+                })
+            });
+
+            if (!syncResponse.ok) {
+                const errorData = await syncResponse.json();
+                throw new Error(errorData.error || 'Failed to sync resume data');
+            }
+
+            toast.update(toastId, {
+                render: 'Resume updated successfully!',
+                type: 'success',
+                isLoading: false,
+                autoClose: 3000,
+            });
+
+            // Refresh profile data to show new resume
+            await fetchProfileData(selectedAccount.applywizz_id);
+
+        } catch (error: any) {
+            console.error('Resume upload error:', error);
+            toast.update(toastId, {
+                render: error.message || 'Failed to upload resume',
+                type: 'error',
+                isLoading: false,
+                autoClose: 5000,
+            });
+        } finally {
+            setUploading(false);
+            // Reset file input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
             }
         }
     };
@@ -292,16 +388,34 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                         <UserIcon className="h-5 w-5 text-blue-600" />
                                         Personal Information
                                     </h3>
-                                    {/* Resume Button */}
-                                    {(additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) && (
+                                    {/* Resume Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        {(additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) && (
+                                            <button
+                                                onClick={handleResumeDownload}
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                View Resume
+                                            </button>
+                                        )}
                                         <button
-                                            onClick={handleResumeDownload}
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                                            onClick={handleChangeResumeClick}
+                                            disabled={uploading}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            <Download className="h-4 w-4" />
-                                            View Resume
+                                            <Upload className="h-4 w-4" />
+                                            {uploading ? 'Uploading...' : (additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) ? 'Change Resume' : 'Upload Resume'}
                                         </button>
-                                    )}
+                                        {/* Hidden file input */}
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                            onChange={handleFileSelect}
+                                            className="hidden"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -360,7 +474,7 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Job Role Preferences</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Job Role</label>
                                         <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
                                             {displayValue(client.job_role_preferences)}
                                         </div>
