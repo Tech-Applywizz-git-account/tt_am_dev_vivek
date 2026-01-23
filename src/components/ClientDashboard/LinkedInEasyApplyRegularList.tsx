@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Linkedin, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, DollarSign, Building, Monitor } from "lucide-react";
+import { Calendar, Linkedin, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, DollarSign, Building, Monitor, Zap } from "lucide-react";
+import JobScoringModal from "./JobScoringModal";
+import JobScoringFloatingButton from "./JobScoringFloatingButton";
 
 // ✅ Types
 interface JobItem {
@@ -61,6 +63,11 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
     const [error, setError] = useState("");
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
+    // Job Scoring Modal States
+    const [showScoringModal, setShowScoringModal] = useState(false);
+    const [showFloatingButton, setShowFloatingButton] = useState(false);
+    const [isScoringTriggered, setIsScoringTriggered] = useState(false);
+
     // Fetch summary
     const fetchSummary = async () => {
         if (!applywizzId) {
@@ -86,7 +93,17 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
             const data: any = await response.json();
 
             // When using apply_type=EASY_APPLY, the API returns easy_apply_jobs instead of jobs
-            setSummary(data.easy_apply_jobs || {});
+            const summaryData = data.easy_apply_jobs || {};
+            setSummary(summaryData);
+
+            // Check if today's date exists in the summary
+            const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const hasTodayJobs = summaryData.hasOwnProperty(today);
+
+            // Show modal if summary is empty or today's date is missing
+            if (Object.keys(summaryData).length === 0 || !hasTodayJobs) {
+                setShowScoringModal(true);
+            }
         } catch (err) {
             console.error("Error fetching summary:", err);
             setError(err instanceof Error ? err.message : "Failed to load summary");
@@ -122,6 +139,39 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
     useEffect(() => {
         fetchSummary();
     }, [applywizzId]);
+
+    // Job Scoring Handlers
+    const handleCloseModal = () => {
+        setShowScoringModal(false);
+        setShowFloatingButton(true);
+    };
+
+    const handleStartScoring = async () => {
+        if (!applywizzId || isScoringTriggered) return;
+
+        try {
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${applywizzId}`);
+
+            // Mark as triggered and close modal
+            setIsScoringTriggered(true);
+            setShowScoringModal(false);
+            setShowFloatingButton(false);
+        } catch (err) {
+            // Silent fail as per requirements
+            console.error("Error triggering job scoring:", err);
+        }
+    };
+
+    const handleFloatingButtonClick = () => {
+        setShowFloatingButton(false);
+        setShowScoringModal(true);
+    };
+
+    // Check if today's jobs exist to determine button state
+    const today = new Date().toISOString().split('T')[0];
+    const hasTodayJobs = summary.hasOwnProperty(today);
+    const isScoringButtonDisabled = hasTodayJobs || isScoringTriggered;
 
     // Toggle date expansion and fetch jobs if needed
     const toggleDateExpansion = (date: string) => {
@@ -428,10 +478,17 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
 
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Linkedin className="text-blue-600" size={24} />
-                linkedin Agency Jobs Summary
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Linkedin className="text-blue-600" size={24} />
+                    linkedin Agency Jobs Summary
+                </h2>
+
+                {/* Floating Button - Inline with heading */}
+                {showFloatingButton && (
+                    <JobScoringFloatingButton onClick={handleFloatingButtonClick} />
+                )}
+            </div>
 
             <div className="space-y-2">
                 {dates.map((date) => {
@@ -484,7 +541,15 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
                         </div>
                     );
                 })}
-            </div>
+            </div>            
+            {/* Job Scoring Modal */}
+            <JobScoringModal
+                isOpen={showScoringModal}
+                onClose={handleCloseModal}
+                onStartScoring={handleStartScoring}
+                isButtonDisabled={isScoringButtonDisabled}
+            />
+
         </div>
     );
 };
