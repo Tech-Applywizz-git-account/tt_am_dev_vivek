@@ -98,22 +98,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             else if (fileType.includes("word") || fileType.includes("doc")) ext = "docx";
         }
 
-        // 4. Construct Key - Use existing key if replacing, otherwise create new
-        let key: string;
-        if (isReplacement && existingResumeUrl) {
-            // Extract just the path part if it's a full URL
-            if (existingResumeUrl.startsWith('http://') || existingResumeUrl.startsWith('https://')) {
-                const urlObj = new URL(existingResumeUrl);
-                key = urlObj.pathname.substring(1); // Remove leading slash
-            } else {
-                key = existingResumeUrl;
-            }
-            console.log(`🔄 Replacement mode: Using existing key: ${key}`);
-        } else {
-            // New upload: Create fixed key in resumes folder
-            key = `resumes/${sanitizedId}-resume.${ext}`;
-            console.log(`✨ New upload mode: Creating key: ${key}`);
-        }
+        // 4. Generate timestamp for unique filename (YYYYMMDD format)
+        const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, ''); // 20260123
+
+        // 5. Always create NEW file with timestamp (no replacement)
+        const key = `resumes/${sanitizedId}-${timestamp}-resume.${ext}`;
+
+        console.log(`✨ Creating new resume file: ${key}${isReplacement ? ' (Previous version will be kept)' : ''}`);
 
         // 5. Generate Presigned URL
         const command = new PutObjectCommand({
@@ -130,8 +121,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             isReplacement,
             existingResumeUrl,
             message: isReplacement
-                ? `Resume will be REPLACED. Old file "${existingResumeUrl}" will be overwritten.`
-                : "New resume upload. No existing resume found."
+                ? `New resume version created: "${key}". Previous version "${existingResumeUrl}" will be kept in S3.`
+                : `New resume upload: "${key}"`
         });
 
     } catch (error: any) {
