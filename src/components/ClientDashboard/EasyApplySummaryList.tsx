@@ -255,7 +255,20 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
     };
 
     // Helper: Get company domain from company name
-    const getCompanyDomain = (companyName: string): string | null => {
+    const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
+        if (companyUrl) {
+            try {
+                const url = new URL(companyUrl.startsWith('http') ? companyUrl : `https://${companyUrl}`);
+                const hostname = url.hostname.replace('www.', '');
+                // Skip social media/job board domains
+                const socialDomains = ['linkedin.com', 'indeed.com', 'glassdoor.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com'];
+                if (!socialDomains.some(d => hostname.includes(d))) {
+                    return hostname;
+                }
+            } catch (e) {
+                // fall through to name-based logic
+            }
+        }
         if (!companyName) return null;
 
         // Common company name to domain mapping
@@ -350,7 +363,7 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
         // Fallback: try to guess domain
         // Remove common suffixes and special characters
         const cleanName = normalized
-            .replace(/\s+(inc|llc|ltd|corporation|corp|company|co|group|limited)\b/gi, '')
+            .replace(/\s+(inc|llc|ltd|corporation|corp|company|co|group|limited|federal credit union|credit union|systems)\b/gi, '')
             .replace(/[^a-z0-9]/g, '')
             .trim();
 
@@ -395,10 +408,10 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.createdAt);
         const companyInitials = getCompanyInitials(job.company || '');
-        const companyDomain = getCompanyDomain(job.company || '');
+        const companyDomain = getCompanyDomain(job.company || '', job.jobUrl);
 
         // Use Google's favicon service (no CORS issues) or fallback to UI Avatars
-        const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null;
+        const faviconUrl = companyDomain ? `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${companyDomain}&size=128` : null;
         const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=4F46E5&color=fff&size=80&bold=true&rounded=true`;
 
         const avatarUrl = faviconUrl || fallbackAvatarUrl;

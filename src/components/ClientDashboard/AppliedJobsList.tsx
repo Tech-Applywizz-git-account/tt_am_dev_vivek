@@ -66,7 +66,20 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
     };
 
     // Helper: Get company domain
-    const getCompanyDomain = (companyName: string): string | null => {
+    const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
+        if (companyUrl) {
+            try {
+                const url = new URL(companyUrl.startsWith('http') ? companyUrl : `https://${companyUrl}`);
+                const hostname = url.hostname.replace('www.', '');
+                // Skip social media/job board domains
+                const socialDomains = ['linkedin.com', 'indeed.com', 'glassdoor.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com'];
+                if (!socialDomains.some(d => hostname.includes(d))) {
+                    return hostname;
+                }
+            } catch (e) {
+                // fall through to name-based logic
+            }
+        }
         if (!companyName) return null;
         const companyDomains: Record<string, string> = {
             'apple': 'apple.com', 'google': 'google.com', 'microsoft': 'microsoft.com',
@@ -78,7 +91,10 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
         for (const [key, domain] of Object.entries(companyDomains)) {
             if (normalized.includes(key) || key.includes(normalized)) return domain;
         }
-        const cleanName = normalized.replace(/\s+(inc|llc|ltd|corporation|corp|company|co|group|limited)\b/gi, '').replace(/[^a-z0-9]/g, '').trim();
+        const cleanName = normalized
+            .replace(/\s+(inc|llc|ltd|corporation|corp|company|co|group|limited|federal credit union|credit union|systems)\b/gi, '')
+            .replace(/[^a-z0-9]/g, '')
+            .trim();
         return cleanName ? `${cleanName}.com` : null;
     };
 
@@ -129,9 +145,9 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
         const matchData = getMatchQuality(job.score || 0);
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.createdAt);
-        const companyDomain = getCompanyDomain(job.company || '');
-        const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null;
-        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=4F46E5&color=fff&size=80&bold=true&rounded=true`;
+        const companyDomain = getCompanyDomain(job.company || '', job.jobUrl);
+        const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null;
+        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=4F46E5&color=fff&size=128&bold=true&rounded=true`;
         const avatarUrl = faviconUrl || fallbackAvatarUrl;
 
         return (
