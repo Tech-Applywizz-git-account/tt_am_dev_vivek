@@ -154,12 +154,12 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
 
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm text-gray-500">{timeAgo}</span>
+                                {/* <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
                                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
-                                )}
+                                )} */}
                                 <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
                                     <CheckCircle size={12} />
                                     Applied

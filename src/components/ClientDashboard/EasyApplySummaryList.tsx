@@ -429,14 +429,14 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
                         {/* Job Details */}
                         <div className="flex-1 min-w-0">
                             {/* Time & Source Badge */}
-                            <div className="flex items-center gap-2 mb-2">
+                            {/* <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
                                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
                                 )}
-                            </div>
+                            </div> */}
 
                             {/* Job Title */}
                             <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">

@@ -244,12 +244,12 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
 
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm text-gray-500">{timeAgo}</span>
+                                {/* <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
                                     <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
-                                )}
+                                )} */}
                                 <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs font-medium rounded-full flex items-center gap-1">
                                     <Building2 size={12} />
                                     Staffing
@@ -275,7 +275,7 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
 
                             {/* New fields section */}
                             <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
-                                {job.company_url && (
+                                {/* {job.company_url && (
                                     <a
                                         href={job.company_url}
                                         target="_blank"
@@ -285,7 +285,7 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
                                         <Building size={16} />
                                         <span>{new URL(job.company_url).hostname.replace('www.', '')}</span>
                                     </a>
-                                )}
+                                )} */}
                                 {job.experience_level && (
                                     <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
                                         <Briefcase size={12} />
