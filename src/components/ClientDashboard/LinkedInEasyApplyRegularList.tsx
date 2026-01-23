@@ -56,6 +56,30 @@ const statusOptions = [
     { value: "Job Not Found", label: "Job Not Found" },
 ];
 
+const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
+    const [error, setError] = React.useState(false);
+    const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
+
+    if (error || !logoUrl) {
+        return (
+            <div className={`w-16 h-16 rounded-xl shadow-md flex items-center justify-center text-white text-2xl font-bold ${fallbackColor} shrink-0`}>
+                {firstLetter}
+            </div>
+        );
+    }
+
+    return (
+        <div className="shrink-0">
+            <img
+                src={logoUrl}
+                alt={company}
+                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
+                onError={() => setError(true)}
+            />
+        </div>
+    );
+};
+
 const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> = ({ applywizzId }) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
@@ -290,27 +314,14 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company, job.company_url);
-        const faviconUrl = job.company_logo_url || (companyDomain ? `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${companyDomain}&size=128` : null);
-        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=0077B5&color=fff&size=80&bold=true&rounded=true`;
-        const avatarUrl = faviconUrl || fallbackAvatarUrl;
+        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
                 <div className="flex items-start gap-6 p-6">
                     {/* Left: Company Avatar & Job Info */}
                     <div className="flex-1 flex gap-4">
-                        <div className="flex-shrink-0">
-                            <img
-                                src={avatarUrl}
-                                alt={job.company}
-                                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
-                                onError={(e) => {
-                                    if (e.currentTarget.src !== fallbackAvatarUrl) {
-                                        e.currentTarget.src = fallbackAvatarUrl;
-                                    }
-                                }}
-                            />
-                        </div>
+                        <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-700" />
 
                         <div className="flex-1 min-w-0">
                             {/* <div className="flex items-center gap-2 mb-2">
