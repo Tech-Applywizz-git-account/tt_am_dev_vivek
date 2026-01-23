@@ -243,7 +243,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                         </div>
 
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
+                            {/* <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
                                     <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
@@ -254,7 +254,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                                     <DollarSign size={12} />
                                     C2C
                                 </span>
-                            </div>
+                            </div> */}
 
                             <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
                                 {job.title || "Untitled Role"}
@@ -275,7 +275,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
 
                             {/* New fields section */}
                             <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
-                                {job.company_url && (
+                                {/* {job.company_url && (
                                     <a
                                         href={job.company_url}
                                         target="_blank"
@@ -285,7 +285,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                                         <Building size={16} />
                                         <span>{new URL(job.company_url).hostname.replace('www.', '')}</span>
                                     </a>
-                                )}
+                                )} */}
                                 {job.experience_level && (
                                     <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
                                         <Briefcase size={12} />
