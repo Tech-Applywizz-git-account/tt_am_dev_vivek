@@ -37,6 +37,30 @@ interface EasyApplySummaryListProps {
     applywizzId?: string;
 }
 
+const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
+    const [error, setError] = React.useState(false);
+    const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
+
+    if (error || !logoUrl) {
+        return (
+            <div className={`w-16 h-16 rounded-xl shadow-md flex items-center justify-center text-white text-2xl font-bold ${fallbackColor} shrink-0`}>
+                {firstLetter}
+            </div>
+        );
+    }
+
+    return (
+        <div className="shrink-0">
+            <img
+                src={logoUrl}
+                alt={company}
+                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
+                onError={() => setError(true)}
+            />
+        </div>
+    );
+};
+
 const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
     data,
     loading = false,
@@ -255,7 +279,20 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
     };
 
     // Helper: Get company domain from company name
-    const getCompanyDomain = (companyName: string): string | null => {
+    const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
+        if (companyUrl) {
+            try {
+                const url = new URL(companyUrl.startsWith('http') ? companyUrl : `https://${companyUrl}`);
+                const hostname = url.hostname.replace('www.', '');
+                // Skip social media/job board domains
+                const socialDomains = ['linkedin.com', 'indeed.com', 'glassdoor.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com'];
+                if (!socialDomains.some(d => hostname.includes(d))) {
+                    return hostname;
+                }
+            } catch (e) {
+                // fall through to name-based logic
+            }
+        }
         if (!companyName) return null;
 
         // Common company name to domain mapping
@@ -350,7 +387,7 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
         // Fallback: try to guess domain
         // Remove common suffixes and special characters
         const cleanName = normalized
-            .replace(/\s+(inc|llc|ltd|corporation|corp|company|co|group|limited)\b/gi, '')
+            .replace(/\s+(inc|llc|ltd|corporation|corp|company|co|group|limited|federal credit union|credit union|systems)\b/gi, '')
             .replace(/[^a-z0-9]/g, '')
             .trim();
 
@@ -395,13 +432,8 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.createdAt);
         const companyInitials = getCompanyInitials(job.company || '');
-        const companyDomain = getCompanyDomain(job.company || '');
-
-        // Use Google's favicon service (no CORS issues) or fallback to UI Avatars
-        const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null;
-        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(job.company || 'Company')}&background=4F46E5&color=fff&size=80&bold=true&rounded=true`;
-
-        const avatarUrl = faviconUrl || fallbackAvatarUrl;
+        const companyDomain = getCompanyDomain(job.company || '', job.jobUrl);
+        const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null;
 
         return (
             <div
@@ -411,20 +443,7 @@ const EasyApplySummaryList: React.FC<EasyApplySummaryListProps> = ({
                 <div className="flex items-start gap-6 p-6">
                     {/* Left: Company Avatar & Job Info */}
                     <div className="flex-1 flex gap-4">
-                        {/* Company Avatar */}
-                        <div className="flex-shrink-0">
-                            <img
-                                src={avatarUrl}
-                                alt={job.company || 'Company'}
-                                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
-                                onError={(e) => {
-                                    // Fallback to initials if Clearbit logo fails
-                                    if (e.currentTarget.src !== fallbackAvatarUrl) {
-                                        e.currentTarget.src = fallbackAvatarUrl;
-                                    }
-                                }}
-                            />
-                        </div>
+                        <CompanyLogo company={job.company || 'Company'} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
 
                         {/* Job Details */}
                         <div className="flex-1 min-w-0">
