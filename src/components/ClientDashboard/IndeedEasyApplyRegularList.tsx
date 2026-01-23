@@ -461,14 +461,6 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
 
     const dates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
-    if (dates.length === 0) {
-        return (
-            <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No Indeed agency jobs found.</p>
-            </div>
-        );
-    }
-
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
             <div className="flex items-center justify-between mb-4">
@@ -482,60 +474,64 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
                     <JobScoringFloatingButton onClick={handleFloatingButtonClick} />
                 )}
             </div>
+            {dates.length === 0 ? (
+                <div className="bg-white p-4 rounded-lg shadow mt-6">
+                    <p className="text-gray-500">No Indeed easy apply jobs found.</p>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {dates.map((date) => {
+                        const count = summary[date] || 0;
+                        const jobs = jobsData[date] || [];
+                        const isExpanded = expandedDate === date;
+                        const dateObj = new Date(date);
+                        const formattedDate = dateObj.toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                        });
 
-            <div className="space-y-2">
-                {dates.map((date) => {
-                    const count = summary[date] || 0;
-                    const jobs = jobsData[date] || [];
-                    const isExpanded = expandedDate === date;
-                    const dateObj = new Date(date);
-                    const formattedDate = dateObj.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    });
-
-                    return (
-                        <div key={date}>
-                            <div
-                                onClick={() => toggleDateExpansion(date)}
-                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-blue-100" : "bg-blue-50 hover:bg-blue-100"
-                                    }`}
-                            >
-                                <div className="flex items-center gap-2 text-blue-900">
-                                    <Calendar size={18} />
-                                    <span className="font-medium">{formattedDate}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-blue-700 font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <Briefcase size={18} />
-                                        <span>{count} Indeed Jobs</span>
+                        return (
+                            <div key={date}>
+                                <div
+                                    onClick={() => toggleDateExpansion(date)}
+                                    className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-blue-100" : "bg-blue-50 hover:bg-blue-100"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-2 text-blue-900">
+                                        <Calendar size={18} />
+                                        <span className="font-medium">{formattedDate}</span>
                                     </div>
-                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                    <div className="flex items-center gap-3 text-blue-700 font-semibold">
+                                        <div className="flex items-center gap-2">
+                                            <Briefcase size={18} />
+                                            <span>{count} Indeed Jobs</span>
+                                        </div>
+                                        {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                    </div>
                                 </div>
+
+                                {isExpanded && (
+                                    <div className="mt-3 bg-gray-50 p-4 rounded-lg">
+                                        {jobs.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {jobs
+                                                    .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                    .map((job) => renderJobCard(job, date))}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <SkeletonJobCard />
+                                                <SkeletonJobCard />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-
-                            {isExpanded && (
-                                <div className="mt-3 bg-gray-50 p-4 rounded-lg">
-                                    {jobs.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {jobs
-                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
-                                                .map((job) => renderJobCard(job, date))}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <SkeletonJobCard />
-                                            <SkeletonJobCard />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
+                        );
+                    })}
+                </div>
+            )}
             {/* Job Scoring Modal */}
             <JobScoringModal
                 isOpen={showScoringModal}
