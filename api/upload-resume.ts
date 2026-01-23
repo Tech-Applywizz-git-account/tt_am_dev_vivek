@@ -9,6 +9,7 @@ const ALLOWED_ORIGINS = [
     'https://apply-wizz.me',
 ];
 
+
 // Helper for CORS with dynamic origin
 function cors(req: VercelRequest, res: VercelResponse, status = 200, body: any = {}) {
     const origin = req.headers.origin || '';
