@@ -9,7 +9,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL1;
+const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL2;
 const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
 const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
 
