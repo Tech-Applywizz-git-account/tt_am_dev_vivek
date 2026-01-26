@@ -173,7 +173,7 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
         if (!applywizzId || isScoringTriggered) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL2;
             await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${applywizzId}`);
 
             // Mark as triggered and close modal
