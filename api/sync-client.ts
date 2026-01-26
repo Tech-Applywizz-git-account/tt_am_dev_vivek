@@ -575,11 +575,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         console.log(`Django sync successful for ${applywizzId}`, { lead_id: karmafyLeadId });
+        console.log(`Extracting lead data for ${djangoResponse}`);
+        console.log(`Extracting lead data for ${djangoResponse.lead_id}`);
 
         // Extract lead data (optional - don't fail if this doesn't work)
         // Only trigger extraction if a resume field is present in the update
         const hasResumeUpdate = clientData.resume_url || clientData.resume_path || clientData.resume_s3_path;
-
+        if (hasResumeUpdate) {
+          console.log(`Extracting lead data for ${applywizzId}`);
+        }
+        if (karmafyLeadId) {
+          console.log(`Extracting lead data for ${applywizzId}`);
+        }
         if (karmafyLeadId && hasResumeUpdate) {
           try {
             await extractLeadData(karmafyLeadId);
@@ -588,6 +595,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
             // Don't fail the sync - extraction is a background/optional process
           }
+        } else {
+          console.log(`Skipping lead data extraction for ${applywizzId} - no resume update`);
         }
       } catch (djangoError: any) {
         console.error('Django Sync Error:', djangoError);
