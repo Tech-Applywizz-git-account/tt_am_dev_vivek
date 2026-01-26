@@ -3,9 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing Supabase environment variables');
+}
+
+const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL1;
+const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
+const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
+
+if (!EXTERNAL_API_URL) {
+  throw new Error('Missing VITE_EXTERNAL_API_URL1 environment variable');
+}
+
+if (!KARMAFY_USERNAME || !KARMAFY_PASSWORD) {
+  throw new Error('Missing VITE_KARMAFY_USERNAME or VITE_KARMAFY_PASSWORD environment variable');
 }
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -133,6 +146,23 @@ const ALLOWED_WORK_AUTH = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other
 const ALLOWED_WORK_PREF = ["Remote", "Hybrid", "On-site", "All"];
 // const ALLOWED_NUM_APPS = ["20+", "40+"];
 
+// Validate origin
+function validateOrigin(req: VercelRequest): boolean {
+  const origin = req.headers.origin || req.headers.referer || '';
+
+  // If no origins configured, allow all (development mode)
+  if (!ALLOWED_ORIGINS) {
+    return true;
+  }
+
+  const allowedOriginsList = ALLOWED_ORIGINS.split(',').map(o => o.trim());
+
+  // Check if the request origin matches any allowed origin
+  return allowedOriginsList.some(allowedOrigin =>
+    origin.includes(allowedOrigin) || allowedOrigin === '*'
+  );
+}
+
 // Simple authentication middleware
 function authenticateRequest(req: VercelRequest): boolean {
   // In production, use a proper API key system
@@ -174,7 +204,7 @@ function validateClientData(data: any): { isValid: boolean; errors: string[] } {
     errors.push('ApplyWizz ID is required');
   } else if (!/^AWL-\d{1,5}$/.test(applywizzId) && !/^JB-\d{1,5}$/.test(applywizzId)) {
     errors.push('ApplyWizz ID must follow the pattern AWL-X to AWL-XXXXX where X is a digit (1-5 digits)');
-  } 
+  }
 
   // ✅ XOR check for resume
   // const resumeUrl = data.resume_url;
@@ -292,9 +322,35 @@ function mapToDjangoData(data: ClientSyncData): any {
   };
 }
 
+// Extract Lead Data from Karmafy
+async function extractLeadData(leadId: number) {
+  const EXTRACT_API_URL = `${EXTERNAL_API_URL}/api/v1/leads/${leadId}/extract-data/`;
+
+  // Create Basic Auth header
+  const authString = `${KARMAFY_USERNAME}:${KARMAFY_PASSWORD}`;
+  const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`;
+
+  const response = await fetch(EXTRACT_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authHeader
+    },
+    body: JSON.stringify({}) // Empty body as required by POST
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(result.error || `Lead extraction failed with status ${response.status}`);
+  }
+
+  return result;
+}
+
 // ✅ Sync with Django Project
 async function syncToDjangoProject(data: any) {
-  const DJANGO_API_URL = 'https://dashboard.apply-wizz.com/api/client-update';
+  const DJANGO_API_URL = `${EXTERNAL_API_URL}/api/client-update`;
 
   const response = await fetch(DJANGO_API_URL, {
     method: 'POST',
@@ -329,12 +385,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check if required environment variables are set
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return res.status(500).json({ error: 'Server configuration error', details: 'Missing Supabase environment variables' });
   }
 
   try {
+    // Validate origin
+    if (!validateOrigin(req)) {
+      return res.status(403).json({ error: 'Forbidden', details: 'Origin not allowed' });
+    }
+
     // Authenticate the request
     if (!authenticateRequest(req)) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -503,11 +563,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Only sync to Django if there are fields beyond just apw_id
     let djangoSynced = false;
+    let karmafyLeadId = null;
+
     if (Object.keys(cleanedData).length > 1) {
       try {
-        await syncToDjangoProject(cleanedData);
+        const djangoResponse = await syncToDjangoProject(cleanedData);
         djangoSynced = true;
-        console.log(`Django sync successful for ${applywizzId}`);
+
+        if (djangoResponse && djangoResponse.lead_id) {
+          karmafyLeadId = djangoResponse.lead_id;
+        }
+
+        console.log(`Django sync successful for ${applywizzId}`, { lead_id: karmafyLeadId });
+        console.log(`Extracting lead data for ${djangoResponse}`);
+        console.log(`Extracting lead data for ${djangoResponse.lead_id}`);
+
+        // Extract lead data (optional - don't fail if this doesn't work)
+        // Only trigger extraction if a resume field is present in the update
+        const hasResumeUpdate = clientData.resume_url || clientData.resume_path || clientData.resume_s3_path;
+        if (hasResumeUpdate) {
+          console.log(`Extracting lead data for ${applywizzId}`);
+        }
+        if (karmafyLeadId) {
+          console.log(`Extracting lead data for ${applywizzId}`);
+        }
+        if (karmafyLeadId && hasResumeUpdate) {
+          try {
+            await extractLeadData(karmafyLeadId);
+            console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
+          } catch (extractError: any) {
+            console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
+            // Don't fail the sync - extraction is a background/optional process
+          }
+        } else {
+          console.log(`Skipping lead data extraction for ${applywizzId} - no resume update`);
+        }
       } catch (djangoError: any) {
         console.error('Django Sync Error:', djangoError);
         return res.status(500).json({
@@ -526,7 +616,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : 'Client data synchronized successfully to Supabase only',
       applywizz_id: applywizzId,
       client: clientResult[0],
-      djangoSynced
+      djangoSynced,
+      ...(karmafyLeadId && { karmafy_lead_id: karmafyLeadId })
     });
 
   } catch (err) {
