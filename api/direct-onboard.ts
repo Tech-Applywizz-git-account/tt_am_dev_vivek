@@ -506,6 +506,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 try {
                     await extractLeadData(karmafyLeadId);
                     console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
+
+                    // Trigger Lambda endpoint (fire-and-forget)
+                    try {
+                        await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
+                        console.log('Lambda endpoint triggered');
+                    } catch (lambdaError: any) {
+                        console.error('Lambda endpoint error:', lambdaError);
+                        // Continue execution - this is fire-and-forget
+                    }
+                    
                 } catch (extractError: any) {
                     console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
                     // Don't rollback - client is already created
