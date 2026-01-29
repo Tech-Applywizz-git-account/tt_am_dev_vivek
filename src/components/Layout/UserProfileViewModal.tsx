@@ -168,7 +168,7 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                 window.open(resumePath, '_blank', 'noopener,noreferrer');
             } else {
                 // Otherwise, construct the S3 URL
-                const s3Url = `https://applywizz-dev.s3.us-east-2.amazonaws.com/${resumePath}`;
+                const s3Url = `https://applywizz-prod.s3.us-east-2.amazonaws.com/${resumePath}`;
                 window.open(s3Url, '_blank', 'noopener,noreferrer');
             }
         }
