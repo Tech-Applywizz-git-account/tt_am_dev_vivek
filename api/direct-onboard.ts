@@ -56,6 +56,7 @@ interface DirectOnboardData {
     location_preferences: string[];
 
     // Optional fields
+    personal_email?: string;
     work_preferences?: string;
     salary_range?: string;
     work_auth_details?: string;
