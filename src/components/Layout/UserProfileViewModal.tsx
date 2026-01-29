@@ -213,7 +213,7 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
             const s3Key = await uploadResumeToS3(file, selectedAccount.applywizz_id);
 
             // Step 2: Construct full S3 URL
-            const bucket = import.meta.env.VITE_AWS_S3_BUCKET || 'applywizz-dev';
+            const bucket = import.meta.env.VITE_AWS_S3_BUCKET || 'applywizz-prod';
             const region = import.meta.env.VITE_AWS_REGION || 'us-east-2';
             const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
 
