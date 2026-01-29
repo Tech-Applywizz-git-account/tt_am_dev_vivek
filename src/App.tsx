@@ -19,7 +19,7 @@ import { ClientsListView } from './components/Clients/ClientsListView';
 import { ClientApplicationsView } from './components/Clients/ClientApplicationsView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
-import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
+import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
@@ -1590,7 +1590,10 @@ function App() {
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                Dashboard
+                <LayoutDashboard className="h-7 w-7" />
+              </h1>
               <div className="flex space-x-3">
                 {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head', 'resume_team_member'].includes(currentUser.role) && (
                   <>
@@ -2034,8 +2037,10 @@ function App() {
       case 'regular-applications':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Regular Applications</h1>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-gray-900">Career Portal Application</h1>
+              <p className="text-gray-500">We scan and collect job links directly from official company career pages and trusted job portals.
+                <br /> Our system automatically detects newly posted roles.</p>
             </div>
             {currentUser?.role === 'client' ? (
               optedJobLinks ? (
@@ -2064,7 +2069,7 @@ function App() {
             </div>
             {currentUser?.role === 'client' ? (
               // optedJobLinks ? (
-                <ScoredJobsAppliedList applywizzId={applywizzId} />
+              <ScoredJobsAppliedList applywizzId={applywizzId} />
               // ) : (
               //   <AppliedJobsList applywizzId={applywizzId} />
               // )

@@ -78,7 +78,7 @@ const AppLayout: React.FC<Props> = ({
           pendingClientsCount={pendingClientsCount}
           optedJobLinks={optedJobLinks}
         />
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-8" style={{ borderTopLeftRadius: '30px', borderTopRightRadius: '30px', border: '1px solid #000000', background: '#FFFFFF' }}>
           {renderMainContent()}
         </main>
       </div>
