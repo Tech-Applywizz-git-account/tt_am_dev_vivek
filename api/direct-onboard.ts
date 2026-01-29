@@ -295,7 +295,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const clientsData = {
             id: clientId,
             full_name: clientData.full_name,
-            personal_email: clientData.email.trim().toLowerCase(),
+            personal_email: clientData.personal_email ? clientData.personal_email.trim().toLowerCase() : clientData.email.trim().toLowerCase(),
             whatsapp_number: clientData.phone,
             callable_phone: clientData.phone,
             company_email: clientData.email.trim().toLowerCase(),
