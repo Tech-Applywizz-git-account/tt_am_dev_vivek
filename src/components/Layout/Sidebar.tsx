@@ -182,6 +182,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       show: user.role === 'client',
     },
     {
+      id: 'pricing',
+      label: 'Pricing',
+      icon: DollarSign,
+      show: (user.role === 'client') && (optedJobLinks),
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: Settings,
