@@ -10,6 +10,7 @@ const ALLOWED_ORIGINS = [
     'https://ticketingtoolapplywi-git-ba5fa7-applywizz-tech-vercels-projects.vercel.app',
 ];
 
+
 // Helper for CORS with dynamic origin
 function cors(req: VercelRequest, res: VercelResponse, status = 200, body: any = {}) {
     const origin = req.headers.origin || '';

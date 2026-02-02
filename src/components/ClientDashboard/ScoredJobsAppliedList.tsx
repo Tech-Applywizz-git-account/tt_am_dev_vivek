@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle, MapPin, ExternalLink, Loader2, ChevronLeft, ChevronRight, Linkedin, Briefcase, Building2, DollarSign, RefreshCw, ChevronDown, Building, Monitor } from "lucide-react";
+import { CheckCircle, MapPin, ExternalLink, Loader2, ChevronLeft, ChevronRight, Linkedin, Briefcase, Building2, DollarSign, RefreshCw, ChevronDown, Building, Monitor, ArrowRight } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -47,18 +47,40 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
 
     if (error || !logoUrl) {
         return (
-            <div className={`w-16 h-16 rounded-xl shadow-md flex items-center justify-center text-white text-2xl font-bold ${fallbackColor} shrink-0`}>
-                {firstLetter}
+            <div
+                className="shrink-0 inline-flex items-center justify-end text-white text-2xl font-bold"
+                style={{
+                    height: '160px',
+                    padding: '17px 13px 18px 22px',
+                    borderRadius: '9px',
+                    border: '1px solid #D3D3D3',
+                    background: '#F1F1F1',
+                    boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+                }}
+            >
+                <span style={{ color: '#000' }}>{firstLetter}</span>
             </div>
         );
     }
 
     return (
-        <div className="shrink-0">
+        <div
+            className="shrink-0 inline-flex items-center justify-end"
+            style={{
+                height: '121px',
+                width: '121px',
+                padding: '17px 13px 18px 22px',
+                borderRadius: '9px',
+                border: '1px solid #D3D3D3',
+                background: '#F1F1F1',
+                boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+            }}
+        >
             <img
                 src={logoUrl}
                 alt={company}
-                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
+                className="object-contain"
+                style={{ width: '120px', height: '80px' }}
                 onError={() => setError(true)}
             />
         </div>
@@ -207,9 +229,10 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
-        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
+        const bgGradient = 'linear-gradient(to right, #171717, #353333, #6f6767ff)';
+        if (percentage >= 80) return { label: 'Strong Match', bgColor: '', bgGradient, textColor: '#00FE24' };
+        if (percentage >= 60) return { label: 'Great Match', bgColor: '', bgGradient, textColor: '#42FF5C' };
+        return { label: 'Good Match', bgColor: '', bgGradient, textColor: '#70FF84' };
     };
 
     const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
@@ -333,32 +356,40 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
 
         return (
-            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
-                <div className="flex items-start gap-6 p-6">
+            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-center gap-36 p-6">
+                    {/* Left: Company Avatar & Job Info */}
                     <div className="flex-1 flex gap-4">
                         <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
 
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                                {/* <span className="text-sm text-gray-500">{timeAgo}</span>
+                            {/* <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm text-gray-500">{timeAgo}</span>
                                 {job.source && (
                                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
                                         {job.source}
                                     </span>
-                                )} */}
+                                )}
                                 <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
                                     <CheckCircle size={12} />
                                     Applied
                                 </span>
-                            </div>
+                            </div> */}
 
-                            <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
+                            <h3
+                                className="text-xl font-bold text-gray-900 mb-1 line-clamp-1"
+                                style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
                                 {job.title || "Untitled Role"}
                             </h3>
 
-                            <p className="text-base text-gray-600 mb-3">
+                            <p
+                                className="text-base text-gray-600 mb-3"
+                                style={{ color: "#7B7B7B", fontFamily: "Noto Sans", fontSize: "16px" }}
+                            >
                                 {job.company || "Unknown Company"}
                             </p>
+
+                            <hr className="my-3 border-gray-500" style={{ maxWidth: "80%" }} />
 
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                                 {job.location && (
@@ -404,14 +435,32 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                         </div>
                     </div>
 
-                    <div className={`flex-shrink-0 ${matchData.bgColor} rounded-2xl p-6 w-32 flex flex-col items-center justify-center shadow-lg`}>
+                    {/* Middle: VIEW JOB Button */}
+                    <div className="flex-shrink-0 flex items-center">
+                        <a
+                            href={job.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
+                        >
+                            <span>VIEW JOB</span>
+                            <ArrowRight className="h-5 w-5 text-white" />
+                        </a>
+                    </div>
+
+                    {/* Right: Match Score Card */}
+                    <div
+                        className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                        style={{ background: matchData.bgGradient }}
+                    >
                         <div className="relative w-20 h-20 mb-3">
                             <svg className="w-20 h-20 transform -rotate-90">
                                 <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
                                 <circle
-                                    cx="40" cy="40" r="32" stroke="currentColor" strokeWidth="6" fill="none"
+                                    cx="40" cy="40" r="32" strokeWidth="6" fill="none"
                                     strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
-                                    className={matchData.textColor}
+                                    stroke={matchData.textColor}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -426,15 +475,6 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
                 <div className="px-6 pb-6 flex items-center gap-3">
                     <div className="flex-1"></div>
-                    <a
-                        href={job.url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-                    >
-                        <ExternalLink size={16} />
-                        <span>VIEW JOB</span>
-                    </a>
                 </div>
             </div>
         );
@@ -532,7 +572,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow mt-6">
+        <div>
             {/* Header with filter info and dropdown */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 {/* Left: Filter description */}

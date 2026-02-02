@@ -5,7 +5,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEFAULT_ONBOARDED_BY_ID = process.env.VITE_DEFAULT_ONBOARDED_BY_ID;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
-const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL2;
+const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL;
 const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
 const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
 
@@ -506,6 +506,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 try {
                     await extractLeadData(karmafyLeadId);
                     console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
+
+                    // Trigger Lambda endpoint (fire-and-forget)
+                    try {
+                        await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
+                        console.log('Lambda endpoint triggered');
+                    } catch (lambdaError: any) {
+                        console.error('Lambda endpoint error:', lambdaError);
+                        // Continue execution - this is fire-and-forget
+                    }
+                    
                 } catch (extractError: any) {
                     console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
                     // Don't rollback - client is already created

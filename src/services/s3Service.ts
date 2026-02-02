@@ -82,7 +82,7 @@ export const uploadResumeToS3 = async (file: File, applywizzId: string): Promise
  * @returns Full S3 URL
  */
 export const getS3Url = (s3Key: string): string => {
-    const bucket = import.meta.env.VITE_AWS_S3_BUCKET || 'applywizz-dev';
+    const bucket = import.meta.env.VITE_AWS_S3_BUCKET || 'applywizz-prod';
     const region = import.meta.env.VITE_AWS_REGION || 'us-east-2';
 
     // If it's already a full URL, return as-is

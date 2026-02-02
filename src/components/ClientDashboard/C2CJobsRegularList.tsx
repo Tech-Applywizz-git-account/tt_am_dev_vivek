@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, DollarSign, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, Building, Monitor } from "lucide-react";
+import { Calendar, DollarSign, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, Building, Monitor, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -60,18 +60,40 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
 
     if (error || !logoUrl) {
         return (
-            <div className={`w-16 h-16 rounded-xl shadow-md flex items-center justify-center text-white text-2xl font-bold ${fallbackColor} shrink-0`}>
-                {firstLetter}
+            <div
+                className="shrink-0 inline-flex items-center justify-end text-white text-2xl font-bold"
+                style={{
+                    height: '160px',
+                    padding: '17px 13px 18px 22px',
+                    borderRadius: '9px',
+                    border: '1px solid #D3D3D3',
+                    background: '#F1F1F1',
+                    boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+                }}
+            >
+                <span style={{ color: '#000' }}>{firstLetter}</span>
             </div>
         );
     }
 
     return (
-        <div className="shrink-0">
+        <div
+            className="shrink-0 inline-flex items-center justify-end"
+            style={{
+                height: '121px',
+                width: '121px',
+                padding: '17px 13px 18px 22px',
+                borderRadius: '9px',
+                border: '1px solid #D3D3D3',
+                background: '#F1F1F1',
+                boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+            }}
+        >
             <img
                 src={logoUrl}
                 alt={company}
-                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
+                className="object-contain"
+                style={{ width: '120px', height: '80px' }}
                 onError={() => setError(true)}
             />
         </div>
@@ -84,6 +106,8 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // Fetch summary
     const fetchSummary = async () => {
@@ -218,9 +242,10 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
 
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
-        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
+        const bgGradient = 'linear-gradient(to right, #171717, #353333, #6f6767ff)';
+        if (percentage >= 80) return { label: 'Strong Match', bgColor: '', bgGradient, textColor: '#00FE24' };
+        if (percentage >= 60) return { label: 'Great Match', bgColor: '', bgGradient, textColor: '#42FF5C' };
+        return { label: 'Good Match', bgColor: '', bgGradient, textColor: '#70FF84' };
     };
 
     const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
@@ -265,12 +290,11 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
         const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
 
         return (
-            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
-                <div className="flex items-start gap-6 p-6">
+            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-center gap-36 p-6">
                     {/* Left: Company Avatar & Job Info */}
-                    <div className="flex-1 flex gap-4">
-                        <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-purple-600" />
-
+                    <div className="flex-1 flex gap-4 ">
+                        <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
                         <div className="flex-1 min-w-0">
                             {/* <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
@@ -285,13 +309,20 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                                 </span>
                             </div> */}
 
-                            <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
+                            <h3
+                                className="text-xl font-bold text-gray-900 mb-1 line-clamp-1"
+                                style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
                                 {job.title || "Untitled Role"}
                             </h3>
 
-                            <p className="text-base text-gray-600 mb-3">
+                            <p
+                                className="text-base text-gray-600 mb-3"
+                                style={{ color: "#7B7B7B", fontFamily: "Noto Sans", fontSize: "16px" }}
+                            >
                                 {job.company || "Unknown Company"}
                             </p>
+
+                            <hr className="my-3 border-gray-500" style={{ maxWidth: "80%" }} />
 
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                                 {job.location && (
@@ -337,15 +368,32 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                         </div>
                     </div>
 
+                    {/* Middle: Apply Now Button */}
+                    <div className="flex-shrink-0 flex items-center">
+                        <a
+                            href={job.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
+                        >
+                            <span>APPLY NOW</span>
+                            <ArrowRight className="h-5 w-5 text-white" />
+                        </a>
+                    </div>
+
                     {/* Right: Match Score Card */}
-                    <div className={`flex-shrink-0 ${matchData.bgColor} rounded-2xl p-6 w-32 flex flex-col items-center justify-center shadow-lg`}>
+                    <div
+                        className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                        style={{ background: matchData.bgGradient }}
+                    >
                         <div className="relative w-20 h-20 mb-3">
                             <svg className="w-20 h-20 transform -rotate-90">
                                 <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
                                 <circle
-                                    cx="40" cy="40" r="32" stroke="currentColor" strokeWidth="6" fill="none"
+                                    cx="40" cy="40" r="32" strokeWidth="6" fill="none"
                                     strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
-                                    className={matchData.textColor}
+                                    stroke={matchData.textColor}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -358,12 +406,12 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                     </div>
                 </div>
 
-                {/* Bottom: Actions */}
+                {/* Bottom: Status Dropdown Only */}
                 <div className="px-6 pb-6 flex items-center gap-3">
                     <select
                         value={job.status || 'Pending'}
                         onChange={(e) => handleStatusChange(job.id, e.target.value, date)}
-                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white hover:bg-gray-50 transition-colors"
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-gray-50 transition-colors"
                     >
                         {statusOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -371,18 +419,6 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                             </option>
                         ))}
                     </select>
-
-                    <div className="flex-1"></div>
-
-                    <a
-                        href={job.url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-                    >
-                        <ExternalLink size={16} />
-                        <span>APPLY NOW</span>
-                    </a>
                 </div>
             </div>
         );
@@ -441,9 +477,20 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
         );
     }
 
-    const dates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const totalPages = Math.ceil(allDates.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentDates = allDates.slice(startIndex, startIndex + itemsPerPage);
 
-    if (dates.length === 0) {
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            // Optional: Scroll to top of list
+            // window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    if (allDates.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
                 <p className="text-gray-500">No C2C contract jobs found.</p>
@@ -452,14 +499,10 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
     }
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow mt-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <DollarSign className="text-purple-600" size={24} />
-                C2C Contract Jobs Summary
-            </h2>
+        <div>
 
             <div className="space-y-2">
-                {dates.map((date) => {
+                {currentDates.map((date, index) => {
                     const count = summary[date] || 0;
                     const jobs = jobsData[date] || [];
                     const isExpanded = expandedDate === date;
@@ -474,24 +517,24 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                         <div key={date}>
                             <div
                                 onClick={() => toggleDateExpansion(date)}
-                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-purple-100" : "bg-purple-50 hover:bg-purple-100"
-                                    }`}
+                                className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
+                                style={{ backgroundColor: '#E3FFE7' }}
                             >
-                                <div className="flex items-center gap-2 text-purple-900">
-                                    <Calendar size={18} />
-                                    <span className="font-medium">{formattedDate}</span>
+                                <div className="flex items-center gap-32">
+                                    <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
+                                    <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-purple-700 font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <DollarSign size={18} />
-                                        <span>{count} C2C Jobs</span>
-                                    </div>
-                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                <div className="flex items-center gap-3 text-blue-700 font-semibold">
+                                    <img
+                                        src="/chevron-icon.svg"
+                                        alt="chevron"
+                                        className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                    />
                                 </div>
                             </div>
 
                             {isExpanded && (
-                                <div className="mt-3 bg-gray-50 p-4 rounded-lg">
+                                <div className="mt-3">
                                     {jobs.length > 0 ? (
                                         <div className="space-y-4">
                                             {jobs
@@ -510,6 +553,37 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                     );
                 })}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                    <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#171717] text-white hover:bg-black'
+                            }`}
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+
+                    <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                        {String(currentPage).padStart(2, '0')}
+                    </span>
+
+                    <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#171717] text-white hover:bg-black'
+                            }`}
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
