@@ -176,6 +176,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       show: user.role === 'client',
     },
     {
+      id: 'job-tracking',
+      label: 'Job Tracking',
+      icon: Briefcase,
+      show: user.role === 'client',
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: Settings,

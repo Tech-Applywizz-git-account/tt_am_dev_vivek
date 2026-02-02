@@ -44,6 +44,16 @@ interface DateJobsResponse {
 
 interface ScoredJobsRegularListProps {
     applywizzId?: string;
+    showCalendar: boolean;
+    setShowCalendar: (show: boolean) => void;
+    filteredDate: string | null;
+    setFilteredDate: (date: string | null) => void;
+    expandedDate: string | null;
+    setExpandedDate: (date: string | null) => void;
+}
+
+export interface ScoredJobsRegularListRef {
+    handleDateSelect: (date: Date) => Promise<void>;
 }
 
 const statusOptions = [
@@ -101,15 +111,20 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
     );
 };
 
-const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizzId }) => {
+const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJobsRegularListProps>(({
+    applywizzId,
+    showCalendar,
+    setShowCalendar,
+    filteredDate,
+    setFilteredDate,
+    expandedDate,
+    setExpandedDate
+}, ref) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [expandedDate, setExpandedDate] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [filteredDate, setFilteredDate] = useState<string | null>(null);
     const itemsPerPage = 10;
 
     // Fetch summary
@@ -187,6 +202,47 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
             fetchJobsForDate(date);
         }
     };
+
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    const handleDateSelect = async (selectedDate: Date) => {
+        // Construct YYYY-MM-DD string using local time components to match summary keys
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        if (summary.hasOwnProperty(dateStr)) {
+            // Set filtered date to show only this date
+            setFilteredDate(dateStr);
+
+            // Find page and navigate (though setFilteredDate will make it page 1 usually)
+            const dateIndex = allDates.indexOf(dateStr);
+            if (dateIndex !== -1) {
+                setCurrentPage(1); // Set to page 1 since only one date will be shown
+
+                // Automatically expand
+                if (expandedDate !== dateStr) {
+                    toggleDateExpansion(dateStr);
+                }
+
+                // Close calendar
+                setShowCalendar(false);
+            }
+        } else {
+            // Set filtered date to show the "no jobs" message
+            setFilteredDate(dateStr);
+            setShowCalendar(false);
+
+            // Show alert
+            alert("No jobs found on the selected date.");
+        }
+    };
+
+    // Expose handleDateSelect to parent component via ref
+    React.useImperativeHandle(ref, () => ({
+        handleDateSelect
+    }), [summary, allDates, expandedDate, itemsPerPage, setCurrentPage, setShowCalendar, setFilteredDate, setExpandedDate]);
 
     // Handle status change
     const handleStatusChange = async (jobId: string, newStatus: string, date: string) => {
@@ -480,186 +536,142 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         );
     }
 
-    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-
     // Apply filter if filteredDate is set
     const displayedDates = filteredDate ? [filteredDate] : allDates;
-
-
-    if (allDates.length === 0) {
-        return (
-            <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No jobs found.</p>
-            </div>
-        );
-    }
 
     const totalPages = Math.ceil(displayedDates.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const currentDates = displayedDates.slice(startIndex, startIndex + itemsPerPage);
 
+
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setCurrentPage(newPage);
-            // Optional: Scroll to top of list
-            // window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
-
-    const handleDateSelect = async (selectedDate: Date) => {
-        // Construct YYYY-MM-DD string using local time components to match summary keys
-        const year = selectedDate.getFullYear();
-        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(selectedDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
-        if (summary.hasOwnProperty(dateStr)) {
-            // Find page and navigate
-            const dateIndex = allDates.indexOf(dateStr);
-            if (dateIndex !== -1) {
-                // Determine page if not filtered
-                // const targetPage = Math.floor(dateIndex / itemsPerPage) + 1;
-                setCurrentPage(1); // Set to first page of filtered view
-                setFilteredDate(dateStr); // Set filter
-
-                // Automatically expand
-                if (expandedDate !== dateStr) {
-                    toggleDateExpansion(dateStr);
-                }
-
-                // Close calendar
-                setShowCalendar(false);
-            }
-        }
-    };
-
-    const todayFormatted = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
 
     return (
         <div>
-            <div
-                onClick={() => {
-                    setShowCalendar(!showCalendar);
-                    if (filteredDate) {
-                        setFilteredDate(null);
-                        setExpandedDate(null);
-                    }
-                }}
-                style={{
-                    display: 'inline-flex',
-                    height: '47px',
-                    padding: '16px 18px 17px 35px',
-                    alignItems: 'flex-start',
-                    gap: '24px',
-                    borderRadius: '15px',
-                    border: '1px solid #000',
-                    color: '#000',
-                    cursor: 'pointer'
-                }}
-            >
-                <h1 className="text-sm font-medium">{todayFormatted}</h1>
-                <img
-                    src="/chevron-bottom.svg"
-                    alt="chevron"
-                    style={{
-                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s'
-                    }}
-                />
-            </div>
-
-            {
-                showCalendar && (
-                    <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px' }}>
-                        <JobCalendar onDateSelect={handleDateSelect} />
-                    </div>
-                )
-            }
-            <div className="space-y-2 mt-4">
-                {currentDates.map((date, index) => {
-                    const count = summary[date] || 0;
-                    const jobs = jobsData[date] || [];
-                    const isExpanded = expandedDate === date;
-                    const dateObj = new Date(date);
-                    const formattedDate = dateObj.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    });
-
-                    return (
-                        <div key={date}>
-                            <div
-                                onClick={() => toggleDateExpansion(date)}
-                                className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
-                                style={{ backgroundColor: '#E3FFE7' }}
+            {allDates.length === 0 ? (
+                <div className="bg-white p-4 rounded-lg shadow mt-6">
+                    <p className="text-gray-500">No jobs found.</p>
+                </div>
+            ) : filteredDate && displayedDates.length === 0 ? (
+                <div className="p-6 bg-yellow-50 rounded-lg text-center border border-yellow-200 mt-4">
+                    <p className="text-yellow-800 font-medium text-lg">⚠️ No jobs found on selected date</p>
+                    <p className="text-yellow-600 text-sm mt-2">Please select a different date to view available jobs.</p>
+                    <button
+                        onClick={() => {
+                            setFilteredDate(null);
+                            setExpandedDate(null);
+                        }}
+                        className="mt-4 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                    >
+                        Clear Filter
+                    </button>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {filteredDate && displayedDates.length > 0 && (
+                        <div className="flex justify-start mb-4">
+                            <button
+                                onClick={() => {
+                                    setFilteredDate(null);
+                                    setExpandedDate(null);
+                                }}
+                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors border border-gray-300"
                             >
-                                <div className="flex items-center gap-32">
-                                    <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
-                                    <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-blue-700 font-semibold">
-                                    <img
-                                        src="/chevron-icon.svg"
-                                        alt="chevron"
-                                        className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                                    />
-                                </div>
-                            </div>
+                                ← Show All Dates
+                            </button>
+                        </div>
+                    )}
+                    <div className="space-y-2 mt-4">
+                        {currentDates.map((date, index) => {
+                            const count = summary[date] || 0;
+                            const jobs = jobsData[date] || [];
+                            const isExpanded = expandedDate === date;
+                            const dateObj = new Date(date);
+                            const formattedDate = dateObj.toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                            });
 
-                            {isExpanded && (
-                                <div className="mt-3">
-                                    {jobs.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {jobs
-                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
-                                                .map((job) => renderJobCard(job, date))}
+                            return (
+                                <div key={date}>
+                                    <div
+                                        onClick={() => toggleDateExpansion(date)}
+                                        className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
+                                        style={{ backgroundColor: '#E3FFE7' }}
+                                    >
+                                        <div className="flex items-center gap-32">
+                                            <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
+                                            <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <SkeletonJobCard />
-                                            <SkeletonJobCard />
+                                        <div className="flex items-center gap-3 text-blue-700 font-semibold">
+                                            <img
+                                                src="/chevron-icon.svg"
+                                                alt="chevron"
+                                                className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {isExpanded && (
+                                        <div className="mt-3">
+                                            {jobs.length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {jobs
+                                                        .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                        .map((job) => renderJobCard(job, date))}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <SkeletonJobCard />
+                                                    <SkeletonJobCard />
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
+                            );
+                        })}
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                    <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
-                        <button
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#171717] text-white hover:bg-black'
-                                }`}
-                        >
-                            <ChevronLeft size={16} />
-                        </button>
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-[#171717] text-white hover:bg-black'
+                                        }`}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
 
-                        <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
-                            {String(currentPage).padStart(2, '0')}
-                        </span>
+                                <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                                    {String(currentPage).padStart(2, '0')}
+                                </span>
 
-                        <button
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#171717] text-white hover:bg-black'
-                                }`}
-                        >
-                            <ChevronRight size={16} />
-                        </button>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-[#171717] text-white hover:bg-black'
+                                        }`}
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
-};
+});
 
 export default ScoredJobsRegularList;

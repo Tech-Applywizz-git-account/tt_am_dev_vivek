@@ -225,18 +225,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   </div>
                 </div>
 
-                {/* Remember me checkbox */}
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="w-4 h-4 border-gray-300 rounded focus:ring-green-400"
-                  />
-                  <label htmlFor="remember" className="ml-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 500, fontSize: '14px' }}>
-                    Remember for 30 days
-                  </label>
-                </div>
-
                 {/* Login Button */}
                 <button
                   type="submit"
