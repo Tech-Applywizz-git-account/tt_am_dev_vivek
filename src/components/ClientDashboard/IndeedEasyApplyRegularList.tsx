@@ -45,6 +45,22 @@ interface DateJobsResponse {
 
 interface IndeedEasyApplyRegularListProps {
     applywizzId?: string;
+    showScoringModal: boolean;
+    setShowScoringModal: (show: boolean) => void;
+    showFloatingButton: boolean;
+    setShowFloatingButton: (show: boolean) => void;
+    isScoringTriggered: boolean;
+    setIsScoringTriggered: (triggered: boolean) => void;
+    showCalendar: boolean;
+    setShowCalendar: (show: boolean) => void;
+    filteredDate: string | null;
+    setFilteredDate: (date: string | null) => void;
+    expandedDate: string | null;
+    setExpandedDate: (date: string | null) => void;
+}
+
+export interface IndeedEasyApplyRegularListRef {
+    handleDateSelect: (date: Date) => Promise<void>;
 }
 
 const statusOptions = [
@@ -102,19 +118,27 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
     );
 };
 
-const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({ applywizzId }) => {
+const IndeedEasyApplyRegularList = React.forwardRef<IndeedEasyApplyRegularListRef, IndeedEasyApplyRegularListProps>(({
+    applywizzId,
+    showScoringModal,
+    setShowScoringModal,
+    showFloatingButton,
+    setShowFloatingButton,
+    isScoringTriggered,
+    setIsScoringTriggered,
+    showCalendar,
+    setShowCalendar,
+    filteredDate,
+    setFilteredDate,
+    expandedDate,
+    setExpandedDate
+}, ref) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [expandedDate, setExpandedDate] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
-
-    // Job Scoring Modal States
-    const [showScoringModal, setShowScoringModal] = useState(false);
-    const [showFloatingButton, setShowFloatingButton] = useState(false);
-    const [isScoringTriggered, setIsScoringTriggered] = useState(false);
 
     // Fetch summary
     const fetchSummary = async () => {
@@ -230,6 +254,47 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
             fetchJobsForDate(date);
         }
     };
+
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    const handleDateSelect = async (selectedDate: Date) => {
+        // Construct YYYY-MM-DD string using local time components to match summary keys
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        if (summary.hasOwnProperty(dateStr)) {
+            // Set filtered date to show only this date
+            setFilteredDate(dateStr);
+
+            // Find page and navigate (though setFilteredDate will make it page 1 usually)
+            const dateIndex = allDates.indexOf(dateStr);
+            if (dateIndex !== -1) {
+                setCurrentPage(1); // Set to page 1 since only one date will be shown
+
+                // Automatically expand
+                if (expandedDate !== dateStr) {
+                    toggleDateExpansion(dateStr);
+                }
+
+                // Close calendar
+                setShowCalendar(false);
+            }
+        } else {
+            // Set filtered date to show the "no jobs" message
+            setFilteredDate(dateStr);
+            setShowCalendar(false);
+
+            // Show alert
+            alert("No jobs found on the selected date.");
+        }
+    };
+
+    // Expose handleDateSelect to parent component via ref
+    React.useImperativeHandle(ref, () => ({
+        handleDateSelect
+    }), [summary, allDates, expandedDate, itemsPerPage, setCurrentPage, setShowCalendar, setFilteredDate, setExpandedDate]);
 
     // Handle status change
     const handleStatusChange = async (jobId: string, newStatus: string, date: string) => {
@@ -524,10 +589,12 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
         );
     }
 
-    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-    const totalPages = Math.ceil(allDates.length / itemsPerPage);
+    // Apply filter if filteredDate is set
+    const displayedDates = filteredDate ? [filteredDate] : allDates;
+
+    const totalPages = Math.ceil(displayedDates.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const currentDates = allDates.slice(startIndex, startIndex + itemsPerPage);
+    const currentDates = displayedDates.slice(startIndex, startIndex + itemsPerPage);
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -540,18 +607,40 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
     return (
         <div>
             <div className="flex items-center justify-between mb-4">
-
-                {/* Floating Button - Inline with heading */}
-                {showFloatingButton && (
-                    <JobScoringFloatingButton onClick={handleFloatingButtonClick} />
-                )}
             </div>
             {allDates.length === 0 ? (
                 <div className="bg-white p-4 rounded-lg shadow mt-6">
                     <p className="text-gray-500">No Indeed easy apply jobs found.</p>
                 </div>
+            ) : filteredDate && displayedDates.length === 0 ? (
+                <div className="p-6 bg-yellow-50 rounded-lg text-center border border-yellow-200 mt-4">
+                    <p className="text-yellow-800 font-medium text-lg">⚠️ No jobs found on selected date</p>
+                    <p className="text-yellow-600 text-sm mt-2">Please select a different date to view available jobs.</p>
+                    <button
+                        onClick={() => {
+                            setFilteredDate(null);
+                            setExpandedDate(null);
+                        }}
+                        className="mt-4 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                    >
+                        Clear Filter
+                    </button>
+                </div>
             ) : (
                 <div className="space-y-2">
+                    {filteredDate && displayedDates.length > 0 && (
+                        <div className="flex justify-start mb-4">
+                            <button
+                                onClick={() => {
+                                    setFilteredDate(null);
+                                    setExpandedDate(null);
+                                }}
+                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors border border-gray-300"
+                            >
+                                ← Show All Dates
+                            </button>
+                        </div>
+                    )}
                     {currentDates.map((date, index) => {
                         const count = summary[date] || 0;
                         const jobs = jobsData[date] || [];
@@ -612,8 +701,8 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
                         className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#171717] text-white hover:bg-black'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#171717] text-white hover:bg-black'
                             }`}
                     >
                         <ChevronLeft size={16} />
@@ -627,8 +716,8 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
                         className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#171717] text-white hover:bg-black'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#171717] text-white hover:bg-black'
                             }`}
                     >
                         <ChevronRight size={16} />
@@ -646,6 +735,6 @@ const IndeedEasyApplyRegularList: React.FC<IndeedEasyApplyRegularListProps> = ({
 
         </div>
     );
-};
+});
 
 export default IndeedEasyApplyRegularList;

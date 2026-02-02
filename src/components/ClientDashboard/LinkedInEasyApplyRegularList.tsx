@@ -52,6 +52,16 @@ interface LinkedInEasyApplyRegularListProps {
     setShowFloatingButton: (show: boolean) => void;
     isScoringTriggered: boolean;
     setIsScoringTriggered: (triggered: boolean) => void;
+    showCalendar: boolean;
+    setShowCalendar: (show: boolean) => void;
+    filteredDate: string | null;
+    setFilteredDate: (date: string | null) => void;
+    expandedDate: string | null;
+    setExpandedDate: (date: string | null) => void;
+}
+
+export interface LinkedInEasyApplyRegularListRef {
+    handleDateSelect: (date: Date) => Promise<void>;
 }
 
 const statusOptions = [
@@ -109,23 +119,26 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
     );
 };
 
-const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> = ({
+const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularListRef, LinkedInEasyApplyRegularListProps>(({
     applywizzId,
     showScoringModal,
     setShowScoringModal,
     showFloatingButton,
     setShowFloatingButton,
     isScoringTriggered,
-    setIsScoringTriggered
-}) => {
+    setIsScoringTriggered,
+    showCalendar,
+    setShowCalendar,
+    filteredDate,
+    setFilteredDate,
+    expandedDate,
+    setExpandedDate
+}, ref) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [expandedDate, setExpandedDate] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [filteredDate, setFilteredDate] = useState<string | null>(null);
     const itemsPerPage = 10;
 
     // Fetch summary
@@ -243,6 +256,48 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
             fetchJobsForDate(date);
         }
     };
+
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    const handleDateSelect = async (selectedDate: Date) => {
+        // Construct YYYY-MM-DD string using local time components to match summary keys
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        if (summary.hasOwnProperty(dateStr)) {
+            // Set filtered date to show only this date
+            setFilteredDate(dateStr);
+
+            // Find page and navigate (though setFilteredDate will make it page 1 usually)
+            const dateIndex = allDates.indexOf(dateStr);
+            if (dateIndex !== -1) {
+                setCurrentPage(1); // Set to page 1 since only one date will be shown
+
+                // Automatically expand
+                if (expandedDate !== dateStr) {
+                    toggleDateExpansion(dateStr);
+                }
+
+                // Close calendar
+                setShowCalendar(false);
+            }
+        } else {
+            // Set filtered date to show the "no jobs" message
+            setFilteredDate(dateStr);
+            setShowCalendar(false);
+
+            // Show alert
+            alert("No jobs found on the selected date.");
+        }
+    };
+
+    // Expose handleDateSelect to parent component via ref
+    React.useImperativeHandle(ref, () => ({
+        handleDateSelect
+    }), [summary, allDates, expandedDate, itemsPerPage, setCurrentPage, setShowCalendar, setFilteredDate, setExpandedDate]);
+
 
     // Handle status change
     const handleStatusChange = async (jobId: string, newStatus: string, date: string) => {
@@ -537,8 +592,6 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
         );
     }
 
-    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-
     // Apply filter if filteredDate is set
     const displayedDates = filteredDate ? [filteredDate] : allDates;
 
@@ -554,83 +607,43 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
         }
     };
 
-
-
-    const handleDateSelect = async (selectedDate: Date) => {
-        // Construct YYYY-MM-DD string using local time components to match summary keys
-        const year = selectedDate.getFullYear();
-        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(selectedDate.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
-        if (summary.hasOwnProperty(dateStr)) {
-            // Find page and navigate
-            const dateIndex = allDates.indexOf(dateStr);
-            if (dateIndex !== -1) {
-                const targetPage = Math.floor(dateIndex / itemsPerPage) + 1;
-                setCurrentPage(targetPage);
-
-                // Automatically expand
-                if (expandedDate !== dateStr) {
-                    toggleDateExpansion(dateStr);
-                }
-
-                // Close calendar
-                setShowCalendar(false);
-            }
-        } else {
-            alert("No tasks found on the selected date.");
-        }
-    };
-
-    const todayFormatted = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
-
     return (
         <div>
-            <div
-                onClick={() => {
-                    setShowCalendar(!showCalendar);
-                    if (filteredDate) {
-                        setFilteredDate(null); // Clear filter when opening calendar
-                        setExpandedDate(null); // Collapse
-                    }
-                }}
-                style={{
-                    display: 'inline-flex',
-                    height: '47px',
-                    padding: '16px 18px 17px 35px',
-                    alignItems: 'flex-start',
-                    gap: '24px',
-                    borderRadius: '15px',
-                    border: '1px solid #000',
-                    color: '#000',
-                    cursor: 'pointer'
-                }}
-            >
-                <h1 className="text-sm font-medium">{todayFormatted}</h1>
-                <img
-                    src="/chevron-bottom.svg"
-                    alt="chevron"
-                    style={{
-                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s'
-                    }}
-                />
-            </div>
-
-            {showCalendar && (
-                <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px' }}>
-                    <JobCalendar onDateSelect={handleDateSelect} />
-                </div>
-            )}
             <div className="flex items-center justify-between mb-4">
             </div>
             {allDates.length === 0 ? (
                 <div className="p-4 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
                     <p className="text-gray-500">No linkedin easy apply jobs found.</p>
                 </div>
+            ) : filteredDate && displayedDates.length === 0 ? (
+                <div className="p-6 bg-yellow-50 rounded-lg text-center border border-yellow-200 mt-4">
+                    <p className="text-yellow-800 font-medium text-lg">⚠️ No jobs found on selected date</p>
+                    <p className="text-yellow-600 text-sm mt-2">Please select a different date to view available jobs.</p>
+                    <button
+                        onClick={() => {
+                            setFilteredDate(null);
+                            setExpandedDate(null);
+                        }}
+                        className="mt-4 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                    >
+                        Clear Filter
+                    </button>
+                </div>
             ) : (
                 <div className="space-y-2">
+                    {filteredDate && displayedDates.length > 0 && (
+                        <div className="flex justify-start mb-4">
+                            <button
+                                onClick={() => {
+                                    setFilteredDate(null);
+                                    setExpandedDate(null);
+                                }}
+                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors border border-gray-300"
+                            >
+                                ← Show All Dates
+                            </button>
+                        </div>
+                    )}
                     {currentDates.map((date, index) => {
                         const count = summary[date] || 0;
                         const jobs = jobsData[date] || [];
@@ -725,6 +738,6 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
 
         </div>
     );
-};
+});
 
 export default LinkedInEasyApplyRegularList;
