@@ -27,18 +27,19 @@ const JobScoringModal: React.FC<JobScoringModalProps> = ({
             ></div>
 
             {/* Modal */}
-            <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
+            <div className="relative rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden" style={{ backgroundColor: '#F1FFF3' }}>
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+                <div className="px-6 py-4 flex items-center justify-between" style={{ backgroundColor: '#393737' }}>
                     <div className="flex items-center gap-3">
                         <div className="bg-white/20 p-2 rounded-lg">
-                            <Zap className="text-white" size={24} />
+                            <Zap className="text-black" size={24} style={{ color: '#f8f3f3ff' }} />
                         </div>
-                        <h2 className="text-xl font-bold text-white">Job Scoring Required</h2>
+                        <h2 className="text-xl font-bold" style={{ color: '#fbf9f9ff' }}>Job Scoring Required</h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg"
+                        className="text-black/80 hover:text-black transition-colors p-1 hover:bg-black/10 rounded-lg"
+                        style={{ color: '#f7f4f4ff' }}
                     >
                         <X size={24} />
                     </button>
@@ -46,26 +47,26 @@ const JobScoringModal: React.FC<JobScoringModalProps> = ({
 
                 {/* Content */}
                 <div className="p-6 space-y-4">
-                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                        <p className="text-gray-700 leading-relaxed">
+                    <div className="border-l-4 border-green-500 p-4 rounded-r-lg" style={{ backgroundColor: '#ffffff' }}>
+                        <p className="leading-relaxed" style={{ color: '#000000' }}>
                             We trigger job scoring and job renewal to ensure you receive the most recent jobs from the past 24 hours.
                             Since your profile was not included in the earlier scoring cycle, jobs haven't been scored for your profile yet.
                         </p>
                     </div>
 
                     <div className="space-y-3">
-                        <p className="text-gray-700 leading-relaxed">
+                        <p className="leading-relaxed" style={{ color: '#000000' }}>
                             Click the button below to start job scoring based on your profile. We will generate a match score for each job using your resume data.
                         </p>
 
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+                        <div className="border border-green-200 rounded-lg p-4 space-y-2" style={{ backgroundColor: '#ffffff' }}>
                             <div className="flex items-start gap-2">
-                                <Clock className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
-                                <p className="text-sm text-gray-700">
+                                <Clock className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                                <p className="text-sm" style={{ color: '#000000' }}>
                                     Once you click the button, scoring will begin and may take up to <strong>10 minutes</strong> to complete.
                                 </p>
                             </div>
-                            <p className="text-sm text-gray-700 ml-6">
+                            <p className="text-sm ml-6" style={{ color: '#000000' }}>
                                 However, you don't need to wait that long—scored jobs will start appearing within <strong>1 minute</strong>.
                             </p>
                         </div>
@@ -74,23 +75,24 @@ const JobScoringModal: React.FC<JobScoringModalProps> = ({
                             <div className="flex items-start gap-2">
                                 <RefreshCw className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
                                 <div className="space-y-1 text-sm text-gray-700">
-                                    <p>🔄 <strong>Reload the page after a minute</strong> to see initial results.</p>
-                                    <p>🔄 <strong>Reload again after 10–15 minutes</strong> to view all scored job links.</p>
+                                    <p style={{ color: '#000000' }}>🔄 <strong>Reload the page after a minute</strong> to see initial results.</p>
+                                    <p style={{ color: '#000000' }}>🔄 <strong>Reload again after 10–15 minutes</strong> to view all scored job links.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <p className="text-sm text-gray-600 italic">
+                        <p className="text-sm italic" style={{ color: '#000000' }}>
                             Job scoring will continue to run seamlessly for any additional jobs.
                         </p>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200" style={{ backgroundColor: '#F1FFF3' }}>
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                        className="px-4 py-2 font-medium transition-colors"
+                        style={{ color: '#000000' }}
                     >
                         Close
                     </button>
@@ -100,10 +102,11 @@ const JobScoringModal: React.FC<JobScoringModalProps> = ({
                             disabled={isButtonDisabled}
                             onMouseEnter={() => setIsHovered(true)}
                             onMouseLeave={() => setIsHovered(false)}
-                            className={`px-6 py-3 rounded-lg font-bold text-white transition-all duration-200 flex items-center gap-2 ${isButtonDisabled
-                                    ? "bg-gray-400 cursor-not-allowed"
-                                    : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl"
+                            className={`px-6 py-3 rounded-lg font-bold transition-all duration-200 flex items-center gap-2 ${isButtonDisabled
+                                ? "bg-gray-400 cursor-not-allowed text-gray-700"
+                                : "shadow-lg hover:shadow-xl"
                                 }`}
+                            style={!isButtonDisabled ? { backgroundColor: '#92E69D', color: '#000000' } : {}}
                         >
                             <Zap size={18} />
                             <span>Start Job Scoring</span>

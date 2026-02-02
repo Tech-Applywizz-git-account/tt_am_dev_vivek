@@ -390,7 +390,7 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                     </h3>
                                     {/* Resume Buttons */}
                                     <div className="flex items-center gap-2">
-                                        {(additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) && (
+                                        {/* {(additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) && (
                                             <button
                                                 onClick={handleResumeDownload}
                                                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
@@ -398,14 +398,14 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                                 <Download className="h-4 w-4" />
                                                 View Resume
                                             </button>
-                                        )}
+                                        )} */}
                                         <button
                                             onClick={handleChangeResumeClick}
                                             disabled={uploading}
                                             className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             <Upload className="h-4 w-4" />
-                                            {uploading ? 'Uploading...' : (additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) ? 'Change Resume' : 'Upload Resume'}
+                                            {uploading ? 'Uploading...' : (additional?.resume_url || additional?.resume_path || additional?.resume_s3_path) ? 'Update Resume' : 'Upload Resume'}
                                         </button>
                                         {/* Hidden file input */}
                                         <input

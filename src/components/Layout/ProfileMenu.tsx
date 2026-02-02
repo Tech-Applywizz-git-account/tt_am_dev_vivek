@@ -83,7 +83,7 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) 
             {/* View Profile - Only for clients */}
             {user.role === 'client' && (optedJobLinks) && (
               <button
-                className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
                 onClick={() => {
                   setOpen(false);
                   setShowViewProfileModal(true);
@@ -94,7 +94,7 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) 
               </button>
             )}
             <button
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
               onClick={() => {
                 setOpen(false);
                 setShowChangePasswordModal(true);

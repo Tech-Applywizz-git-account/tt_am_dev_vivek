@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, RefreshCw, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, DollarSign, Building, Monitor, ArrowRight } from "lucide-react";
+import { Calendar, RefreshCw, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, DollarSign, Building, Monitor, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -106,6 +106,8 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // Fetch summary
     const fetchSummary = async () => {
@@ -475,9 +477,20 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
         );
     }
 
-    const dates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const totalPages = Math.ceil(allDates.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentDates = allDates.slice(startIndex, startIndex + itemsPerPage);
 
-    if (dates.length === 0) {
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            // Optional: Scroll to top of list
+            // window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    if (allDates.length === 0) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
                 <p className="text-gray-500">No c2cw2 agency jobs found.</p>
@@ -493,7 +506,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
             </h2>
 
             <div className="space-y-2">
-                {dates.map((date, index) => {
+                {currentDates.map((date, index) => {
                     const count = summary[date] || 0;
                     const jobs = jobsData[date] || [];
                     const isExpanded = expandedDate === date;
@@ -512,7 +525,7 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                                 style={{ backgroundColor: '#E3FFE7' }}
                             >
                                 <div className="flex items-center gap-32">
-                                    <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{index + 1}.</span>
+                                    <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
                                     <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-blue-700 font-semibold">
@@ -544,6 +557,37 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                     );
                 })}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                    <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#171717] text-white hover:bg-black'
+                            }`}
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+
+                    <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                        {String(currentPage).padStart(2, '0')}
+                    </span>
+
+                    <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#171717] text-white hover:bg-black'
+                            }`}
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

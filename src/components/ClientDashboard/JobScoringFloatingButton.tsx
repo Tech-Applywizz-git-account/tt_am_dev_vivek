@@ -9,7 +9,7 @@ const JobScoringFloatingButton: React.FC<JobScoringFloatingButtonProps> = ({ onC
     return (
         <button
             onClick={onClick}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 group relative"
+            className="text-white bg-gradient-to-b from-[#F9F76C] to-[#14D530] text-black p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 group relative"
             title="Start Job Scoring"
         >
             <Zap size={20} className="animate-pulse" />

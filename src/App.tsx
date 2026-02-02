@@ -39,6 +39,7 @@ import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/
 import EasyApplySummaryList from './components/ClientDashboard/EasyApplySummaryList';
 import AppliedJobsList from './components/ClientDashboard/AppliedJobsList';
 import JobLinksList from './components/ClientDashboard/JobLinksList';
+import JobScoringFloatingButton from "./components/ClientDashboard/JobScoringFloatingButton";
 import ScoredJobsDashboard from './components/ClientDashboard/ScoredJobsDashboard';
 import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegularList';
 import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
@@ -180,6 +181,12 @@ function App() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   // State to store the selected client
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  // Lifted state for LinkedInEasyApplyRegularList
+  const [showScoringModal, setShowScoringModal] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const [isScoringTriggered, setIsScoringTriggered] = useState(false);
+
   // State to store whether the ticket edit modal is open
   const [isTicketEditModalOpen, setIsTicketEditModalOpen] = useState(false);
   // State to store whether the client edit modal is open
@@ -2017,9 +2024,23 @@ function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">LinkedIn Easy Apply</h1>
+              {showFloatingButton && (
+                <JobScoringFloatingButton onClick={() => {
+                  setShowFloatingButton(false);
+                  setShowScoringModal(true);
+                }} />
+              )}
             </div>
             {/* <LinkedInEasyApplyDashboard applywizzId={applywizzId} /> */}
-            <LinkedInEasyApplyRegularList applywizzId={applywizzId} />
+            <LinkedInEasyApplyRegularList
+              applywizzId={applywizzId}
+              showScoringModal={showScoringModal}
+              setShowScoringModal={setShowScoringModal}
+              showFloatingButton={showFloatingButton}
+              setShowFloatingButton={setShowFloatingButton}
+              isScoringTriggered={isScoringTriggered}
+              setIsScoringTriggered={setIsScoringTriggered}
+            />
           </div>
         );
 

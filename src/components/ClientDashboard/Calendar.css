@@ -1,0 +1,214 @@
+/* Calendar.css */
+@import url('https://fonts.googleapis.com/css?family=Montserrat');
+@import url('https://fonts.googleapis.com/css?family=Open+Sans');
+
+/* Variables flattened */
+/* $color1: #48A9A6; */
+/* $color5: #303633; */
+/* $color_bg: #C8D9E7; */
+
+.calendar-wrapper {
+    /* Renamed from body/html styles to a wrapper to avoid polluting global scope */
+    font-family: "Montserrat", sans-serif;
+    color: #303633;
+    /* background-color: #C8D9E7; */
+    /* Removing background from wrapper as it might be overlay */
+    position: relative;
+    outline: none;
+    perspective: 1000px;
+    width: 100%;
+    height: 500px;
+    /* Giving it some height context */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.content-wrapper {
+    position: relative;
+    width: 380px;
+    height: 420px;
+    /* top/left centering removed as we use flex in parent */
+    box-sizing: border-box;
+    /* transform: translate(-50%, -50%); */
+    transition: all 0.195s ease;
+    transform-style: preserve-3d;
+    background-color: white;
+    /* meaningful default */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    /* Added shadow for better visibility */
+    border-radius: 8px;
+    /* Added rounded corners */
+}
+
+.content-wrapper.is-rotated-left {
+    transform: rotateY(-4deg);
+}
+
+.content-wrapper.is-rotated-right {
+    transform: rotateY(4deg);
+}
+
+.left-wrapper {
+    background-color: white;
+    width: 100%;
+    float: none;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.right-wrapper {
+    display: none;
+}
+
+.header {
+    padding: 15px 0 20px;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.header i {
+    padding: 0 5px;
+    cursor: pointer;
+}
+
+.header span {
+    display: inline-block;
+    margin: 0 3px;
+    font-weight: 700;
+}
+
+.right-wrapper {
+    background-color: #48A9A6;
+    color: white;
+    transform-origin: left center;
+    transform: rotateY(110deg);
+    transition: all 0.5s;
+    /* Position absolute to overlay or float? Original was float. 
+     If we want the "book open" effect, it needs to handle 3d correctly.
+     The original has rotateY(110deg) initially? That means it's closed/hidden?
+     Ah, "is-active" makes it 0deg. So initially it is rotated away.
+  */
+    transform-style: preserve-3d;
+    position: absolute;
+    /* Changed to absolute to sit on top/next correctly in 3d space */
+    right: 0;
+    top: 0;
+}
+
+.right-wrapper.is-active {
+    transform: rotateY(0deg);
+}
+
+.right-wrapper .header {
+    text-align: left;
+    justify-content: center;
+}
+
+.right-wrapper .day {
+    font-size: 12em;
+    text-indent: -12px;
+    display: block;
+    font-weight: 700;
+}
+
+.right-wrapper .month {
+    font-size: 2.5em;
+    font-weight: 700;
+}
+
+.left-wrapper .showDate {
+    color: white;
+    text-align: right;
+    width: 100%;
+    margin-top: auto;
+    /* Push to bottom */
+}
+
+.left-wrapper .showDate i {
+    cursor: pointer;
+    background: #48A9A6;
+    border-radius: 4px;
+    padding: 8px 12px;
+    transform: scale(1);
+    transition: all 0.3s;
+}
+
+.left-wrapper .showDate i.is-active {
+    transform: scale(-1);
+}
+
+.left-wrapper table {
+    text-align: center;
+    font-family: "Open Sans", sans-serif;
+    width: 90%;
+    margin: 30px auto 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.left-wrapper table tbody:before {
+    content: "-";
+    display: block;
+    line-height: 0.75em;
+    color: transparent;
+}
+
+.left-wrapper table th {
+    color: #48A9A6;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.left-wrapper table td {
+    padding: 11px 5px;
+    color: rgba(206, 208, 206, 1);
+    /* $color4 */
+    font-size: 0.75em;
+    transition: all 0.3s;
+    position: relative;
+    cursor: pointer;
+}
+
+.left-wrapper table td::before {
+    content: "";
+    display: none;
+    width: 50%;
+    height: 2px;
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translate(-50%, -8px);
+    background-color: #48A9A6;
+}
+
+.left-wrapper table td.currentDay::before {
+    display: block;
+}
+
+.left-wrapper table td.selectable {
+    color: #303633;
+    /* $color_text */
+}
+
+.left-wrapper table td.selectable:hover {
+    background: #48A9A6;
+    color: white;
+    border-radius: 50%;
+    /* Added simpler circle hover */
+}
+
+.left-wrapper table td.active,
+.left-wrapper table td.hover {
+    background: #48A9A6;
+    color: white;
+    border-radius: 50%;
+    /* Circle for active date */
+}

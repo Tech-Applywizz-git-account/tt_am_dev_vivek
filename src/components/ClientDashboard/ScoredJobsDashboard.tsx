@@ -26,6 +26,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
     const [chartData, setChartData] = useState<ChartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
     // Fetch summary data
     const fetchSummaryData = async () => {
@@ -139,47 +140,59 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
     return (
         <div className="space-y-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                style={{
+                    backgroundColor: '#F1FFF3'
+                }}>
                 {/* Total Applications Card */}
-                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+                <div
+                    onClick={() => setSelectedCard('total')}
+                    className={`cursor-pointer transition-colors duration-300 rounded-xl p-6 text-gray-900 shadow-lg ${selectedCard === 'total' ? 'bg-[#A0FFAD]' : 'bg-[#87B1FF] hover:bg-[#A0FFAD]'}`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-indigo-100 text-sm font-medium">Total Applications</p>
+                            <p className="text-gray-700 text-sm font-medium">Total Applications</p>
                             <p className="text-3xl font-bold mt-2">{totalApplications}</p>
                         </div>
-                        <div className="bg-white/20 p-3 rounded-lg">
+                        <div className="bg-white/50 p-3 rounded-lg">
                             <TrendingUp size={28} />
                         </div>
                     </div>
                 </div>
 
                 {/* Regular Applications Card */}
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+                <div
+                    onClick={() => setSelectedCard('regular')}
+                    className={`cursor-pointer transition-colors duration-300 rounded-xl p-6 text-gray-900 shadow-lg ${selectedCard === 'regular' ? 'bg-[#A0FFAD]' : 'bg-[#87B1FF] hover:bg-[#A0FFAD]'}`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-blue-100 text-sm font-medium">Regular Applications</p>
+                            <p className="text-gray-700 text-sm font-medium">Regular Applications</p>
                             <p className="text-3xl font-bold mt-2">{totalRegular}</p>
-                            <p className="text-blue-100 text-xs mt-1">
+                            <p className="text-gray-700 text-xs mt-1">
                                 {totalApplications > 0 ? Math.round((totalRegular / totalApplications) * 100) : 0}% of total
                             </p>
                         </div>
-                        <div className="bg-white/20 p-3 rounded-lg">
+                        <div className="bg-white/50 p-3 rounded-lg">
                             <Briefcase size={28} />
                         </div>
                     </div>
                 </div>
 
                 {/* Easy Apply Card */}
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-6 text-white shadow-lg">
+                <div
+                    onClick={() => setSelectedCard('easy')}
+                    className={`cursor-pointer transition-colors duration-300 rounded-xl p-6 text-gray-900 shadow-lg ${selectedCard === 'easy' ? 'bg-[#A0FFAD]' : 'bg-[#87B1FF] hover:bg-[#A0FFAD]'}`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-emerald-100 text-sm font-medium">Easy Apply</p>
+                            <p className="text-gray-700 text-sm font-medium">Easy Apply</p>
                             <p className="text-3xl font-bold mt-2">{totalEasyApply}</p>
-                            <p className="text-emerald-100 text-xs mt-1">
+                            <p className="text-gray-700 text-xs mt-1">
                                 {totalApplications > 0 ? Math.round((totalEasyApply / totalApplications) * 100) : 0}% of total
                             </p>
                         </div>
-                        <div className="bg-white/20 p-3 rounded-lg">
+                        <div className="bg-white/50 p-3 rounded-lg">
                             <Zap size={28} />
                         </div>
                     </div>
@@ -187,11 +200,10 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
             </div>
 
             {/* Chart */}
-            <div className="bg-white p-6 shadow-lg rounded-xl border border-gray-100">
+            <div
+                className="p-6 shadow-lg rounded-xl"
+                style={{ backgroundColor: "#F1FFF3" }}>
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-lg">
-                        <Calendar className="text-white" size={20} />
-                    </div>
                     <h2 className="text-xl font-bold text-gray-800">Applications Over Time</h2>
                 </div>
 

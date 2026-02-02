@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Linkedin, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, DollarSign, Building, Monitor, ArrowRight } from "lucide-react";
+import { Calendar as CalendarIcon, Linkedin, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Briefcase, DollarSign, Building, Monitor, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import JobScoringModal from "./JobScoringModal";
 import JobScoringFloatingButton from "./JobScoringFloatingButton";
+import JobCalendar from "./Calendar";
 
 // ✅ Types
 interface JobItem {
@@ -45,6 +46,12 @@ interface DateJobsResponse {
 
 interface LinkedInEasyApplyRegularListProps {
     applywizzId?: string;
+    showScoringModal: boolean;
+    setShowScoringModal: (show: boolean) => void;
+    showFloatingButton: boolean;
+    setShowFloatingButton: (show: boolean) => void;
+    isScoringTriggered: boolean;
+    setIsScoringTriggered: (triggered: boolean) => void;
 }
 
 const statusOptions = [
@@ -102,17 +109,24 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
     );
 };
 
-const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> = ({ applywizzId }) => {
+const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> = ({
+    applywizzId,
+    showScoringModal,
+    setShowScoringModal,
+    showFloatingButton,
+    setShowFloatingButton,
+    isScoringTriggered,
+    setIsScoringTriggered
+}) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
-
-    // Job Scoring Modal States
-    const [showScoringModal, setShowScoringModal] = useState(false);
-    const [showFloatingButton, setShowFloatingButton] = useState(false);
-    const [isScoringTriggered, setIsScoringTriggered] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [filteredDate, setFilteredDate] = useState<string | null>(null);
+    const itemsPerPage = 10;
 
     // Fetch summary
     const fetchSummary = async () => {
@@ -523,24 +537,101 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
         );
     }
 
-    const dates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    // Apply filter if filteredDate is set
+    const displayedDates = filteredDate ? [filteredDate] : allDates;
+
+    const totalPages = Math.ceil(displayedDates.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentDates = displayedDates.slice(startIndex, startIndex + itemsPerPage);
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            // Optional: Scroll to top of list
+            // window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+
+
+    const handleDateSelect = async (selectedDate: Date) => {
+        // Construct YYYY-MM-DD string using local time components to match summary keys
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        if (summary.hasOwnProperty(dateStr)) {
+            // Find page and navigate
+            const dateIndex = allDates.indexOf(dateStr);
+            if (dateIndex !== -1) {
+                const targetPage = Math.floor(dateIndex / itemsPerPage) + 1;
+                setCurrentPage(targetPage);
+
+                // Automatically expand
+                if (expandedDate !== dateStr) {
+                    toggleDateExpansion(dateStr);
+                }
+
+                // Close calendar
+                setShowCalendar(false);
+            }
+        } else {
+            alert("No tasks found on the selected date.");
+        }
+    };
+
+    const todayFormatted = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
-
-                {/* Floating Button - Inline with heading */}
-                {showFloatingButton && (
-                    <JobScoringFloatingButton onClick={handleFloatingButtonClick} />
-                )}
+            <div
+                onClick={() => {
+                    setShowCalendar(!showCalendar);
+                    if (filteredDate) {
+                        setFilteredDate(null); // Clear filter when opening calendar
+                        setExpandedDate(null); // Collapse
+                    }
+                }}
+                style={{
+                    display: 'inline-flex',
+                    height: '47px',
+                    padding: '16px 18px 17px 35px',
+                    alignItems: 'flex-start',
+                    gap: '24px',
+                    borderRadius: '15px',
+                    border: '1px solid #000',
+                    color: '#000',
+                    cursor: 'pointer'
+                }}
+            >
+                <h1 className="text-sm font-medium">{todayFormatted}</h1>
+                <img
+                    src="/chevron-bottom.svg"
+                    alt="chevron"
+                    style={{
+                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s'
+                    }}
+                />
             </div>
-            {dates.length === 0 ? (
+
+            {showCalendar && (
+                <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px' }}>
+                    <JobCalendar onDateSelect={handleDateSelect} />
+                </div>
+            )}
+            <div className="flex items-center justify-between mb-4">
+            </div>
+            {allDates.length === 0 ? (
                 <div className="p-4 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
                     <p className="text-gray-500">No linkedin easy apply jobs found.</p>
                 </div>
             ) : (
                 <div className="space-y-2">
-                    {dates.map((date, index) => {
+                    {currentDates.map((date, index) => {
                         const count = summary[date] || 0;
                         const jobs = jobsData[date] || [];
                         const isExpanded = expandedDate === date;
@@ -559,7 +650,7 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
                                     style={{ backgroundColor: '#E3FFE7' }}
                                 >
                                     <div className="flex items-center gap-32">
-                                        <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{index + 1}.</span>
+                                        <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
                                         <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-blue-700 font-semibold">
@@ -592,6 +683,38 @@ const LinkedInEasyApplyRegularList: React.FC<LinkedInEasyApplyRegularListProps> 
                     })}
                 </div>
             )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                    <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#171717] text-white hover:bg-black'
+                            }`}
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+
+                    <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                        {String(currentPage).padStart(2, '0')}
+                    </span>
+
+                    <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#171717] text-white hover:bg-black'
+                            }`}
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            )}
+
             {/* Job Scoring Modal */}
             <JobScoringModal
                 isOpen={showScoringModal}
