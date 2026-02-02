@@ -59,6 +59,7 @@ import C2CW2JobsRegularList from './components/ClientDashboard/C2CW2JobsRegularL
 import JobTrackingDashboard from './components/ClientDashboard/JobTrackingDashboard';
 import { useAccount } from './contexts/AccountContext';
 import ReportPage from './components/Report/ReportPage';
+import PricingSection from './components/Pricing/PricingSection';
 
 
 function App() {
@@ -1122,261 +1123,106 @@ function App() {
 
   // Function to handle direct onboarding without role assignment
   const handleDirectOnboard = async (client: any) => {
-    const { error: insertError } = await supabase.from('clients').insert({
-      id: client.id,
-      full_name: client.full_name,
-      personal_email: client.personal_email.trim().toLowerCase(),
-      whatsapp_number: client.whatsapp_number,
-      callable_phone: client.callable_phone,
-      company_email: client.company_email.trim().toLowerCase(),
-      job_role_preferences: client.job_role_preferences,
-      salary_range: client.salary_range,
-      location_preferences: client.location_preferences,
-      work_auth_details: client.work_auth_details,
-      visa_type: client.visa_type,
-      onboarded_by: currentUser!.id,
-      sponsorship: client.sponsorship,
-      applywizz_id: client.applywizz_id,
-      badge_value: client.badge_value,
-      created_at: new Date().toISOString(),
-      update_at: new Date().toISOString(),
-      opted_job_links: true,
-    });
-    if (insertError) {
-      alert("Failed to complete onboarding");
-      console.error("Onboarding failed:", insertError.message);
-      return;
-    }
-    const { error: additionalInfoError } = await supabase.from('clients_additional_information').insert({
-      id: client.id,
-      applywizz_id: client.applywizz_id,
-      resume_url: client.resume_url,
-      resume_path: client.resume_path,
-      start_date: client.start_date,
-      end_date: client.end_date,
-      no_of_applications: client.no_of_applications,
-      is_over_18: client.is_over_18,
-      eligible_to_work_in_us: client.eligible_to_work_in_us,
-      authorized_without_visa: client.authorized_without_visa,
-      require_future_sponsorship: client.require_future_sponsorship,
-      can_perform_essential_functions: client.can_perform_essential_functions,
-      worked_for_company_before: client.worked_for_company_before,
-      discharged_for_policy_violation: client.discharged_for_policy_violation,
-      referred_by_agency: client.referred_by_agency,
-      highest_education: client.highest_education,
-      university_name: client.university_name,
-      cumulative_gpa: client.cumulative_gpa,
-      desired_start_date: client.desired_start_date,
-      willing_to_relocate: client.willing_to_relocate,
-      can_work_3_days_in_office: client.can_work_3_days_in_office,
-      role: client.role,
-      experience: client.experience,
-      work_preferences: client.work_preferences,
-      alternate_job_roles: client.alternate_job_roles,
-      exclude_companies: client.exclude_companies,
-      convicted_of_felony: client.convicted_of_felony,
-      felony_explanation: client.felony_explanation,
-      pending_investigation: client.pending_investigation,
-      willing_background_check: client.willing_background_check,
-      willing_drug_screen: client.willing_drug_screen,
-      failed_or_refused_drug_test: client.failed_or_refused_drug_test,
-      uses_substances_affecting_duties: client.uses_substances_affecting_duties,
-      substances_description: client.substances_description,
-      can_provide_legal_docs: client.can_provide_legal_docs,
-      gender: client.gender,
-      is_hispanic_latino: client.is_hispanic_latino,
-      race_ethnicity: client.race_ethnicity,
-      veteran_status: client.veteran_status,
-      disability_status: client.disability_status,
-      has_relatives_in_company: client.has_relatives_in_company,
-      relatives_details: client.relatives_details,
-      state_of_residence: client.state_of_residence,
-      zip_or_country: client.zip_or_country,
-      main_subject: client.main_subject,
-      graduation_year: client.graduation_year,
-      add_ons_info: client.add_ons_info,
-      github_url: client.github_url,
-      linked_in_url: client.linked_in_url
-    });
-
-    if (additionalInfoError) {
-      console.error("Failed to insert additional client information:", additionalInfoError.message);
-    }
-
-    const name = client.full_name?.trim();
-    const email = client.company_email?.trim().toLowerCase();
-    const password = "Created@123";
-    const role = 'client';
-    const department = 'Client Services';
-
-
-    const { data: userData, error } = await SupabaseAdminCreateClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // User can login immediately
-    });
-    if (userData) console.log("Created user:", userData.user);
-
-    if (error) {
-      if (error.message.includes('already been registered')) {
-        console.log("Error", error)
-        console.error(`❌ Error creating ${client.company_email} : Already registered`);
-      } else {
-        console.log("Error", error)
-        console.error(`❌ Error creating ${client.company_email} : ${error.message}`);
-      }
-    } else {
-      const { error: userInsertError } = await supabase.from('users').insert({
-        id: userData.user.id, // must match auth.users.id
-        name: name,
-        email: email,
-        role: 'client',
-        department: 'Client Services',
-        is_active: true,
-      });
-
-      if (userInsertError) {
-        console.error(`❌ Error inserting into users table for ${client.company_email} : ${userInsertError.message}`);
-        console.error(userInsertError);
-      }
-    }
     try {
-      const apiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/client-create`;
+      console.log('🚀 Starting direct onboarding for:', client.applywizz_id);
 
-      // Validate required fields before sending
-      if (!client.company_email || !client.full_name) {
-        console.error('❌ Missing required fields:', {
-          email: client.company_email,
-          name: client.full_name
-        });
-        alert('Cannot sync to external database: Missing email or name');
-        return;
-      }
-
-      // Map data to match external database schema exactly
+      // Prepare payload for the API
       const payload = {
-        // Core identification
-        "email": client.company_email.trim().toLowerCase(),
-        "name": client.full_name.trim(),
+        // Required fields
+        full_name: client.full_name,
+        email: client.company_email.trim().toLowerCase(),
+        phone: client.whatsapp_number || client.callable_phone,
+        experience: client.experience,
+        applywizz_id: client.applywizz_id,
+        gender: client.gender,
+        state_of_residence: client.state_of_residence,
+        zip_or_country: client.zip_or_country,
+        resume_s3_path: client.resume_url,
+        start_date: client.start_date,
+        job_role_preferences: client.job_role_preferences,
+        visa_type: client.visa_type,
+        location_preferences: client.location_preferences,
 
-        // Experience and location
-        "years_experience": client.experience ? parseInt(String(client.experience)) : 0,
-        "location": client.state_of_residence,
-        "country": client.zip_or_country || "",
-
-        // Job preferences
-        "services_opted": (() => {
-          // Handle if services_opted is a string (from database)
-          if (typeof client.add_ons_info === 'string') {
-            try {
-              return JSON.parse(client.add_ons_info);
-            } catch {
-              return [];
-            }
-          }
-          // If it's already an array, use it
-          if (Array.isArray(client.add_ons_info)) {
-            return client.add_ons_info;
-          }
-          // Default to empty array
-          return [];
-        })(),
-        // Service dates
-        "start_date": client.start_date,
-        // "end_date": client.end_date || null,
-
-        // Work preferences
-        "willing_to_relocate": Boolean(client.willing_to_relocate),
-        "work_auth": client.visa_type || "",
-        "work_preference": (() => {
-          // If location_preferences is an array
-          if (Array.isArray(client.location_preferences)) {
-            // If more than 1 location, send "All"
-            if (client.location_preferences.length > 1) {
-              return "All";
-            }
-            // If exactly 1 location, send that location
-            if (client.location_preferences.length === 1) {
-              return client.location_preferences[0];
-            }
-          }
-          // Default to "All" if empty or not an array
-          return "All";
-        })(),
-        "sponsorship": client.sponsorship ? "yes" : "No",
-
-        // Personal details
-        "gender": client.gender || "",
-
-        // Company and resume details  
-        "exclude_companies": (() => {
-          // Handle if exclude_companies is a string (from database)
-          if (typeof client.exclude_companies === 'string') {
-            try {
-              return JSON.parse(client.exclude_companies);
-            } catch {
-              return ["facebook"];
-            }
-          }
-          // If it's already an array, use it
-          if (Array.isArray(client.exclude_companies)) {
-            return client.exclude_companies;
-          }
-          // Default to facebook
-          return ["facebook"];
-        })(),
-        "resume_s3_path": client.resume_url,
-        "resume_url": client.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${client.resume_url}` : "",
-
-        // Salary and applications
-        "expected_salary": client.salary_range || "",
-        "number_of_applications": client.no_of_applications ? `${client.no_of_applications}+` : "0",
-
-        // Social profiles
-        "github_url": client.github_url || "",
-        "linkedin_url": client.linked_in_url || "",
-
-        // Status and plan
-        "status": "Active",
-        "apw_id": client.applywizz_id,
-        "target_role": Array.isArray(client.job_role_preferences) ? client.job_role_preferences[0] || "" : client.job_role_preferences || "",
-        "plan": "Standard",
+        // Optional fields
+        personal_email: client.personal_email.trim().toLowerCase(),
+        work_preferences: client.work_preferences,
+        salary_range: client.salary_range,
+        work_auth_details: client.work_auth_details,
+        sponsorship: client.sponsorship,
+        github_url: client.github_url,
+        linked_in_url: client.linked_in_url,
+        end_date: client.end_date,
+        willing_to_relocate: client.willing_to_relocate,
+        alternate_job_roles: client.alternate_job_roles,
+        no_of_applications: client.no_of_applications,
+        highest_education: client.highest_education,
+        university_name: client.university_name,
+        cumulative_gpa: client.cumulative_gpa,
+        main_subject: client.main_subject,
+        graduation_year: client.graduation_year,
+        badge_value: client.badge_value,
+        is_over_18: client.is_over_18,
+        eligible_to_work_in_us: client.eligible_to_work_in_us,
+        authorized_without_visa: client.authorized_without_visa,
+        require_future_sponsorship: client.require_future_sponsorship,
+        can_perform_essential_functions: client.can_perform_essential_functions,
+        worked_for_company_before: client.worked_for_company_before,
+        discharged_for_policy_violation: client.discharged_for_policy_violation,
+        referred_by_agency: client.referred_by_agency,
+        desired_start_date: client.desired_start_date,
+        can_work_3_days_in_office: client.can_work_3_days_in_office,
+        role: client.role,
+        convicted_of_felony: client.convicted_of_felony,
+        felony_explanation: client.felony_explanation,
+        pending_investigation: client.pending_investigation,
+        willing_background_check: client.willing_background_check,
+        willing_drug_screen: client.willing_drug_screen,
+        failed_or_refused_drug_test: client.failed_or_refused_drug_test,
+        uses_substances_affecting_duties: client.uses_substances_affecting_duties,
+        substances_description: client.substances_description,
+        can_provide_legal_docs: client.can_provide_legal_docs,
+        is_hispanic_latino: client.is_hispanic_latino,
+        race_ethnicity: client.race_ethnicity,
+        veteran_status: client.veteran_status,
+        disability_status: client.disability_status,
+        has_relatives_in_company: client.has_relatives_in_company,
+        relatives_details: client.relatives_details,
+        add_ons_info: client.add_ons_info,
+        exclude_companies: client.exclude_companies,
+        client_form_fill_date: client.client_form_fill_date,
+        cover_letter_path: client.cover_letter_path,
+        full_address: client.full_address,
+        date_of_birth: client.date_of_birth,
+        primary_phone: client.primary_phone,
       };
 
-      const response = await fetch(apiUrl, {
+      // Call the direct-onboard API
+      const response = await fetch('/api/direct-onboard', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        let errorDetails = 'Unknown error';
-        try {
-          const errorData = await response.json();
-          errorDetails = JSON.stringify(errorData, null, 2);
-        } catch {
-          errorDetails = await response.text();
-        }
+      const result = await response.json();
 
-        console.error('❌ API Error Response:', errorDetails);
-        alert(`Failed to sync with external database: ${response.status} - ${errorDetails}`);
+      if (!response.ok) {
+        console.error('❌ Direct onboard API error:', result);
+        alert(`Failed to onboard client: ${result.error}\n${Array.isArray(result.details) ? result.details.join('\n') : result.details || ''}`);
         return;
       }
 
-      // Successfully onboarded, remove from pending list
-      await supabase.from('pending_clients').delete().eq('id', client.id);
+      console.log('✅ Client onboarded successfully:', result);
+      alert(`Client successfully onboarded!\nApplyWizz ID: ${result.applywizz_id}`);
 
-      // Refresh the pending clients list
-      await fetchData();
-
-      alert("Client successfully onboarded to secondary database!");
+      // Remove from pending clients and refresh
       await supabase.from('pending_clients').delete().eq('id', client.id);
       await fetchData();
-    } catch (error) {
-      console.error('Error making external API call:', error);
-      alert("Failed to onboard client to secondary database");
+
+    } catch (error: any) {
+      console.error('❌ Error calling direct-onboard API:', error);
+      alert(`Failed to onboard client: ${error.message || 'Unknown error occurred'}`);
     }
   };
 
@@ -1601,6 +1447,8 @@ function App() {
             onClose={() => setActiveView('dashboard')}
           />
         );
+      case 'pricing':
+        return <PricingSection />;
       case 'dashboard':
         const isExecutive = currentUser && ['ceo', 'coo', 'cro'].includes(currentUser.role);
 
