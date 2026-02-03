@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
@@ -17,6 +17,36 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Typewriter animation states
+  const [displayedText, setDisplayedText] = useState('');
+  const [showCursor, setShowCursor] = useState(true);
+  const fullText = "You've got this...";
+
+  // Typewriter effect
+  useEffect(() => {
+    let currentIndex = 0;
+    const words = fullText.split(' ');
+    let currentWordIndex = 0;
+    let currentText = '';
+
+    const typeInterval = setInterval(() => {
+      if (currentWordIndex < words.length) {
+        currentText = words.slice(0, currentWordIndex + 1).join(' ');
+        setDisplayedText(currentText);
+        currentWordIndex++;
+      } else {
+        // Pause at the end, then restart
+        setTimeout(() => {
+          currentWordIndex = 0;
+          currentText = '';
+        }, 1000);
+      }
+    }, 400); // Each word appears every 400ms
+
+    return () => clearInterval(typeInterval);
+  }, []);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,152 +82,211 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     setShowResetModal(true);
   };
 
-    const handleSendResetLink = async () => {
-      if (!resetEmail) {
-        setError("Please enter your email to reset your password.");
-        return;
-      }
-    
-      try {
-        const response = await fetch(
-          "https://zkebbnegghodwmgmkynt.supabase.co/functions/v1/request-password-reset",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email: resetEmail }),
-          }
-        );
-    
-        const result = await response.json();
-    
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to send reset link");
+  const handleSendResetLink = async () => {
+    if (!resetEmail) {
+      setError("Please enter your email to reset your password.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "https://zkebbnegghodwmgmkynt.supabase.co/functions/v1/request-password-reset",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: resetEmail }),
         }
-    
-        toastify(result.message || "Reset link sent to your email!", {
-          position: "top-center",
-          autoClose: 4000,
-          theme: "dark",
-        });
-    
-        setShowResetModal(false);
-        setResetEmail("");
-      } catch (err: any) {
-        console.error('Reset password error:', err);
-        alert(err.message || "Unable to send reset link. Please try again.");
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send reset link");
       }
-    };
+
+      toastify(result.message || "Reset link sent to your email!", {
+        position: "top-center",
+        autoClose: 4000,
+        theme: "dark",
+      });
+
+      setShowResetModal(false);
+      setResetEmail("");
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      alert(err.message || "Unable to send reset link. Please try again.");
+    }
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        {/* ... (header remains same) ... */}
-        <h2 className="text-lg text-center justify-center  font-semibold mb-2"> Applywizz Login</h2>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F1FFF3' }}>
+      {/* Main container with split screen layout */}
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row items-stretch min-h-screen">
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="your.email@company.com"
-              required
+        {/* LEFT SECTION - Illustration */}
+        <div className="flex-1 flex flex-col items-start justify-center p-8 lg:p-16 relative">
+          {/* Logo - top left */}
+          <div className="absolute top-8 left-8">
+            <div className="flex items-center gap-2">
+              {/* Placeholder for logo - will be replaced */}
+              <img
+                src="/applywizz-logo.jpg"
+                alt="Apply Wizz Logo"
+                className="w-8 h-8 rounded-lg"
+              />
+              <span className="font-bold text-gray-800 text-sm">APPLY WIZZ</span>
+            </div>
+          </div>
+
+          {/* Speech bubble */}
+          <div className="mb-2 relative">
+            <div className="ml-24 pl-24 pr-24 pt-12 pb-12 shadow-lg" style={{ background: '#9BDA88', borderRadius: '50%' }}>
+              <p className="text-white text-lg font-handwriting italic">
+                {displayedText}
+                <span style={{ opacity: showCursor ? 1 : 0 }}>|</span>
+              </p>
+            </div>
+            {/* Speech bubble tail */}
+            <div className="absolute -bottom-4 left-36 w-0 h-0 border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent border-t-[40px]" style={{ borderTopColor: '#9BDA88' }}></div>
+          </div>
+
+          {/* Illustration placeholder - will be replaced with actual image */}
+          <div className="w-128 h-96 flex items-start justify-start">
+            <img
+              src="/login-page-image-1.png"
+              alt="Woman working on laptop"
+              className="w-full h-full object-contain lightgray -6px 0px / 100.809% 100% no-repeat"
             />
           </div>
+        </div>
 
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 pr-10"
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+        {/* RIGHT SECTION - Login Form */}
+        <div className="flex-1 flex items-center justify-center p-8 lg:p-16">
+          <div className="w-full max-w-md">
+            {/* Login Card */}
+            <div className="bg-white rounded-3xl shadow-lg p-10 border border-gray-200">
+              {/* Header */}
+              <div className="mb-16">
+                <h1 className="mb-2" style={{ color: '#424141', fontFamily: '"Darker Grotesque"', fontSize: '32px', fontWeight: 500, lineHeight: 'normal' }}>Welcome back!</h1>
+                <p className="text-sm" style={{ color: '#989898', fontFamily: '"Noto Sans"', fontStyle: 'normal', fontSize: '16px' }}>Enter your credentials to access your account</p>
+              </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Login Form */}
+              <form onSubmit={handleLogin} className="space-y-5">
+                {/* Email Field */}
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 700, fontSize: '16px' }}>
+                    Email address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
+                    placeholder="Enter your mail"
+                    required
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 700, fontSize: '16px' }}>
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all pr-12"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Login Button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: '#77E954' }}
+                  onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#68D045')}
+                  onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#77E954')}
+                >
+                  {loading ? 'Logging in...' : (
+                    <>
+                      Login
+                      <span>→</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Sign up link */}
+              <div className="mt-6 text-center">
+                <p style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 700, fontSize: '16px' }}>
+                  Don't remember your password?{' '} <br />
+                  <button
+                    type="button"
+                    onClick={handleForgotPasswordClick}
+                    className="font-medium"
+                    style={{ color: '#77E954' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#68D045'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#77E954'}
+                  >
+                    Reset Password →
+                  </button>
+                </p>
+              </div>
             </div>
           </div>
-          {error && (
-            <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <div className="text-right mt-4">
-          <button
-            type="button"
-            onClick={handleForgotPasswordClick}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Forgot Password?
-          </button>
-        </div>
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-900 mb-2">Login Instructions:</h3>
-          <ul className="text-xs text-gray-600 space-y-1">
-            {/* <li>• You’re now using the beta version of our internal ticketing system. 🎉
-              We’re testing and improving how tickets are created, tracked, and resolved across teams.
-              💬 Found a bug or have feedback? Let us know — your input helps us make it better!</li> */}
-            <li>• Use the email and password provided by your administrator</li>
-            <li>• Contact your system admin if you need credentials</li>
-            <li>• Never share your password with anyone</li>
-          </ul>
         </div>
       </div>
 
+      {/* Password Reset Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-gray-500 border-4 border-blue-100 p-16 rounded-lg max-w-xl w-full"
-          //  style={{background: "linear-gradient(to left, rgba(0, 255, 94, 1) 0%, rgba(0, 217, 255, 1) 70%, rgba(0, 89, 255, 0.64) 100%)",}}
-          >
-            <h2 className="text-lg text-center justify-center  font-semibold mb-2">Reset Password</h2>
-            <p className="text-sm text-center mb-4">Enter your email to receive a reset link:</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Reset Password</h2>
+            <p className="text-sm text-gray-600 mb-6">Enter your email to receive a reset link:</p>
             <input
               type="email"
               placeholder="you@example.com"
               value={resetEmail}
               onChange={(e) => setResetEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded mb-4"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 mb-6"
             />
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowResetModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendResetLink}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-6 py-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-colors"
               >
                 Send Reset Link
               </button>
@@ -205,8 +294,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           </div>
         </div>
       )}
-
-
     </div>
   );
 };

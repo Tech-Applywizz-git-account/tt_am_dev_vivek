@@ -19,7 +19,7 @@ import { ClientsListView } from './components/Clients/ClientsListView';
 import { ClientApplicationsView } from './components/Clients/ClientApplicationsView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
-import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail } from 'lucide-react';
+import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
@@ -39,13 +39,15 @@ import ApplicationSummaryList, { TaskCount } from './components/ClientDashboard/
 import EasyApplySummaryList from './components/ClientDashboard/EasyApplySummaryList';
 import AppliedJobsList from './components/ClientDashboard/AppliedJobsList';
 import JobLinksList from './components/ClientDashboard/JobLinksList';
+import JobScoringFloatingButton from "./components/ClientDashboard/JobScoringFloatingButton";
+import JobCalendar from "./components/ClientDashboard/Calendar";
 import ScoredJobsDashboard from './components/ClientDashboard/ScoredJobsDashboard';
-import ScoredJobsRegularList from './components/ClientDashboard/ScoredJobsRegularList';
+import ScoredJobsRegularList, { ScoredJobsRegularListRef } from './components/ClientDashboard/ScoredJobsRegularList';
 import ScoredJobsAppliedList from './components/ClientDashboard/ScoredJobsAppliedList';
 import LinkedInEasyApplyDashboard from './components/ClientDashboard/LinkedInEasyApplyDashboard';
-import LinkedInEasyApplyRegularList from './components/ClientDashboard/LinkedInEasyApplyRegularList';
+import LinkedInEasyApplyRegularList, { LinkedInEasyApplyRegularListRef } from './components/ClientDashboard/LinkedInEasyApplyRegularList';
 import IndeedEasyApplyDashboard from './components/ClientDashboard/IndeedEasyApplyDashboard';
-import IndeedEasyApplyRegularList from './components/ClientDashboard/IndeedEasyApplyRegularList';
+import IndeedEasyApplyRegularList, { IndeedEasyApplyRegularListRef } from './components/ClientDashboard/IndeedEasyApplyRegularList';
 import StaffingAgenciesDashboard from './components/ClientDashboard/StaffingAgenciesDashboard';
 import StaffingAgenciesRegularList from './components/ClientDashboard/StaffingAgenciesRegularList';
 import C2CJobsDashboard from './components/ClientDashboard/C2CJobsDashboard';
@@ -54,8 +56,10 @@ import W2JobsDashboard from './components/ClientDashboard/W2JobsDashboard';
 import W2JobsRegularList from './components/ClientDashboard/W2JobsRegularList';
 import C2CW2JobsDashboard from './components/ClientDashboard/C2CW2JobsDashboard';
 import C2CW2JobsRegularList from './components/ClientDashboard/C2CW2JobsRegularList';
+import JobTrackingDashboard from './components/ClientDashboard/JobTrackingDashboard';
 import { useAccount } from './contexts/AccountContext';
 import ReportPage from './components/Report/ReportPage';
+import PricingSection from './components/Pricing/PricingSection';
 
 
 function App() {
@@ -180,6 +184,20 @@ function App() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   // State to store the selected client
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  // Lifted state for LinkedInEasyApplyRegularList
+  const [showScoringModal, setShowScoringModal] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const [isScoringTriggered, setIsScoringTriggered] = useState(false);
+
+  // Calendar state for LinkedIn Easy Apply
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [filteredDate, setFilteredDate] = useState<string | null>(null);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const linkedInEasyApplyRef = React.useRef<LinkedInEasyApplyRegularListRef>(null);
+  const indeedEasyApplyRef = React.useRef<IndeedEasyApplyRegularListRef>(null);
+  const scoredJobsRef = React.useRef<ScoredJobsRegularListRef>(null);
+
   // State to store whether the ticket edit modal is open
   const [isTicketEditModalOpen, setIsTicketEditModalOpen] = useState(false);
   // State to store whether the client edit modal is open
@@ -1429,13 +1447,18 @@ function App() {
             onClose={() => setActiveView('dashboard')}
           />
         );
+      case 'pricing':
+        return <PricingSection />;
       case 'dashboard':
         const isExecutive = currentUser && ['ceo', 'coo', 'cro'].includes(currentUser.role);
 
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                Dashboard
+                <LayoutDashboard className="h-7 w-7" />
+              </h1>
               <div className="flex space-x-3">
                 {['ceo', 'coo', 'cro', 'system_admin', 'ca_team_lead', 'resume_team_head', 'resume_team_member'].includes(currentUser.role) && (
                   <>
@@ -1669,13 +1692,21 @@ function App() {
                   )}
               </div>
             </div>
-
             {currentUser?.role === 'client' ? (
               <>
                 {optedJobLinks ? (
                   <>
                     <ScoredJobsDashboard applywizzId={applywizzId} />
-                    <ScoredJobsRegularList applywizzId={applywizzId} />
+                    <ScoredJobsRegularList
+                      ref={scoredJobsRef}
+                      applywizzId={applywizzId}
+                      showCalendar={showCalendar}
+                      setShowCalendar={setShowCalendar}
+                      filteredDate={filteredDate}
+                      setFilteredDate={setFilteredDate}
+                      expandedDate={expandedDate}
+                      setExpandedDate={setExpandedDate}
+                    />
                   </>
                 ) : (
                   <>
@@ -1693,86 +1724,84 @@ function App() {
                   </>
                 )}
               </>
-            )
-              :
-              (
-                <>
-                  <DashboardStatsComponent
-                    stats={stats}
-                    userRole={currentUser?.role || ''}
-                    onTotalTicketsClick={() => {
-                      setActiveView('tickets');
-                      setFilterStatus('all'); // Reset status filter
-                      setFilterType('all');
-                      setFilterPriority('all');
-                    }}
-                    onOpenTicketsClick={() => {
-                      setActiveView('tickets');
-                      setFilterStatus('open'); // This will filter to only open tickets
-                      setFilterType('all'); // Reset type filter
-                      setFilterPriority('all');
-                    }}
-                    onResolvedTicketsClick={() => {
-                      setActiveView('tickets');
-                      setFilterStatus('resolved');
-                      setFilterType('all');
-                      setFilterPriority('all');
-                    }}
-                    onCriticalTicketsClick={() => {
-                      setActiveView('tickets');
-                      setFilterStatus('all');
-                      setFilterType('all');
-                      setFilterPriority('critical');
-                    }}
-                  />
-                  {isExecutive ? (
-                    <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
-                  ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h2>
-                        <div className="space-y-4">
-                          {getVisibleTickets().slice(0, 5).map(ticket => (
-                            <div
-                              key={ticket.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                              onClick={() => handleTicketClick(ticket)}
-                            >
-                              <div className="flex-1">
-                                <h3 className="font-medium text-gray-900">{ticket.title}</h3>
-                                <p className="text-sm text-gray-600">{ticket.type.replace('_', ' ')}</p>
-                              </div>
-                              <div className={`px-2 py-1 text-xs font-medium rounded-full ${ticket.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                                ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                {ticket.priority}
-                              </div>
+            ) : (
+              <>
+                <DashboardStatsComponent
+                  stats={stats}
+                  userRole={currentUser?.role || ''}
+                  onTotalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all'); // Reset status filter
+                    setFilterType('all');
+                    setFilterPriority('all');
+                  }}
+                  onOpenTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('open'); // This will filter to only open tickets
+                    setFilterType('all'); // Reset type filter
+                    setFilterPriority('all');
+                  }}
+                  onResolvedTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('resolved');
+                    setFilterType('all');
+                    setFilterPriority('all');
+                  }}
+                  onCriticalTicketsClick={() => {
+                    setActiveView('tickets');
+                    setFilterStatus('all');
+                    setFilterType('all');
+                    setFilterPriority('critical');
+                  }}
+                />
+                {isExecutive ? (
+                  <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h2>
+                      <div className="space-y-4">
+                        {getVisibleTickets().slice(0, 5).map(ticket => (
+                          <div
+                            key={ticket.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => handleTicketClick(ticket)}
+                          >
+                            <div className="flex-1">
+                              <h3 className="font-medium text-gray-900">{ticket.title}</h3>
+                              <p className="text-sm text-gray-600">{ticket.type.replace('_', ' ')}</p>
                             </div>
-                          ))}
-                        </div>
+                            <div className={`px-2 py-1 text-xs font-medium rounded-full ${ticket.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                              ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {ticket.priority}
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    </div>
 
-                      <div className="bg-white rounded-xl border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                        <div className="space-y-3">
-                          <button
-                            onClick={() => setActiveView('tickets')}
-                            className="w-full flex items-center space-x-3 p-3 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                          >
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            <span className="font-medium text-blue-900">View All Tickets</span>
-                          </button>
+                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => setActiveView('tickets')}
+                          className="w-full flex items-center space-x-3 p-3 text-left bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        >
+                          <FileText className="h-5 w-5 text-blue-600" />
+                          <span className="font-medium text-blue-900">View All Tickets</span>
+                        </button>
 
-                          <button
-                            onClick={() => setActiveView('clients')}
-                            className="w-full flex items-center space-x-3 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                          >
-                            <Users className="h-5 w-5 text-green-600" />
-                            <span className="font-medium text-green-900">Manage Clients</span>
-                          </button>
+                        <button
+                          onClick={() => setActiveView('clients')}
+                          className="w-full flex items-center space-x-3 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                        >
+                          <Users className="h-5 w-5 text-green-600" />
+                          <span className="font-medium text-green-900">Manage Clients</span>
+                        </button>
 
-                          {/* <button
+                        {/* <button
                       onClick={() => setActiveView('reports')}
                       className="w-full flex items-center space-x-3 p-3 text-left bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
                     >
@@ -1780,21 +1809,22 @@ function App() {
                       <span className="font-medium text-purple-900">View Reports</span>
                     </button> */}
 
-                          {currentUser?.role === 'system_admin' && (
-                            <button
-                              onClick={() => setIsUserManagementModalOpen(true)}
-                              className="w-full flex items-center space-x-3 p-3 text-left bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
-                            >
-                              <Settings className="h-5 w-5 text-orange-600" />
-                              <span className="font-medium text-orange-900">User Management</span>
-                            </button>
-                          )}
-                        </div>
+                        {currentUser?.role === 'system_admin' && (
+                          <button
+                            onClick={() => setIsUserManagementModalOpen(true)}
+                            className="w-full flex items-center space-x-3 p-3 text-left bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                          >
+                            <Settings className="h-5 w-5 text-orange-600" />
+                            <span className="font-medium text-orange-900">User Management</span>
+                          </button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </>
-              )}
+                  </div>
+                )}
+              </>
+            )
+            }
             <FeedbackButton user={currentUser} />
           </div>
         );
@@ -1859,9 +1889,77 @@ function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">LinkedIn Easy Apply</h1>
+              <div className="flex items-center gap-4">
+                {/* Calendar Date Picker */}
+                <div style={{ position: 'relative' }}>
+                  <div
+                    onClick={() => {
+                      setShowCalendar(!showCalendar);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      height: '47px',
+                      padding: '16px 18px 17px 35px',
+                      alignItems: 'flex-start',
+                      gap: '24px',
+                      borderRadius: '15px',
+                      border: '1px solid #000',
+                      color: '#000',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <h1 className="text-sm font-medium">
+                      {filteredDate
+                        ? filteredDate.split('-').reverse().join('-')
+                        : new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
+                    </h1>
+                    <img
+                      src="/chevron-bottom.svg"
+                      alt="chevron"
+                      style={{
+                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s'
+                      }}
+                    />
+                  </div>
+
+                  {showCalendar && (
+                    <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px', right: 0 }}>
+                      <JobCalendar onDateSelect={(date) => {
+                        if (linkedInEasyApplyRef.current) {
+                          linkedInEasyApplyRef.current.handleDateSelect(date);
+                        }
+                      }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Job Scoring Button */}
+                {showFloatingButton && (
+                  <JobScoringFloatingButton onClick={() => {
+                    setShowFloatingButton(false);
+                    setShowScoringModal(true);
+                  }} />
+                )}
+              </div>
             </div>
             {/* <LinkedInEasyApplyDashboard applywizzId={applywizzId} /> */}
-            <LinkedInEasyApplyRegularList applywizzId={applywizzId} />
+            <LinkedInEasyApplyRegularList
+              ref={linkedInEasyApplyRef}
+              applywizzId={applywizzId}
+              showScoringModal={showScoringModal}
+              setShowScoringModal={setShowScoringModal}
+              showFloatingButton={showFloatingButton}
+              setShowFloatingButton={setShowFloatingButton}
+              isScoringTriggered={isScoringTriggered}
+              setIsScoringTriggered={setIsScoringTriggered}
+              showCalendar={showCalendar}
+              setShowCalendar={setShowCalendar}
+              filteredDate={filteredDate}
+              setFilteredDate={setFilteredDate}
+              expandedDate={expandedDate}
+              setExpandedDate={setExpandedDate}
+            />
           </div>
         );
 
@@ -1870,9 +1968,77 @@ function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Indeed Easy Apply</h1>
+              <div className="flex items-center gap-4">
+                {/* Calendar Date Picker */}
+                <div style={{ position: 'relative' }}>
+                  <div
+                    onClick={() => {
+                      setShowCalendar(!showCalendar);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      height: '47px',
+                      padding: '16px 18px 17px 35px',
+                      alignItems: 'flex-start',
+                      gap: '24px',
+                      borderRadius: '15px',
+                      border: '1px solid #000',
+                      color: '#000',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <h1 className="text-sm font-medium">
+                      {filteredDate
+                        ? filteredDate.split('-').reverse().join('-')
+                        : new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
+                    </h1>
+                    <img
+                      src="/chevron-bottom.svg"
+                      alt="chevron"
+                      style={{
+                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s'
+                      }}
+                    />
+                  </div>
+
+                  {showCalendar && (
+                    <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px', right: 0 }}>
+                      <JobCalendar onDateSelect={(date) => {
+                        if (indeedEasyApplyRef.current) {
+                          indeedEasyApplyRef.current.handleDateSelect(date);
+                        }
+                      }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Job Scoring Button */}
+                {showFloatingButton && (
+                  <JobScoringFloatingButton onClick={() => {
+                    setShowFloatingButton(false);
+                    setShowScoringModal(true);
+                  }} />
+                )}
+              </div>
             </div>
             {/* <IndeedEasyApplyDashboard applywizzId={applywizzId} /> */}
-            <IndeedEasyApplyRegularList applywizzId={applywizzId} />
+            <IndeedEasyApplyRegularList
+              ref={indeedEasyApplyRef}
+              applywizzId={applywizzId}
+              showScoringModal={showScoringModal}
+              setShowScoringModal={setShowScoringModal}
+              showFloatingButton={showFloatingButton}
+              setShowFloatingButton={setShowFloatingButton}
+              isScoringTriggered={isScoringTriggered}
+              setIsScoringTriggered={setIsScoringTriggered}
+              showCalendar={showCalendar}
+              setShowCalendar={setShowCalendar}
+              filteredDate={filteredDate}
+              setFilteredDate={setFilteredDate}
+              expandedDate={expandedDate}
+              setExpandedDate={setExpandedDate}
+            />
           </div>
         );
 
@@ -1880,11 +2046,72 @@ function App() {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">Regular Applications</h1>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold text-gray-900">Career Portal Application</h1>
+                <p className="text-gray-500">We scan and collect job links directly from official company career pages and trusted job portals.
+                  <br /> Our system automatically detects newly posted roles.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* Calendar Date Picker */}
+                <div style={{ position: 'relative' }}>
+                  <div
+                    onClick={() => {
+                      setShowCalendar(!showCalendar);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      height: '47px',
+                      padding: '16px 18px 17px 35px',
+                      alignItems: 'flex-start',
+                      gap: '24px',
+                      borderRadius: '15px',
+                      border: '1px solid #000',
+                      color: '#000',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <h1 className="text-sm font-medium">
+                      {filteredDate
+                        ? filteredDate.split('-').reverse().join('-')
+                        : new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
+                    </h1>
+                    <img
+                      src="/chevron-bottom.svg"
+                      alt="chevron"
+                      style={{
+                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s'
+                      }}
+                    />
+                  </div>
+
+                  {showCalendar && (
+                    <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px', right: 0 }}>
+                      <JobCalendar onDateSelect={(date) => {
+                        if (scoredJobsRef.current) {
+                          scoredJobsRef.current.handleDateSelect(date);
+                        }
+                      }} />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+
             {currentUser?.role === 'client' ? (
               optedJobLinks ? (
-                <ScoredJobsRegularList applywizzId={applywizzId} />
+                <ScoredJobsRegularList
+                  ref={scoredJobsRef}
+                  applywizzId={applywizzId}
+                  showCalendar={showCalendar}
+                  setShowCalendar={setShowCalendar}
+                  filteredDate={filteredDate}
+                  setFilteredDate={setFilteredDate}
+                  expandedDate={expandedDate}
+                  setExpandedDate={setExpandedDate}
+                />
               ) : (
                 <ApplicationSummaryList
                   data={clientDashboardData}
@@ -1909,7 +2136,7 @@ function App() {
             </div>
             {currentUser?.role === 'client' ? (
               // optedJobLinks ? (
-                <ScoredJobsAppliedList applywizzId={applywizzId} />
+              <ScoredJobsAppliedList applywizzId={applywizzId} />
               // ) : (
               //   <AppliedJobsList applywizzId={applywizzId} />
               // )
@@ -2100,6 +2327,13 @@ function App() {
             onAssignRoles={handleAssignRoles}
             onDirectOnboard={handleDirectOnboard}
           />
+        );
+
+      case 'job-tracking':
+        return (
+          <div className="space-y-6">
+            <JobTrackingDashboard currentUserEmail={currentUser?.email} />
+          </div>
         );
 
       default:
