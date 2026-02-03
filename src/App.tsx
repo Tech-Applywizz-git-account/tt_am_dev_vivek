@@ -3632,8 +3632,10 @@ function App() {
             onClose={() => setActiveView('dashboard')}
           />
         );
+
       case 'pricing':
         return <PricingSection user={currentUser} />;
+
       case 'dashboard':
         const isExecutive = currentUser && ['ceo', 'coo', 'cro'].includes(currentUser.role);
 
