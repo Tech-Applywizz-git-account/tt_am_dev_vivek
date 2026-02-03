@@ -19,7 +19,9 @@ import {
   DollarSign,
   RefreshCw,
   Linkedin,
-  CreditCard
+  CreditCard,
+  ArrowRight,
+  LogOut
 } from 'lucide-react';
 import { User } from '../../types';
 import { rolePermissions } from '../../data/mockData';
@@ -143,6 +145,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'applied-jobs',
       label: 'Applied Jobs',
       icon: CheckCircle,
+      show: user.role === 'client',
+    },
+    {
+      id: 'job-tracking',
+      label: 'Job Tracking',
+      icon: Briefcase,
       show: user.role === 'client',
     },
     {
