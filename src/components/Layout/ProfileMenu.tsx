@@ -38,14 +38,21 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) 
       {/* Person icon (always visible) */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-full p-2 bg-blue-700 hover:bg-gray-500 transition"
+        className="rounded-full p-2 mr-4 hover:bg-gray-500 transition"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
         title="Account"
       >
-        <UserIcon className="h-6 w-6 text-gray-100" />
+        <img src="/profile.png" alt="Profile" className="h-6 w-6" />
       </button>
+      {/* <button
+        className="rounded-full p-2 hover:bg-gray-500 transition"
+        aria-label="Settings menu"
+        title="Settings"
+      >
+        <img src="/settings.png" alt="settings" className="h-6 w-6" />
+      </button> */}
 
       {/* Dropdown */}
       {open && (
@@ -76,7 +83,7 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) 
             {/* View Profile - Only for clients */}
             {user.role === 'client' && (optedJobLinks) && (
               <button
-                className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
                 onClick={() => {
                   setOpen(false);
                   setShowViewProfileModal(true);
@@ -87,7 +94,7 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) 
               </button>
             )}
             <button
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
               onClick={() => {
                 setOpen(false);
                 setShowChangePasswordModal(true);

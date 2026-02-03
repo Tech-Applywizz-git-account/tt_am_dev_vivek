@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, DollarSign, Building, Monitor } from "lucide-react";
+import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, DollarSign, Building, Monitor, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import JobCalendar from "./Calendar";
 
 // ✅ Types
 interface JobItem {
@@ -43,6 +44,16 @@ interface DateJobsResponse {
 
 interface ScoredJobsRegularListProps {
     applywizzId?: string;
+    showCalendar: boolean;
+    setShowCalendar: (show: boolean) => void;
+    filteredDate: string | null;
+    setFilteredDate: (date: string | null) => void;
+    expandedDate: string | null;
+    setExpandedDate: (date: string | null) => void;
+}
+
+export interface ScoredJobsRegularListRef {
+    handleDateSelect: (date: Date) => Promise<void>;
 }
 
 const statusOptions = [
@@ -60,30 +71,61 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
 
     if (error || !logoUrl) {
         return (
-            <div className={`w-16 h-16 rounded-xl shadow-md flex items-center justify-center text-white text-2xl font-bold ${fallbackColor} shrink-0`}>
-                {firstLetter}
+            <div
+                className="shrink-0 inline-flex items-center justify-end text-white text-2xl font-bold"
+                style={{
+                    height: '160px',
+                    padding: '17px 13px 18px 22px',
+                    borderRadius: '9px',
+                    border: '1px solid #D3D3D3',
+                    background: '#F1F1F1',
+                    boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+                }}
+            >
+                <span style={{ color: '#000' }}>{firstLetter}</span>
             </div>
         );
     }
 
     return (
-        <div className="shrink-0">
+        <div
+            className="shrink-0 inline-flex items-center justify-end"
+            style={{
+                height: '121px',
+                width: '121px',
+                padding: '17px 13px 18px 22px',
+                borderRadius: '9px',
+                border: '1px solid #D3D3D3',
+                background: '#F1F1F1',
+                boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+            }}
+        >
             <img
                 src={logoUrl}
                 alt={company}
-                className="w-16 h-16 rounded-xl shadow-md object-contain bg-white p-1"
+                className="object-contain"
+                style={{ width: '120px', height: '80px' }}
                 onError={() => setError(true)}
             />
         </div>
     );
 };
 
-const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizzId }) => {
+const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJobsRegularListProps>(({
+    applywizzId,
+    showCalendar,
+    setShowCalendar,
+    filteredDate,
+    setFilteredDate,
+    expandedDate,
+    setExpandedDate
+}, ref) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [expandedDate, setExpandedDate] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // Fetch summary
     const fetchSummary = async () => {
@@ -161,6 +203,47 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         }
     };
 
+    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    const handleDateSelect = async (selectedDate: Date) => {
+        // Construct YYYY-MM-DD string using local time components to match summary keys
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        if (summary.hasOwnProperty(dateStr)) {
+            // Set filtered date to show only this date
+            setFilteredDate(dateStr);
+
+            // Find page and navigate (though setFilteredDate will make it page 1 usually)
+            const dateIndex = allDates.indexOf(dateStr);
+            if (dateIndex !== -1) {
+                setCurrentPage(1); // Set to page 1 since only one date will be shown
+
+                // Automatically expand
+                if (expandedDate !== dateStr) {
+                    toggleDateExpansion(dateStr);
+                }
+
+                // Close calendar
+                setShowCalendar(false);
+            }
+        } else {
+            // Set filtered date to show the "no jobs" message
+            setFilteredDate(dateStr);
+            setShowCalendar(false);
+
+            // Show alert
+            alert("No jobs found on the selected date.");
+        }
+    };
+
+    // Expose handleDateSelect to parent component via ref
+    React.useImperativeHandle(ref, () => ({
+        handleDateSelect
+    }), [summary, allDates, expandedDate, itemsPerPage, setCurrentPage, setShowCalendar, setFilteredDate, setExpandedDate]);
+
     // Handle status change
     const handleStatusChange = async (jobId: string, newStatus: string, date: string) => {
         // Optimistic update
@@ -223,9 +306,10 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
 
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
-        return { label: 'FAIR MATCH', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
+        const bgGradient = 'linear-gradient(to right, #171717, #353333, #6f6767ff)';
+        if (percentage >= 80) return { label: 'Strong Match', bgColor: '', bgGradient, textColor: '#00FE24' };
+        if (percentage >= 60) return { label: 'Great Match', bgColor: '', bgGradient, textColor: '#42FF5C' };
+        return { label: 'Good Match', bgColor: '', bgGradient, textColor: '#70FF84' };
     };
 
     const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
@@ -270,12 +354,11 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
 
         return (
-            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
-                <div className="flex items-start gap-6 p-6">
+            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-center gap-36 p-6">
                     {/* Left: Company Avatar & Job Info */}
-                    <div className="flex-1 flex gap-4">
+                    <div className="flex-1 flex gap-4 ">
                         <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
-
                         <div className="flex-1 min-w-0">
                             {/* <div className="flex items-center gap-2 mb-2">
                                 <span className="text-sm text-gray-500">{timeAgo}</span>
@@ -286,13 +369,20 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                                 )}
                             </div> */}
 
-                            <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
+                            <h3
+                                className="text-xl font-bold text-gray-900 mb-1 line-clamp-1"
+                                style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
                                 {job.title || "Untitled Role"}
                             </h3>
 
-                            <p className="text-base text-gray-600 mb-3">
+                            <p
+                                className="text-base text-gray-600 mb-3"
+                                style={{ color: "#7B7B7B", fontFamily: "Noto Sans", fontSize: "16px" }}
+                            >
                                 {job.company || "Unknown Company"}
                             </p>
+
+                            <hr className="my-3 border-gray-500" style={{ maxWidth: "80%" }} />
 
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                                 {job.location && (
@@ -338,15 +428,32 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                         </div>
                     </div>
 
+                    {/* Middle: Apply Now Button */}
+                    <div className="flex-shrink-0 flex items-center">
+                        <a
+                            href={job.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
+                        >
+                            <span>APPLY NOW</span>
+                            <ArrowRight className="h-5 w-5 text-white" />
+                        </a>
+                    </div>
+
                     {/* Right: Match Score Card */}
-                    <div className={`flex-shrink-0 ${matchData.bgColor} rounded-2xl p-6 w-32 flex flex-col items-center justify-center shadow-lg`}>
+                    <div
+                        className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                        style={{ background: matchData.bgGradient }}
+                    >
                         <div className="relative w-20 h-20 mb-3">
                             <svg className="w-20 h-20 transform -rotate-90">
                                 <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
                                 <circle
-                                    cx="40" cy="40" r="32" stroke="currentColor" strokeWidth="6" fill="none"
+                                    cx="40" cy="40" r="32" strokeWidth="6" fill="none"
                                     strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
-                                    className={matchData.textColor}
+                                    stroke={matchData.textColor}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -359,7 +466,7 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                     </div>
                 </div>
 
-                {/* Bottom: Actions */}
+                {/* Bottom: Status Dropdown Only */}
                 <div className="px-6 pb-6 flex items-center gap-3">
                     <select
                         value={job.status || 'Pending'}
@@ -372,18 +479,6 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
                             </option>
                         ))}
                     </select>
-
-                    <div className="flex-1"></div>
-
-                    <a
-                        href={job.url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-                    >
-                        <ExternalLink size={16} />
-                        <span>APPLY NOW</span>
-                    </a>
                 </div>
             </div>
         );
@@ -441,77 +536,142 @@ const ScoredJobsRegularList: React.FC<ScoredJobsRegularListProps> = ({ applywizz
         );
     }
 
-    const dates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    // Apply filter if filteredDate is set
+    const displayedDates = filteredDate ? [filteredDate] : allDates;
 
-    if (dates.length === 0) {
-        return (
-            <div className="bg-white p-4 rounded-lg shadow mt-6">
-                <p className="text-gray-500">No jobs found.</p>
-            </div>
-        );
-    }
+    const totalPages = Math.ceil(displayedDates.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentDates = displayedDates.slice(startIndex, startIndex + itemsPerPage);
+
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow mt-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Briefcase className="text-blue-600" size={24} />
-                Career Portal Jobs Summary
-            </h2>
-
-            <div className="space-y-2">
-                {dates.map((date) => {
-                    const count = summary[date] || 0;
-                    const jobs = jobsData[date] || [];
-                    const isExpanded = expandedDate === date;
-                    const dateObj = new Date(date);
-                    const formattedDate = dateObj.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    });
-
-                    return (
-                        <div key={date}>
-                            <div
-                                onClick={() => toggleDateExpansion(date)}
-                                className={`flex justify-between items-center p-4 rounded-lg cursor-pointer transition ${isExpanded ? "bg-blue-100" : "bg-blue-50 hover:bg-blue-100"
-                                    }`}
+        <div>
+            {allDates.length === 0 ? (
+                <div className="bg-white p-4 rounded-lg shadow mt-6">
+                    <p className="text-gray-500">No jobs found.</p>
+                </div>
+            ) : filteredDate && displayedDates.length === 0 ? (
+                <div className="p-6 bg-yellow-50 rounded-lg text-center border border-yellow-200 mt-4">
+                    <p className="text-yellow-800 font-medium text-lg">⚠️ No jobs found on selected date</p>
+                    <p className="text-yellow-600 text-sm mt-2">Please select a different date to view available jobs.</p>
+                    <button
+                        onClick={() => {
+                            setFilteredDate(null);
+                            setExpandedDate(null);
+                        }}
+                        className="mt-4 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                    >
+                        Clear Filter
+                    </button>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {filteredDate && displayedDates.length > 0 && (
+                        <div className="flex justify-start mb-4">
+                            <button
+                                onClick={() => {
+                                    setFilteredDate(null);
+                                    setExpandedDate(null);
+                                }}
+                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors border border-gray-300"
                             >
-                                <div className="flex items-center gap-2 text-blue-900">
-                                    <Calendar size={18} />
-                                    <span className="font-medium">{formattedDate}</span>
-                                </div>
-                                <div className="flex items-center gap-3 text-blue-700 font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <Briefcase size={18} />
-                                        <span>{count} Jobs</span>
-                                    </div>
-                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                                </div>
-                            </div>
+                                ← Show All Dates
+                            </button>
+                        </div>
+                    )}
+                    <div className="space-y-2 mt-4">
+                        {currentDates.map((date, index) => {
+                            const count = summary[date] || 0;
+                            const jobs = jobsData[date] || [];
+                            const isExpanded = expandedDate === date;
+                            const dateObj = new Date(date);
+                            const formattedDate = dateObj.toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                            });
 
-                            {isExpanded && (
-                                <div className="mt-3 bg-gray-50 p-4 rounded-lg">
-                                    {jobs.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {jobs
-                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
-                                                .map((job) => renderJobCard(job, date))}
+                            return (
+                                <div key={date}>
+                                    <div
+                                        onClick={() => toggleDateExpansion(date)}
+                                        className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
+                                        style={{ backgroundColor: '#E3FFE7' }}
+                                    >
+                                        <div className="flex items-center gap-32">
+                                            <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
+                                            <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <SkeletonJobCard />
-                                            <SkeletonJobCard />
+                                        <div className="flex items-center gap-3 text-blue-700 font-semibold">
+                                            <img
+                                                src="/chevron-icon.svg"
+                                                alt="chevron"
+                                                className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {isExpanded && (
+                                        <div className="mt-3">
+                                            {jobs.length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {jobs
+                                                        .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                        .map((job) => renderJobCard(job, date))}
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <SkeletonJobCard />
+                                                    <SkeletonJobCard />
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
+                            );
+                        })}
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-[#171717] text-white hover:bg-black'
+                                        }`}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+
+                                <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                                    {String(currentPage).padStart(2, '0')}
+                                </span>
+
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-[#171717] text-white hover:bg-black'
+                                        }`}
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
-};
+});
 
 export default ScoredJobsRegularList;
