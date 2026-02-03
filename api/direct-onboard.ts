@@ -56,6 +56,7 @@ interface DirectOnboardData {
     location_preferences: string[];
 
     // Optional fields
+    personal_email?: string;
     work_preferences?: string;
     salary_range?: string;
     work_auth_details?: string;
@@ -294,7 +295,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const clientsData = {
             id: clientId,
             full_name: clientData.full_name,
-            personal_email: clientData.email.trim().toLowerCase(),
+            personal_email: clientData.personal_email ? clientData.personal_email.trim().toLowerCase() : clientData.email.trim().toLowerCase(),
             whatsapp_number: clientData.phone,
             callable_phone: clientData.phone,
             company_email: clientData.email.trim().toLowerCase(),
@@ -507,7 +508,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     await extractLeadData(karmafyLeadId);
                     console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
 
-                    // Trigger Lambda endpoint (fire-and-forget)
+                    Trigger Lambda endpoint (fire-and-forget)
                     try {
                         await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
                         console.log('Lambda endpoint triggered');
