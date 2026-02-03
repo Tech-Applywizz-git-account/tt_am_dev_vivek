@@ -237,7 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
         </div>
 
         {/* ATS Resume Card */}
-        <div
+        {/* <div
           className="mt-4 rounded-lg p-2 cursor-pointer hover:opacity-90 transition-all"
           style={{
             background: 'linear-gradient(90deg, #171717 0%, #171717 30%, #816D46 50%, #171717 70%, #3F3F3F 100%)',
@@ -256,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
             </div>
             <ArrowRight className="h-5 w-5 text-white" />
           </div>
-        </div>
+        </div> */}
 
         {/* Logout Button */}
         {onLogout && (
