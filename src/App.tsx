@@ -60,6 +60,7 @@ import JobTrackingDashboard from './components/ClientDashboard/JobTrackingDashbo
 import { useAccount } from './contexts/AccountContext';
 import ReportPage from './components/Report/ReportPage';
 import PricingSection from './components/Pricing/PricingSection';
+import JobScoringOverlay from './components/ClientDashboard/JobScoringOverlay';
 
 
 function App() {
@@ -219,6 +220,9 @@ function App() {
   const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
   const [clientDashboardError, setClientDashboardError] = useState("");
   const [applywizzId, setApplywizzId] = useState<string | undefined>();
+
+  // State for job scoring overlay
+  const [showJobScoringOverlay, setShowJobScoringOverlay] = useState(false);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -550,6 +554,23 @@ function App() {
     } catch (error) {
       console.error('Error during logout:', error);
       // Even if there's an error, we've cleared the critical data
+    }
+  };
+
+  // Handler for when jobs list is empty (shows overlay)
+  const handleJobsEmpty = (isEmpty: boolean) => {
+    // Only show overlay if user is client AND opted for job links
+    if (currentUser?.role === 'client' && optedJobLinks) {
+      setShowJobScoringOverlay(isEmpty);
+    }
+  };
+
+  // Handler for refresh button in overlay
+  const handleRefreshJobs = () => {
+    // Trigger a re-fetch by calling the ref method if available
+    if (scoredJobsRef.current) {
+      // Force a page reload to refresh all data
+      window.location.reload();
     }
   };
 
@@ -1706,6 +1727,7 @@ function App() {
                       setFilteredDate={setFilteredDate}
                       expandedDate={expandedDate}
                       setExpandedDate={setExpandedDate}
+                      onJobsEmpty={handleJobsEmpty}
                     />
                   </>
                 ) : (
@@ -2415,6 +2437,14 @@ function App() {
           </Routes>
         </BrowserRouter>
       </DialogProvider>
+
+      {/* Job Scoring Overlay - Shows when client has no jobs yet */}
+      {showJobScoringOverlay && currentUser && (
+        <JobScoringOverlay
+          userName={currentUser.name}
+          onRefresh={handleRefreshJobs}
+        />
+      )}
     </>
   );
 }
