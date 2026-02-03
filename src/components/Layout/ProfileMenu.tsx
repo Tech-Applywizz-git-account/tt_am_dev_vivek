@@ -46,13 +46,13 @@ export const ProfileMenu: React.FC<Props> = ({ user, onLogout, optedJobLinks }) 
       >
         <img src="/profile.png" alt="Profile" className="h-6 w-6" />
       </button>
-      <button
+      {/* <button
         className="rounded-full p-2 hover:bg-gray-500 transition"
         aria-label="Settings menu"
         title="Settings"
       >
         <img src="/settings.png" alt="settings" className="h-6 w-6" />
-      </button>
+      </button> */}
 
       {/* Dropdown */}
       {open && (
