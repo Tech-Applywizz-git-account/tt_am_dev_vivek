@@ -19,6 +19,7 @@ import {
   DollarSign,
   RefreshCw,
   Linkedin,
+  CreditCard,
   ArrowRight,
   LogOut
 } from 'lucide-react';
@@ -183,8 +184,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
     },
     {
       id: 'pricing',
-      label: 'Pricing',
-      icon: DollarSign,
+      label: 'Pricing Plan',
+      icon: CreditCard,
       show: (user.role === 'client') && (optedJobLinks),
     },
     {

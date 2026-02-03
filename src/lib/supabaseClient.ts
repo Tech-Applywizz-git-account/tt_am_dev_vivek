@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-export const supabase = createClient(supabaseUrl, supabaseAnonKey,{
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
     params: {
       eventsPerSecond: 10, // Reasonable default
@@ -12,11 +12,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey,{
 
 const supabaseUrl1 = import.meta.env.VITE_SUPABASE_URL1
 const supabaseAnonKey1 = import.meta.env.VITE_SUPABASE_ANON_KEY1
-export const supabase1 = createClient(supabaseUrl1, supabaseAnonKey1,{
+export const supabase1 = createClient(supabaseUrl1, supabaseAnonKey1, {
   realtime: {
     params: {
       eventsPerSecond: 10, // Reasonable default
     },
   },
 })
-
+const supabaseUrl2 = import.meta.env.VITE_SUPABASE_URL_PAYMENT
+const supabaseAnonKey2 = import.meta.env.VITE_SUPABASE_ANON_KEY_PAYMENT
+export const supabase2 = createClient(supabaseUrl2, supabaseAnonKey2, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // Reasonable default
+    },
+  },
+})
