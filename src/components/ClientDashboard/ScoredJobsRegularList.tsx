@@ -50,6 +50,7 @@ interface ScoredJobsRegularListProps {
     setFilteredDate: (date: string | null) => void;
     expandedDate: string | null;
     setExpandedDate: (date: string | null) => void;
+    onJobsEmpty?: (isEmpty: boolean) => void;
 }
 
 export interface ScoredJobsRegularListRef {
@@ -118,7 +119,8 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     filteredDate,
     setFilteredDate,
     expandedDate,
-    setExpandedDate
+    setExpandedDate,
+    onJobsEmpty
 }, ref) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
@@ -191,6 +193,14 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     useEffect(() => {
         fetchSummary();
     }, [applywizzId]);
+
+    // Notify parent when jobs list is empty
+    useEffect(() => {
+        const allDates = Object.keys(summary);
+        if (onJobsEmpty) {
+            onJobsEmpty(allDates.length === 0);
+        }
+    }, [summary, onJobsEmpty]);
 
     // Toggle date expansion and fetch jobs if needed
     const toggleDateExpansion = (date: string) => {
