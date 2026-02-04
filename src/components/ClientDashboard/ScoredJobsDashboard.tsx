@@ -154,14 +154,9 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         `;
 
         return (
-            <rect
-                x={adjustedX}
-                y={y}
-                width={width}
-                height={height}
+            <path
+                d={path}
                 fill={fill}
-                rx={8}
-                ry={8}
             />
         );
     };
