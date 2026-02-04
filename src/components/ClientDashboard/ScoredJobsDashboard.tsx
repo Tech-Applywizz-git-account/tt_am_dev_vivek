@@ -264,23 +264,27 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                                 iconType="circle"
                             />
 
-                            {/* Regular Applications Bar */}
-                            <Bar
-                                dataKey="regularCount"
-                                name="Regular Applications"
-                                fill="url(#colorRegular)"
-                                radius={[8, 8, 0, 0]}
-                                maxBarSize={50}
-                            />
-
-                            {/* Easy Apply Bar */}
-                            <Bar
-                                dataKey="easyApplyCount"
-                                name="Easy Apply"
-                                fill="url(#colorEasyApply)"
-                                radius={[8, 8, 0, 0]}
-                                maxBarSize={50}
-                            />
+                            {/* Regular Applications Bar - Only show if there's data */}
+                            {totalRegular > 0 && (
+                                <Bar
+                                    dataKey="regularCount"
+                                    name="Regular Applications"
+                                    fill="url(#colorRegular)"
+                                    radius={[8, 8, 0, 0]}
+                                    maxBarSize={50}
+                                />
+                            )}
+ 
+                            {/* Easy Apply Bar - Only show if there's data */}
+                            {totalEasyApply > 0 && (
+                                <Bar
+                                    dataKey="easyApplyCount"
+                                    name="Easy Apply"
+                                    fill="url(#colorEasyApply)"
+                                    radius={[8, 8, 0, 0]}
+                                    maxBarSize={50}
+                                />
+                            )}
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
