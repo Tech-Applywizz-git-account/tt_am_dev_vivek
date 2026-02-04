@@ -135,20 +135,34 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         const easyApplyCount = payload.easyApplyCount || 0;
         const bothHaveData = regularCount > 0 && easyApplyCount > 0;
 
-        // Determine the x position
-        // When only one bar exists, we need to center it in the full category space
-        // In grouped mode, Recharts allocates space for both bars plus gap
-        // Adjust the multiplier (0.5) to fine-tune centering
-        const barX = bothHaveData ? x : x + (width * 0.5);
+        // Determine which bar this is
+        const isRegularBar = dataKey === 'regularCount';
+        const isEasyApplyBar = dataKey === 'easyApplyCount';
+
+        // Only render if this bar has data
+        const currentValue = isRegularBar ? regularCount : easyApplyCount;
+        if (currentValue === 0) {
+            return null; // Don't render bars with zero values
+        }
+
+        // Calculate bar position and width
+        let barX = x;
+        let barWidth = width;
+
+        if (!bothHaveData) {
+            // When only one bar has data, center it
+            // Recharts allocates space for both bars, so we need to shift to center
+            barX = x + (width * 0.5);
+        }
 
         // Create a path with rounded top corners only (radius 8)
         const radius = 8;
         const path = `
             M ${barX},${y + radius}
             Q ${barX},${y} ${barX + radius},${y}
-            L ${barX + width - radius},${y}
-            Q ${barX + width},${y} ${barX + width},${y + radius}
-            L ${barX + width},${y + height}
+            L ${barX + barWidth - radius},${y}
+            Q ${barX + barWidth},${y} ${barX + barWidth},${y + radius}
+            L ${barX + barWidth},${y + height}
             L ${barX},${y + height}
             Z
         `;
