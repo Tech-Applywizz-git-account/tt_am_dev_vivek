@@ -126,13 +126,14 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         return null;
     };
 
-    // Custom bar shape with rounded top corners
+    // Custom bar shape with rounded top corners and centering logic
     const CustomBarShape = (props: any) => {
         const { fill, x, y, width, height, payload, dataKey } = props;
 
         // Check if this bar has data
         const regularCount = payload.regularCount || 0;
         const easyApplyCount = payload.easyApplyCount || 0;
+        const bothHaveData = regularCount > 0 && easyApplyCount > 0;
 
         // Determine which bar this is
         const isRegularBar = dataKey === 'regularCount';
@@ -143,15 +144,27 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
             return null;
         }
 
+        // Calculate bar position
+        let barX = x;
+        const isSingleDate = chartData.length === 1;
+
+        if (isSingleDate && !bothHaveData) {
+            // For single date with single bar type, shift to center
+            barX = x - width;
+        } else if (!bothHaveData) {
+            // For multiple dates with single bar type per date, center the bar
+            barX = x + (width * 0.5);
+        }
+
         // Create a path with rounded top corners only (radius 8)
         const radius = 8;
         const path = `
-            M ${x},${y + radius}
-            Q ${x},${y} ${x + radius},${y}
-            L ${x + width - radius},${y}
-            Q ${x + width},${y} ${x + width},${y + radius}
-            L ${x + width},${y + height}
-            L ${x},${y + height}
+            M ${barX},${y + radius}
+            Q ${barX},${y} ${barX + radius},${y}
+            L ${barX + width - radius},${y}
+            Q ${barX + width},${y} ${barX + width},${y + radius}
+            L ${barX + width},${y + height}
+            L ${barX},${y + height}
             Z
         `;
 
