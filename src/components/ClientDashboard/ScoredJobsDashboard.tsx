@@ -126,50 +126,32 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         return null;
     };
 
-    // Custom bar shape that centers when only one bar type has data
+    // Custom bar shape with rounded top corners
     const CustomBarShape = (props: any) => {
         const { fill, x, y, width, height, payload, dataKey } = props;
 
-        // Check if this is the only bar with data for this date
+        // Check if this bar has data
         const regularCount = payload.regularCount || 0;
         const easyApplyCount = payload.easyApplyCount || 0;
-        const bothHaveData = regularCount > 0 && easyApplyCount > 0;
 
         // Determine which bar this is
         const isRegularBar = dataKey === 'regularCount';
-        const isEasyApplyBar = dataKey === 'easyApplyCount';
-
-        // Only render if this bar has data
         const currentValue = isRegularBar ? regularCount : easyApplyCount;
+
+        // Don't render bars with zero values
         if (currentValue === 0) {
-            return null; // Don't render bars with zero values
-        }
-
-        // Calculate bar position and width
-        let barX = x;
-        let barWidth = width;
-
-        // Check if this is a single-date chart
-        const isSingleDate = chartData.length === 1;
-
-        if (isSingleDate && !bothHaveData) {
-            // For single date with single bar type, shift LEFT to center
-            // When there's only one date, Recharts gives more space, so we shift left
-            barX = x - (width * 0.5);
-        } else if (!bothHaveData) {
-            // For multiple dates with single bar type per date, center the bar
-            barX = x + (width * 0.5);
+            return null;
         }
 
         // Create a path with rounded top corners only (radius 8)
         const radius = 8;
         const path = `
-            M ${barX},${y + radius}
-            Q ${barX},${y} ${barX + radius},${y}
-            L ${barX + barWidth - radius},${y}
-            Q ${barX + barWidth},${y} ${barX + barWidth},${y + radius}
-            L ${barX + barWidth},${y + height}
-            L ${barX},${y + height}
+            M ${x},${y + radius}
+            Q ${x},${y} ${x + radius},${y}
+            L ${x + width - radius},${y}
+            Q ${x + width},${y} ${x + width},${y + radius}
+            L ${x + width},${y + height}
+            L ${x},${y + height}
             Z
         `;
 
@@ -275,6 +257,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                         <BarChart
                             data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            barCategoryGap="20%"
                         >
                             <defs>
                                 <linearGradient id="colorRegular" x1="0" y1="0" x2="0" y2="1">
