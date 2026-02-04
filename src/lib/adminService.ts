@@ -52,3 +52,59 @@ export const getPricingSettings = async () => {
         return { monthly: '45', threeMonth: '119.99', sixMonth: '224' };
     }
 };
+
+export const getPayPalPlanIds = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('admin_settings')
+            .select('*')
+            .in('setting_key', [
+                'paypal_india_monthly',
+                'paypal_india_3_months',
+                'paypal_india_6_months',
+                'paypal_dubai_monthly',
+                'paypal_dubai_3_months',
+                'paypal_dubai_6_months'
+            ]);
+
+        if (error) throw error;
+
+        console.log('📊 Fetched PayPal Plan IDs from database:', data);
+
+        const planIds: any = {};
+        data?.forEach(item => {
+            planIds[item.setting_key] = item.setting_value;
+        });
+
+        const result = {
+            india: {
+                monthly: planIds.paypal_india_monthly || 'P-4VW53857BD588000YNGACGIY',
+                '3-months': planIds.paypal_india_3_months || 'P-0W497970HN288661MNGAC2IA',
+                '6-months': planIds.paypal_india_6_months || 'P-5BV82030WF868805GNGAC2WA'
+            },
+            dubai: {
+                monthly: planIds.paypal_dubai_monthly || 'P-6LG69448ER983061VNGAC5YQ',
+                '3-months': planIds.paypal_dubai_3_months || 'P-5KY99446JK6188514NGACYUA',
+                '6-months': planIds.paypal_dubai_6_months || 'P-74B19855BS8555159NGACZTQ'
+            }
+        };
+
+        console.log('✅ Structured PayPal Plan IDs:', result);
+        return result;
+    } catch (error) {
+        console.error('❌ Error fetching PayPal plan IDs:', error);
+        // Return hardcoded fallback values
+        return {
+            india: {
+                monthly: 'P-4VW53857BD588000YNGACGIY',
+                '3-months': 'P-0W497970HN288661MNGAC2IA',
+                '6-months': 'P-5BV82030WF868805GNGAC2WA'
+            },
+            dubai: {
+                monthly: 'P-6LG69448ER983061VNGAC5YQ',
+                '3-months': 'P-5KY99446JK6188514NGACYUA',
+                '6-months': 'P-74B19855BS8555159NGACZTQ'
+            }
+        };
+    }
+};

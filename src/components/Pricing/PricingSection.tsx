@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getPaymentSettings, getPricingSettings } from "../../lib/adminService";
+import { getPaymentSettings, getPricingSettings, getPayPalPlanIds } from "../../lib/adminService";
 import { createTransaction } from "../../lib/paymentService";
 import PayPalSubscriptionButton from "../PayPal/PayPalSubscriptionButton";
 import { X, Check } from "lucide-react";
@@ -18,6 +18,7 @@ const PricingSection = ({ user }: PricingSectionProps) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [transactionId, setTransactionId] = useState("");
     const [showPayPalModal, setShowPayPalModal] = useState(false);
+    const [paypalPlanIds, setPaypalPlanIds] = useState<any>(null);
 
     const [pricingPlans, setPricingPlans] = useState([
         {
@@ -76,15 +77,22 @@ const PricingSection = ({ user }: PricingSectionProps) => {
         }
     ]);
 
-    // Fetch dynamic gateway and prices from shared admin settings
+    // Fetch dynamic gateway, prices, and PayPal plan IDs from shared admin settings
     useEffect(() => {
         const loadSettings = async () => {
-            const [gatewayData, prices] = await Promise.all([
+            console.log('🔄 Loading payment settings...');
+            const [gatewayData, prices, planIds] = await Promise.all([
                 getPaymentSettings(),
-                getPricingSettings()
+                getPricingSettings(),
+                getPayPalPlanIds()
             ]);
 
+            console.log('💳 Active Gateway:', gatewayData);
+            console.log('💰 Prices:', prices);
+            console.log('🆔 PayPal Plan IDs loaded:', planIds);
+
             setActiveGateway(gatewayData);
+            setPaypalPlanIds(planIds);
 
             // Update plan prices dynamically if they exist in DB
             setPricingPlans(prev => prev.map(plan => {
@@ -114,6 +122,14 @@ const PricingSection = ({ user }: PricingSectionProps) => {
             }, plan.id, activeGateway.account);
 
             setTransactionId(txn.jb_id);
+
+            // Log which plan ID will be used
+            const planIdToUse = paypalPlanIds?.[activeGateway.account]?.[plan.id];
+            console.log(`🎯 Selected Plan: ${plan.name} (${plan.id})`);
+            console.log(`🏦 Account: ${activeGateway.account}`);
+            console.log(`🆔 PayPal Plan ID to use: ${planIdToUse}`);
+            console.log(`📋 All available plan IDs:`, paypalPlanIds);
+
             setShowPayPalModal(true);
         } catch (error) {
             alert("Failed to initiate checkout. Please try again.");
@@ -194,7 +210,7 @@ const PricingSection = ({ user }: PricingSectionProps) => {
 
                             <PayPalSubscriptionButton
                                 key={`${activeGateway.account}_${selectedPlan?.id}`}
-                                planId={getPayPalPlanId(activeGateway.account, selectedPlan?.id)}
+                                planId={paypalPlanIds?.[activeGateway.account]?.[selectedPlan?.id] || ''}
                                 jbId={transactionId}
                                 account={activeGateway.account as any}
                                 onSuccess={() => window.location.href = '/success'}
@@ -208,21 +224,7 @@ const PricingSection = ({ user }: PricingSectionProps) => {
     );
 };
 
-// Helper to map UI plans to PayPal Plan IDs (Production IDs)
-const getPayPalPlanId = (account: string, uiPlanId: string) => {
-    const plans: any = {
-        india: {
-            'monthly': 'P-4VW53857BD588000YNGACGIY',
-            '3-months': 'P-0W497970HN288661MNGAC2IA',
-            '6-months': 'P-5BV82030WF868805GNGAC2WA',
-        },
-        dubai: {
-            'monthly': 'P-6LG69448ER983061VNGAC5YQ',
-            '3-months': 'P-5KY99446JK6188514NGACYUA',
-            '6-months': 'P-74B19855BS8555159NGACZTQ',
-        }
-    };
-    return plans[account]?.[uiPlanId] || plans[account]?.['monthly'];
-};
+// Note: PayPal Plan IDs are now fetched dynamically from the database via getPayPalPlanIds()
+// This ensures that admin changes to plan IDs are reflected on the payment page
 
 export default PricingSection;
