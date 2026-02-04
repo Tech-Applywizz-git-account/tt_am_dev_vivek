@@ -435,49 +435,51 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
                         {/* Horizontal Line below logo and header info */}
                         <hr className="my-3 border-gray-100" style={{ maxWidth: "80%" }} />
                         <div className="flex gap-12 mt-3">
-                            {/* Column 1: Location and Salary */}
-                            <div className="flex flex-col gap-3">
-                                {job.location && (
-                                    <div
-                                        className="flex items-center gap-1.5"
-                                        style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}
-                                    >
-                                        <MapPin size={16} style={{ color: "#282828" }} />
-                                        <span>{job.location}</span>
-                                    </div>
-                                )}
-                                {job.salary && (
-                                    <div
-                                        className="flex items-center gap-1.5"
-                                        style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}
-                                    >
-                                        <DollarSign size={16} style={{ color: "#282828" }} />
-                                        <span>Salary: {job.salary}</span>
-                                    </div>
-                                )}
-                            </div>
+                            {(() => {
+                                const details = [];
+                                if (job.location) {
+                                    details.push(
+                                        <div key="loc" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <MapPin size={16} style={{ color: "#282828" }} />
+                                            <span>{job.location}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.salary) {
+                                    details.push(
+                                        <div key="sal" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <DollarSign size={16} style={{ color: "#282828" }} />
+                                            <span>Salary: {job.salary}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.experience_level) {
+                                    details.push(
+                                        <span key="exp" className="px-2 py-0.5 flex items-center gap-1" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <Briefcase size={16} />
+                                            {job.experience_level}
+                                        </span>
+                                    );
+                                }
+                                if (job.work_type) {
+                                    details.push(
+                                        <span key="work" className="px-2 py-0.5 flex items-center gap-1" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <Monitor size={16} />
+                                            {job.work_type}
+                                        </span>
+                                    );
+                                }
 
-                            {/* Column 2: Experience and Work Type */}
-                            <div className="flex flex-col gap-3">
-                                {job.experience_level && (
-                                    <span
-                                        className="px-2 py-0.5 flex items-center gap-1"
-                                        style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}
-                                    >
-                                        <Briefcase size={16} />
-                                        {job.experience_level}
-                                    </span>
-                                )}
-                                {job.work_type && (
-                                    <span
-                                        className="px-2 py-0.5 flex items-center gap-1"
-                                        style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}
-                                    >
-                                        <Monitor size={16} />
-                                        {job.work_type}
-                                    </span>
-                                )}
-                            </div>
+                                const columns = [];
+                                for (let i = 0; i < details.length; i += 2) {
+                                    columns.push(
+                                        <div key={`col-${i}`} className="flex flex-col gap-3">
+                                            {details.slice(i, i + 2)}
+                                        </div>
+                                    );
+                                }
+                                return columns;
+                            })()}
                         </div>
                     </div>
 
