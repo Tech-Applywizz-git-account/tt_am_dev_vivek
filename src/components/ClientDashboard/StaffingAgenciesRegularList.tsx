@@ -80,9 +80,9 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
         <div
             className="shrink-0 inline-flex items-center justify-end"
             style={{
-                height: '121px',
-                width: '121px',
-                padding: '17px 13px 18px 22px',
+                height: '80px',
+                width: '80px',
+                padding: '17px 17px 17px 17px',
                 borderRadius: '9px',
                 border: '1px solid #D3D3D3',
                 background: '#F1F1F1',
@@ -93,7 +93,7 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
                 src={logoUrl}
                 alt={company}
                 className="object-contain"
-                style={{ width: '120px', height: '80px' }}
+                style={{ width: '80px', height: '80px' }}
                 onError={() => setError(true)}
             />
         </div>
@@ -562,8 +562,8 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
                         className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === 1
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#171717] text-white hover:bg-black'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#171717] text-white hover:bg-black'
                             }`}
                     >
                         <ChevronLeft size={16} />
@@ -577,8 +577,8 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
                         className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${currentPage === totalPages
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-[#171717] text-white hover:bg-black'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#171717] text-white hover:bg-black'
                             }`}
                     >
                         <ChevronRight size={16} />

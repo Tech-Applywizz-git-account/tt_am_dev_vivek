@@ -99,9 +99,9 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
         <div
             className="shrink-0 inline-flex items-center justify-end"
             style={{
-                height: '121px',
-                width: '121px',
-                padding: '17px 13px 18px 22px',
+                height: '80px',
+                width: '80px',
+                padding: '17px 17px 17px 17px',
                 borderRadius: '9px',
                 border: '1px solid #D3D3D3',
                 background: '#F1F1F1',
@@ -112,7 +112,7 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
                 src={logoUrl}
                 alt={company}
                 className="object-contain"
-                style={{ width: '120px', height: '80px' }}
+                style={{ width: '80px', height: '80px' }}
                 onError={() => setError(true)}
             />
         </div>
