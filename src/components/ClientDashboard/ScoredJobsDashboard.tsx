@@ -144,6 +144,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
             return null;
         }
 
+        
         // Calculate bar position
         let barX = x;
         const isSingleDate = chartData.length === 1;
