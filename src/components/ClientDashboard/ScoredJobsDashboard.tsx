@@ -212,6 +212,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                         <BarChart
                             data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            barCategoryGap="20%"
                         >
                             <defs>
                                 <linearGradient id="colorRegular" x1="0" y1="0" x2="0" y2="1">
