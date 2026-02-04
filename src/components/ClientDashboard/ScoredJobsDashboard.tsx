@@ -143,8 +143,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         const easyApplyCount = payload.easyApplyCount || 0;
         const bothHaveData = regularCount > 0 && easyApplyCount > 0;
 
-        // Determine the x position
-        const barX = bothHaveData ? x : x + width / 2;
+        const barX = bothHaveData ? x : x + width;
 
         // Create a path with rounded top corners only (radius 8)
         const radius = 8;
