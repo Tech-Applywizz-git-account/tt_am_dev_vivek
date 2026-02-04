@@ -153,8 +153,9 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         const isSingleDate = chartData.length === 1;
 
         if (isSingleDate && !bothHaveData) {
-            // For single date with single bar type, don't adjust - use default positioning
-            barX = x;
+            // For single date with single bar type, shift LEFT to center
+            // When there's only one date, Recharts gives more space, so we shift left
+            barX = x - (width * 0.5);
         } else if (!bothHaveData) {
             // For multiple dates with single bar type per date, center the bar
             barX = x + (width * 0.5);
