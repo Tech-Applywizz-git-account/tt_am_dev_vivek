@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, CheckCircle, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Calendar, CheckCircle, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, DollarSign, Briefcase, Monitor, ArrowRight } from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -76,9 +76,9 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
     // Helper: Get match quality based on score
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        if (percentage >= 90) return { label: 'STRONG MATCH', color: 'green', bgColor: 'bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-900', textColor: 'text-emerald-300' };
-        if (percentage >= 70) return { label: 'GOOD MATCH', color: 'blue', bgColor: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900', textColor: 'text-amber-300' };
-        return { label: 'FAIR MATCH', color: 'yellow', bgColor: 'bg-gradient-to-b from-orange-600 via-orange-700 to-orange-900', textColor: 'text-orange-300' };
+        if (percentage >= 90) return { label: 'STRONG MATCH', color: 'green', bgGradient: 'linear-gradient(135deg, #059669 0%, #064E3B 100%)', textColor: '#A7F3D0' };
+        if (percentage >= 70) return { label: 'GOOD MATCH', color: 'blue', bgGradient: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)', textColor: '#BFDBFE' };
+        return { label: 'FAIR MATCH', color: 'yellow', bgGradient: 'linear-gradient(135deg, #D97706 0%, #78350F 100%)', textColor: '#FDE68A' };
     };
 
     // Helper: Get company initials
@@ -173,60 +173,90 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
         const faviconUrl = companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null;
 
         return (
-            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
-                <div className="flex items-start gap-6 p-6">
+            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-center gap-12 p-6">
                     {/* Left: Company Avatar & Job Info */}
-                    <div className="flex-1 flex gap-4">
-                        <CompanyLogo company={job.company || 'Company'} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
+                    <div className="flex-1">
+                        {/* Header: Logo, Title, and Company */}
+                        <div className="flex gap-3 items-start mb-1">
+                            <CompanyLogo company={job.company || 'Company'} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
+                            <div className="flex-1 min-w-0 mt-3">
+                                <h3
+                                    className="text-xl font-bold mb-1"
+                                    style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
+                                    {job.jobTitle || "Untitled Role"}
+                                </h3>
 
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                                {/* <span className="text-sm text-gray-500">{timeAgo}</span>
-                                {job.source && (
-                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                        {job.source}
-                                    </span>
-                                )} */}
-                                <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
-                                    <CheckCircle size={12} />
-                                    Applied
-                                </span>
+                                <p
+                                    className="text-base text-gray-600"
+                                    style={{ color: "#282828", fontFamily: "Noto Sans", fontSize: "12px" }}
+                                >
+                                    {job.company || "Unknown Company"}
+                                </p>
                             </div>
+                        </div>
 
-                            <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1">
-                                {job.jobTitle || "Untitled Role"}
-                            </h3>
+                        {/* Horizontal Line below logo and header info */}
+                        <hr className="my-3 border-gray-100" style={{ maxWidth: "80%" }} />
+                        <div className="flex gap-12 mt-3">
+                            {(() => {
+                                const details = [];
+                                if (job.location) {
+                                    details.push(
+                                        <div key="loc" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <MapPin size={16} style={{ color: "#282828" }} />
+                                            <span>{job.location}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.salary && job.salary !== "Not Available") {
+                                    details.push(
+                                        <div key="sal" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <DollarSign size={16} style={{ color: "#282828" }} />
+                                            <span>Salary: {job.salary}</span>
+                                        </div>
+                                    );
+                                }
 
-                            <p className="text-base text-gray-600 mb-3">
-                                {job.company || "Unknown Company"}
-                            </p>
-
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                {job.location && (
-                                    <div className="flex items-center gap-1.5">
-                                        <MapPin size={16} className="text-gray-400" />
-                                        <span>{job.location}</span>
-                                    </div>
-                                )}
-                                {job.salary && job.salary !== "Not Available" && (
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-gray-400">💰</span>
-                                        <span>{job.salary}</span>
-                                    </div>
-                                )}
-                            </div>
+                                const columns = [];
+                                for (let i = 0; i < details.length; i += 2) {
+                                    columns.push(
+                                        <div key={`col-${i}`} className="flex flex-col gap-3">
+                                            {details.slice(i, i + 2)}
+                                        </div>
+                                    );
+                                }
+                                return columns;
+                            })()}
                         </div>
                     </div>
 
+                    {/* Middle: VIEW JOB Button */}
+                    <div className="flex-shrink-0 flex items-center">
+                        <a
+                            href={job.jobUrl || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
+                        >
+                            <span>VIEW JOB</span>
+                            <ArrowRight className="h-5 w-5 text-white" />
+                        </a>
+                    </div>
+
                     {/* Right: Match Score Card */}
-                    <div className={`flex-shrink-0 ${matchData.bgColor} rounded-2xl p-6 w-32 flex flex-col items-center justify-center shadow-lg`}>
+                    <div
+                        className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                        style={{ background: matchData.bgGradient }}
+                    >
                         <div className="relative w-20 h-20 mb-3">
                             <svg className="w-20 h-20 transform -rotate-90">
                                 <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
                                 <circle
-                                    cx="40" cy="40" r="32" stroke="currentColor" strokeWidth="6" fill="none"
+                                    cx="40" cy="40" r="32" strokeWidth="6" fill="none"
                                     strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
-                                    className={matchData.textColor}
+                                    stroke={matchData.textColor}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -237,20 +267,6 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
                             {matchData.label}
                         </span>
                     </div>
-                </div>
-
-                {/* Bottom: View Job Button */}
-                <div className="px-6 pb-6 flex items-center gap-3">
-                    <div className="flex-1"></div>
-                    <a
-                        href={job.jobUrl || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-                    >
-                        <ExternalLink size={16} />
-                        <span>VIEW JOB</span>
-                    </a>
                 </div>
             </div>
         );

@@ -224,6 +224,7 @@ function App() {
 
   // State for job scoring overlay
   const [showJobScoringOverlay, setShowJobScoringOverlay] = useState(false);
+  const [hasShownOverlayThisSession, setHasShownOverlayThisSession] = useState(false);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -530,6 +531,7 @@ function App() {
       // 1. Clear React state first
       setCurrentUser(null);
       setActiveView('dashboard');
+      setHasShownOverlayThisSession(false);
 
       // 2. Clear account selection using context (handles selectedAccountId in localStorage)
       clearSelection();
@@ -560,9 +562,16 @@ function App() {
 
   // Handler for when jobs list is empty (shows overlay)
   const handleJobsEmpty = (isEmpty: boolean) => {
-    // Only show overlay if user is client AND opted for job links
-    if (currentUser?.role === 'client' && optedJobLinks) {
-      setShowJobScoringOverlay(isEmpty);
+    // Only show overlay if:
+    // 1. User is client AND opted for job links
+    // 2. Jobs list is empty
+    // 3. Overlay hasn't been shown yet in this session
+    if (currentUser?.role === 'client' && optedJobLinks && isEmpty && !hasShownOverlayThisSession) {
+      setShowJobScoringOverlay(true);
+      setHasShownOverlayThisSession(true); // Mark as shown for this session
+    } else if (!isEmpty) {
+      // If jobs are now available, hide the overlay
+      setShowJobScoringOverlay(false);
     }
   };
 

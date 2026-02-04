@@ -188,7 +188,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               <form onSubmit={handleLogin} className="space-y-5">
                 {/* Email Field */}
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 700, fontSize: '16px' }}>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px' }}>
                     Email address
                   </label>
                   <input
@@ -203,7 +203,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
                 {/* Password Field */}
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 700, fontSize: '16px' }}>
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px' }}>
                     Password
                   </label>
                   <div className="relative">
@@ -230,7 +230,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   type="submit"
                   disabled={loading}
                   className="w-full text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: '#77E954' }}
+                  style={{ background: '#77E954', fontFamily: '"Noto Sans"', fontWeight: 500, fontSize: '16px' }}
                   onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#68D045')}
                   onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#77E954')}
                 >
@@ -245,13 +245,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
               {/* Sign up link */}
               <div className="mt-6 text-center">
-                <p style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 700, fontSize: '16px' }}>
+                <p style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px' }}>
                   Don't remember your password?{' '} <br />
                   <button
                     type="button"
                     onClick={handleForgotPasswordClick}
                     className="font-medium"
-                    style={{ color: '#77E954' }}
+                    style={{ color: '#77E954', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px' }}
                     onMouseEnter={(e) => e.currentTarget.style.color = '#68D045'}
                     onMouseLeave={(e) => e.currentTarget.style.color = '#77E954'}
                   >

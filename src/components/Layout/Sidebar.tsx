@@ -259,17 +259,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
           </div>
         </div> */}
 
-        {/* Logout Button */}
-        {onLogout && (
+      </div>
+
+      {/* Logout Button Pinned to Bottom */}
+      {onLogout && (
+        <div className="p-4 border-t border-green-100">
           <button
             onClick={onLogout}
-            className="mt-3 w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 text-gray-600 hover:bg-white hover:text-black"
+            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 text-gray-600 hover:bg-white hover:text-black"
           >
             <LogOut className="h-5 w-5 flex-shrink-0 text-gray-400" />
             <span className="font-medium text-sm">Logout</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

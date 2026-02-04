@@ -92,24 +92,31 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                 year: "numeric"
             });
 
+            const regularValue = payload.find((p: any) => p.dataKey === 'regularCount')?.value || 0;
+            const easyApplyValue = payload.find((p: any) => p.dataKey === 'easyApplyCount')?.value || 0;
+
             return (
                 <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
                     <p className="font-semibold text-gray-800 mb-2">{formattedDate}</p>
                     <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                            <span className="text-sm text-gray-600">Regular:</span>
-                            <span className="font-semibold text-gray-900">{payload[0]?.value || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                            <span className="text-sm text-gray-600">Easy Apply:</span>
-                            <span className="font-semibold text-gray-900">{payload[1]?.value || 0}</span>
-                        </div>
+                        {regularValue > 0 && (
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                                <span className="text-sm text-gray-600">Regular:</span>
+                                <span className="font-semibold text-gray-900">{regularValue}</span>
+                            </div>
+                        )}
+                        {easyApplyValue > 0 && (
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                                <span className="text-sm text-gray-600">Easy Apply:</span>
+                                <span className="font-semibold text-gray-900">{easyApplyValue}</span>
+                            </div>
+                        )}
                         <div className="pt-2 border-t mt-2">
                             <span className="text-sm text-gray-600">Total:</span>
                             <span className="font-bold text-gray-900 ml-2">
-                                {(payload[0]?.value || 0) + (payload[1]?.value || 0)}
+                                {regularValue + easyApplyValue}
                             </span>
                         </div>
                     </div>
@@ -118,6 +125,60 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         }
         return null;
     };
+
+    // Custom bar shape that centers when only one bar type has data
+    const CustomBarShape = (props: any) => {
+        const { fill, x, y, width, height, payload, dataKey } = props;
+
+        // Check if this is the only bar with data for this date
+        const regularCount = payload.regularCount || 0;
+        const easyApplyCount = payload.easyApplyCount || 0;
+        const bothHaveData = regularCount > 0 && easyApplyCount > 0;
+
+        // Determine which bar this is
+        const isRegularBar = dataKey === 'regularCount';
+        const isEasyApplyBar = dataKey === 'easyApplyCount';
+
+        // Only render if this bar has data
+        const currentValue = isRegularBar ? regularCount : easyApplyCount;
+        if (currentValue === 0) {
+            return null; // Don't render bars with zero values
+        }
+
+        // Calculate bar position and width
+        let barX = x;
+        let barWidth = width;
+
+        // For single date graphs, the barCategoryGap handles centering
+        // For multiple dates, we need to center when only one bar type has data
+        const isSingleDateGraph = chartData.length === 1;
+
+        if (!bothHaveData && !isSingleDateGraph) {
+            // When only one bar has data (and multiple dates), center it
+            // Recharts allocates space for both bars, so we need to shift to center
+            barX = x + (width * 0.5);
+        }
+
+        // Create a path with rounded top corners only (radius 8)
+        const radius = 8;
+        const path = `
+            M ${barX},${y + radius}
+            Q ${barX},${y} ${barX + radius},${y}
+            L ${barX + barWidth - radius},${y}
+            Q ${barX + barWidth},${y} ${barX + barWidth},${y + radius}
+            L ${barX + barWidth},${y + height}
+            L ${barX},${y + height}
+            Z
+        `;
+
+        return (
+            <path
+                d={path}
+                fill={fill}
+            />
+        );
+    };
+
 
     if (loading) {
         return (
@@ -212,6 +273,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                         <BarChart
                             data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            barCategoryGap={chartData.length === 1 ? "40%" : "20%"}
                         >
                             <defs>
                                 <linearGradient id="colorRegular" x1="0" y1="0" x2="0" y2="1">
@@ -264,27 +326,23 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                                 iconType="circle"
                             />
 
-                            {/* Regular Applications Bar - Only show if there's data */}
-                            {totalRegular > 0 && (
-                                <Bar
-                                    dataKey="regularCount"
-                                    name="Regular Applications"
-                                    fill="url(#colorRegular)"
-                                    radius={[8, 8, 0, 0]}
-                                    maxBarSize={50}
-                                />
-                            )}
- 
-                            {/* Easy Apply Bar - Only show if there's data */}
-                            {totalEasyApply > 0 && (
-                                <Bar
-                                    dataKey="easyApplyCount"
-                                    name="Easy Apply"
-                                    fill="url(#colorEasyApply)"
-                                    radius={[8, 8, 0, 0]}
-                                    maxBarSize={50}
-                                />
-                            )}
+                            {/* Regular Applications Bar */}
+                            <Bar
+                                dataKey="regularCount"
+                                name="Regular Applications"
+                                fill="url(#colorRegular)"
+                                shape={<CustomBarShape />}
+                                maxBarSize={50}
+                            />
+
+                            {/* Easy Apply Bar */}
+                            <Bar
+                                dataKey="easyApplyCount"
+                                name="Easy Apply"
+                                fill="url(#colorEasyApply)"
+                                shape={<CustomBarShape />}
+                                maxBarSize={50}
+                            />
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
