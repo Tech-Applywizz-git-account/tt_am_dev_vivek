@@ -154,6 +154,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
             // Recharts allocates space for both bars, so we need to shift to center
             barX = x + (width * 0.5);
         }
+        
         // Create a path with rounded top corners only (radius 8)
         const radius = 8;
         const path = `
