@@ -144,7 +144,10 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         const bothHaveData = regularCount > 0 && easyApplyCount > 0;
 
         // Determine the x position
-        const barX = bothHaveData ? x : x + width / 2;
+        // When only one bar exists, we need to center it in the full category space
+        // In grouped mode, Recharts allocates space for both bars plus gap
+        // So we shift by (width + gap) to center
+        const barX = bothHaveData ? x : x + width;
 
         // Create a path with rounded top corners only (radius 8)
         const radius = 8;
@@ -260,7 +263,6 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                         <BarChart
                             data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                            barCategoryGap="20%"
                         >
                             <defs>
                                 <linearGradient id="colorRegular" x1="0" y1="0" x2="0" y2="1">
