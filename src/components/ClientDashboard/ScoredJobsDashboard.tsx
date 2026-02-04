@@ -130,24 +130,38 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
     const CustomBarShape = (props: any) => {
         const { fill, x, y, width, height, payload, dataKey } = props;
 
+        // Get the value for this specific bar
+        const value = payload[dataKey] || 0;
+
+        // Don't render if value is 0
+        if (value === 0) {
+            return null;
+        }
+
         // Check if this is the only bar with data for this date
         const regularCount = payload.regularCount || 0;
         const easyApplyCount = payload.easyApplyCount || 0;
-        const hasOnlyThisType = (dataKey === 'regularCount' && regularCount > 0 && easyApplyCount === 0) ||
-            (dataKey === 'easyApplyCount' && easyApplyCount > 0 && regularCount === 0);
+        const bothHaveData = regularCount > 0 && easyApplyCount > 0;
 
-        // If only this bar type has data, center it by adjusting x position
-        const adjustedX = hasOnlyThisType ? x + width / 2 : x;
+        // Determine the x position
+        const barX = bothHaveData ? x : x + width / 2;
+
+        // Create a path with rounded top corners only (radius 8)
+        const radius = 8;
+        const path = `
+            M ${barX},${y + radius}
+            Q ${barX},${y} ${barX + radius},${y}
+            L ${barX + width - radius},${y}
+            Q ${barX + width},${y} ${barX + width},${y + radius}
+            L ${barX + width},${y + height}
+            L ${barX},${y + height}
+            Z
+        `;
 
         return (
-            <rect
-                x={adjustedX}
-                y={y}
-                width={width}
-                height={height}
+            <path
+                d={path}
                 fill={fill}
-                rx={8}
-                ry={8}
             />
         );
     };
