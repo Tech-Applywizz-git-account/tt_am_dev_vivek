@@ -149,8 +149,12 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
         let barX = x;
         let barWidth = width;
 
-        if (!bothHaveData) {
-            // When only one bar has data, center it
+        // For single date graphs, the barCategoryGap handles centering
+        // For multiple dates, we need to center when only one bar type has data
+        const isSingleDateGraph = chartData.length === 1;
+
+        if (!bothHaveData && !isSingleDateGraph) {
+            // When only one bar has data (and multiple dates), center it
             // Recharts allocates space for both bars, so we need to shift to center
             barX = x + (width * 0.5);
         }
@@ -269,6 +273,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                         <BarChart
                             data={chartData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            barCategoryGap={chartData.length === 1 ? "40%" : "20%"}
                         >
                             <defs>
                                 <linearGradient id="colorRegular" x1="0" y1="0" x2="0" y2="1">
