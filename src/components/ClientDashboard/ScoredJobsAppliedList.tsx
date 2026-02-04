@@ -357,81 +357,76 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
-                <div className="flex items-center gap-36 p-6">
+                <div className="flex items-center gap-12 p-6">
                     {/* Left: Company Avatar & Job Info */}
-                    <div className="flex-1 flex gap-4">
-                        <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
+                    <div className="flex-1">
+                        {/* Header: Logo, Title, and Company */}
+                        <div className="flex gap-3 items-start mb-1">
+                            <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
+                            <div className="flex-1 min-w-0 mt-3">
+                                <h3
+                                    className="text-xl font-bold mb-1"
+                                    style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
+                                    {job.title || "Untitled Role"}
+                                </h3>
 
-                        <div className="flex-1 min-w-0">
-                            {/* <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm text-gray-500">{timeAgo}</span>
-                                {job.source && (
-                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                        {job.source}
-                                    </span>
-                                )}
-                                <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
-                                    <CheckCircle size={12} />
-                                    Applied
-                                </span>
-                            </div> */}
-
-                            <h3
-                                className="text-xl font-bold text-gray-900 mb-1 line-clamp-1"
-                                style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
-                                {job.title || "Untitled Role"}
-                            </h3>
-
-                            <p
-                                className="text-base text-gray-600 mb-3"
-                                style={{ color: "#7B7B7B", fontFamily: "Noto Sans", fontSize: "16px" }}
-                            >
-                                {job.company || "Unknown Company"}
-                            </p>
-
-                            <hr className="my-3 border-gray-500" style={{ maxWidth: "80%" }} />
-
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                {job.location && (
-                                    <div className="flex items-center gap-1.5">
-                                        <MapPin size={16} className="text-gray-400" />
-                                        <span>{job.location}</span>
-                                    </div>
-                                )}
+                                <p
+                                    className="text-base text-gray-600"
+                                    style={{ color: "#282828", fontFamily: "Noto Sans", fontSize: "12px" }}
+                                >
+                                    {job.company || "Unknown Company"}
+                                </p>
                             </div>
+                        </div>
 
-                            {/* New fields section */}
-                            <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
-                                {/* {job.company_url && (
-                                    <a
-                                        href={job.company_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline"
-                                    >
-                                        <Building size={16} />
-                                        <span>{new URL(job.company_url).hostname.replace('www.', '')}</span>
-                                    </a>
-                                )} */}
-                                {job.experience_level && (
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
-                                        <Briefcase size={12} />
-                                        {job.experience_level}
-                                    </span>
-                                )}
-                                {job.salary && (
-                                    <div className="flex items-center gap-1.5 text-gray-600">
-                                        <DollarSign size={16} className="text-gray-400" />
-                                        <span>Salary: {job.salary}</span>
-                                    </div>
-                                )}
-                                {job.work_type && (
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full flex items-center gap-1">
-                                        <Monitor size={12} />
-                                        {job.work_type}
-                                    </span>
-                                )}
-                            </div>
+                        {/* Horizontal Line below logo and header info */}
+                        <hr className="my-3 border-gray-100" style={{ maxWidth: "80%" }} />
+                        <div className="flex gap-12 mt-3">
+                            {(() => {
+                                const details = [];
+                                if (job.location) {
+                                    details.push(
+                                        <div key="loc" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <MapPin size={16} style={{ color: "#282828" }} />
+                                            <span>{job.location}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.salary) {
+                                    details.push(
+                                        <div key="sal" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <DollarSign size={16} style={{ color: "#282828" }} />
+                                            <span>Salary: {job.salary}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.experience_level) {
+                                    details.push(
+                                        <span key="exp" className="px-2 py-0.5 flex items-center gap-1" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <Briefcase size={16} />
+                                            {job.experience_level}
+                                        </span>
+                                    );
+                                }
+                                if (job.work_type) {
+                                    details.push(
+                                        <span key="work" className="px-2 py-0.5 flex items-center gap-1" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <Monitor size={16} />
+                                            {job.work_type}
+                                        </span>
+                                    );
+                                }
+
+                                const columns = [];
+                                for (let i = 0; i < details.length; i += 2) {
+                                    columns.push(
+                                        <div key={`col-${i}`} className="flex flex-col gap-3">
+                                            {details.slice(i, i + 2)}
+                                        </div>
+                                    );
+                                }
+                                return columns;
+                            })()}
                         </div>
                     </div>
 

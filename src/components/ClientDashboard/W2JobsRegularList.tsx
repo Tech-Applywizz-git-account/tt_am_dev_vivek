@@ -291,7 +291,7 @@ const W2JobsRegularList: React.FC<W2JobsRegularListProps> = ({ applywizzId }) =>
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
-                <div className="flex items-center gap-36 p-6">
+                <div className="flex items-center gap-12 p-6">
                     {/* Left: Company Avatar & Job Info */}
                     <div className="flex-1">
                         {/* Header: Logo, Title, and Company */}
