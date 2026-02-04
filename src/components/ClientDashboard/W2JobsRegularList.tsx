@@ -497,10 +497,10 @@ const W2JobsRegularList: React.FC<W2JobsRegularListProps> = ({ applywizzId }) =>
 
     return (
         <div className="bg-white p-4 rounded-lg shadow mt-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            {/* <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Briefcase className="text-blue-600" size={24} />
                 w2 Agency Jobs Summary
-            </h2>
+            </h2> */}
 
             <div className="space-y-2">
                 {currentDates.map((date, index) => {

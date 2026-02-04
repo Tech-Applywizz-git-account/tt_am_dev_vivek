@@ -77,6 +77,7 @@ const AppLayout: React.FC<Props> = ({
           onViewChange={setActiveView}
           pendingClientsCount={pendingClientsCount}
           optedJobLinks={optedJobLinks}
+          onLogout={handleLogout}
         />
         <main className="flex-1 p-8" style={{ borderTopLeftRadius: '30px', borderTopRightRadius: '30px', border: '1px solid #000000', background: '#FFFFFF' }}>
           {renderMainContent()}
