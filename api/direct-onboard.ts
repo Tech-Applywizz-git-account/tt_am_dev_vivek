@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEFAULT_ONBOARDED_BY_ID = process.env.VITE_DEFAULT_ONBOARDED_BY_ID;
+const DEFAULT_SUBMITTED_BY_ID = 'd92f960d-b244-45e8-a13d-d0ad08828c89';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
 const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL;
 const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
@@ -56,6 +57,7 @@ interface DirectOnboardData {
     location_preferences: string[];
 
     // Optional fields
+    submission_type?: 'direct' | 'pending';
     personal_email?: string;
     work_preferences?: string;
     salary_range?: string;
@@ -93,7 +95,7 @@ interface DirectOnboardData {
     uses_substances_affecting_duties?: boolean;
     substances_description?: string;
     can_provide_legal_docs?: boolean;
-    is_hispanic_latino?: boolean;
+    is_hispanic_latino?: string;
     race_ethnicity?: string;
     veteran_status?: string;
     disability_status?: string;
@@ -104,6 +106,9 @@ interface DirectOnboardData {
     full_address?: string;
     date_of_birth?: string;
     primary_phone?: string;
+    is_new_domain?: boolean;
+    add_ons_info?: string[];
+    exclude_companies?: string;
     [key: string]: any;
 }
 
@@ -223,6 +228,151 @@ async function extractLeadData(leadId: number) {
     return result;
 }
 
+// Handle Pending Client Submission
+async function handlePendingClientSubmission(clientData: DirectOnboardData, res: VercelResponse) {
+    try {
+        // Normalize email
+        const normalizedEmail = clientData.email.trim().toLowerCase();
+        const normalizedPersonalEmail = clientData.personal_email
+            ? clientData.personal_email.trim().toLowerCase()
+            : normalizedEmail;
+
+        // Check for duplicate emails in pending_clients table
+        const { data: existingClients, error: checkError } = await supabaseAdmin
+            .from('pending_clients')
+            .select('id, company_email, personal_email')
+            .or(`company_email.eq.${normalizedEmail},personal_email.eq.${normalizedPersonalEmail}`);
+
+        if (checkError) {
+            console.error('Error checking for duplicate emails:', checkError);
+            return res.status(500).json({
+                error: 'Failed to check for duplicate emails',
+                details: checkError.message
+            });
+        }
+
+        if (existingClients && existingClients.length > 0) {
+            return res.status(409).json({
+                error: 'Email already exists',
+                details: `A pending client with email ${normalizedEmail} already exists`
+            });
+        }
+
+        // Generate a unique ID for the pending client
+        const pendingClientId = crypto.randomUUID();
+
+        // Prepare pending_clients table data
+        const pendingClientData = {
+            id: pendingClientId,
+            full_name: clientData.full_name,
+            personal_email: normalizedPersonalEmail,
+            whatsapp_number: clientData.phone,
+            callable_phone: clientData.phone,
+            company_email: normalizedEmail,
+            job_role_preferences: clientData.job_role_preferences,
+            salary_range: clientData.salary_range || null,
+            location_preferences: clientData.location_preferences,
+            work_auth_details: clientData.work_auth_details || null,
+            submitted_by: DEFAULT_SUBMITTED_BY_ID,
+            visa_type: clientData.visa_type,
+            applywizz_id: clientData.applywizz_id,
+            sponsorship: clientData.sponsorship || false,
+            badge_value: clientData.badge_value || 0,
+            resume_url: clientData.resume_s3_path ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_s3_path}` : null,
+            resume_path: clientData.resume_s3_path,
+            start_date: clientData.start_date,
+            end_date: clientData.end_date || null,
+            no_of_applications: clientData.no_of_applications || '20',
+            is_over_18: clientData.is_over_18 ?? null,
+            eligible_to_work_in_us: clientData.eligible_to_work_in_us ?? null,
+            require_future_sponsorship: clientData.require_future_sponsorship ?? null,
+            can_perform_essential_functions: clientData.can_perform_essential_functions ?? null,
+            worked_for_company_before: clientData.worked_for_company_before ?? null,
+            discharged_for_policy_violation: clientData.discharged_for_policy_violation ?? null,
+            referred_by_agency: clientData.referred_by_agency ?? null,
+            highest_education: clientData.highest_education || null,
+            university_name: clientData.university_name || null,
+            cumulative_gpa: clientData.cumulative_gpa || null,
+            desired_start_date: clientData.desired_start_date || null,
+            willing_to_relocate: clientData.willing_to_relocate ?? null,
+            can_work_3_days_in_office: clientData.can_work_3_days_in_office ?? null,
+            role: clientData.role || null,
+            experience: clientData.experience || '0',
+            work_preferences: clientData.work_preferences || null,
+            alternate_job_roles: clientData.alternate_job_roles || null,
+            exclude_companies: clientData.exclude_companies || 'NA',
+            convicted_of_felony: clientData.convicted_of_felony ?? null,
+            felony_explanation: clientData.felony_explanation || null,
+            pending_investigation: clientData.pending_investigation ?? null,
+            willing_background_check: clientData.willing_background_check ?? null,
+            willing_drug_screen: clientData.willing_drug_screen ?? null,
+            failed_or_refused_drug_test: clientData.failed_or_refused_drug_test ?? null,
+            uses_substances_affecting_duties: clientData.uses_substances_affecting_duties ?? null,
+            substances_description: clientData.substances_description || null,
+            can_provide_legal_docs: clientData.can_provide_legal_docs ?? null,
+            gender: clientData.gender,
+            is_hispanic_latino: clientData.is_hispanic_latino || null,
+            race_ethnicity: clientData.race_ethnicity || null,
+            veteran_status: clientData.veteran_status || null,
+            disability_status: clientData.disability_status || null,
+            has_relatives_in_company: clientData.has_relatives_in_company ?? null,
+            relatives_details: clientData.relatives_details || null,
+            state_of_residence: clientData.state_of_residence,
+            zip_or_country: clientData.zip_or_country,
+            main_subject: clientData.main_subject || null,
+            graduation_year: clientData.graduation_year || null,
+            add_ons_info: clientData.add_ons_info || null,
+            github_url: clientData.github_url || null,
+            linked_in_url: clientData.linked_in_url || null,
+            client_form_fill_date: clientData.client_form_fill_date || null,
+            cover_letter_path: clientData.cover_letter_path || null,
+            full_address: clientData.full_address || null,
+            date_of_birth: clientData.date_of_birth || null,
+            primary_phone: clientData.primary_phone || clientData.phone,
+            is_new_domain: clientData.is_new_domain ?? true,
+            created_at: new Date().toISOString(),
+        };
+
+        // Insert into pending_clients table
+        const { error: insertError } = await supabaseAdmin
+            .from('pending_clients')
+            .insert(pendingClientData);
+
+        if (insertError) {
+            console.error('Supabase pending_clients insert error:', insertError);
+
+            // Check if it's a duplicate key error
+            if (insertError.message.includes('duplicate key') || insertError.code === '23505') {
+                return res.status(409).json({
+                    error: 'Email already exists',
+                    details: `A pending client with email ${normalizedEmail} already exists`
+                });
+            }
+
+            return res.status(500).json({
+                error: 'Failed to create pending client',
+                details: insertError.message
+            });
+        }
+
+        // Return success response
+        return res.status(200).json({
+            message: 'Pending client submitted successfully',
+            applywizz_id: clientData.applywizz_id,
+            pending_client_id: pendingClientId,
+            email: normalizedEmail,
+            status: 'pending_review'
+        });
+
+    } catch (err: any) {
+        console.error('Unexpected error in pending client submission:', err);
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: err.message || 'Unknown error occurred'
+        });
+    }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Enable CORS for cross-origin requests
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -280,6 +430,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 error: 'Validation failed',
                 details: validation.errors
             });
+        }
+
+        // Check submission type - handle pending clients separately
+        if (clientData.submission_type === 'pending') {
+            return await handlePendingClientSubmission(clientData, res);
         }
 
         // Set defaults
@@ -508,7 +663,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     await extractLeadData(karmafyLeadId);
                     console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
 
-                    Trigger Lambda endpoint (fire-and-forget)
+                    // Trigger Lambda endpoint (fire-and-forget)
                     try {
                         await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
                         console.log('Lambda endpoint triggered');
@@ -516,7 +671,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         console.error('Lambda endpoint error:', lambdaError);
                         // Continue execution - this is fire-and-forget
                     }
-                    
+
                 } catch (extractError: any) {
                     console.error('⚠️ Lead data extraction failed (continuing anyway):', extractError);
                     // Don't rollback - client is already created
@@ -554,3 +709,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 }
+
