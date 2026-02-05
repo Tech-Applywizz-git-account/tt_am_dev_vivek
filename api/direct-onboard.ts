@@ -555,7 +555,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Create Supabase auth user
         const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: clientData.email.trim().toLowerCase(),
-            password: "Created@123",
+            password: "Applywizz@2026",
             email_confirm: true,
         });
 
