@@ -272,7 +272,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                     <ResponsiveContainer width="100%" height={400}>
                         <BarChart
                             data={chartData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
                             barCategoryGap={chartData.length === 1 ? "40%" : "20%"}
                         >
                             <defs>
@@ -310,7 +310,6 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                                 label={{
                                     value: "Number of Applications",
                                     angle: -90,
-                                    position: "insideLeft",
                                     style: { fill: '#374151', fontSize: 14, fontWeight: 600 }
                                 }}
                             />
@@ -319,7 +318,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
 
                             <Legend
                                 wrapperStyle={{
-                                    paddingTop: '20px',
+                                    paddingTop: '10px',
                                     fontSize: '14px',
                                     fontWeight: 600
                                 }}

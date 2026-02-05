@@ -143,7 +143,7 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                     <ResponsiveContainer width="100%" height={400}>
                         <BarChart
                             data={data}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
                         >
                             <defs>
                                 <linearGradient id="colorRegular" x1="0" y1="0" x2="0" y2="1">
@@ -180,7 +180,7 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                                 label={{
                                     value: "Number of Applications",
                                     angle: -90,
-                                    position: "insideLeft",
+                                    offset: -40,
                                     style: { fill: '#374151', fontSize: 14, fontWeight: 600 }
                                 }}
                             />
