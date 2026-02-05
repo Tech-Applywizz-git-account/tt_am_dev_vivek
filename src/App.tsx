@@ -61,6 +61,7 @@ import { useAccount } from './contexts/AccountContext';
 import ReportPage from './components/Report/ReportPage';
 import PricingSection from './components/Pricing/PricingSection';
 import JobScoringOverlay from './components/ClientDashboard/JobScoringOverlay';
+import LoadingOverlay from './components/ClientDashboard/LoadingOverlay';
 import SuccessPage from './components/Payment/SuccessPage';
 
 
@@ -225,6 +226,7 @@ function App() {
   // State for job scoring overlay
   const [showJobScoringOverlay, setShowJobScoringOverlay] = useState(false);
   const [hasShownOverlayThisSession, setHasShownOverlayThisSession] = useState(false);
+  const [isJobsLoading, setIsJobsLoading] = useState(true);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -532,6 +534,7 @@ function App() {
       setCurrentUser(null);
       setActiveView('dashboard');
       setHasShownOverlayThisSession(false);
+      setIsJobsLoading(true); // Reset loading state for next login
 
       // 2. Clear account selection using context (handles selectedAccountId in localStorage)
       clearSelection();
@@ -560,13 +563,19 @@ function App() {
     }
   };
 
+  // Handler for jobs loading state
+  const handleJobsLoading = (isLoading: boolean) => {
+    setIsJobsLoading(isLoading);
+  };
+
   // Handler for when jobs list is empty (shows overlay)
   const handleJobsEmpty = (isEmpty: boolean) => {
     // Only show overlay if:
     // 1. User is client AND opted for job links
     // 2. Jobs list is empty
     // 3. Overlay hasn't been shown yet in this session
-    if (currentUser?.role === 'client' && optedJobLinks && isEmpty && !hasShownOverlayThisSession) {
+    // 4. NOT currently loading (to prevent flash during initial load)
+    if (currentUser?.role === 'client' && optedJobLinks && isEmpty && !hasShownOverlayThisSession && !isJobsLoading) {
       setShowJobScoringOverlay(true);
       setHasShownOverlayThisSession(true); // Mark as shown for this session
     } else if (!isEmpty) {
@@ -1740,6 +1749,7 @@ function App() {
                       expandedDate={expandedDate}
                       setExpandedDate={setExpandedDate}
                       onJobsEmpty={handleJobsEmpty}
+                      onLoadingChange={handleJobsLoading}
                     />
                   </>
                 ) : (
@@ -2450,6 +2460,11 @@ function App() {
           </Routes>
         </BrowserRouter>
       </DialogProvider>
+
+      {/* Loading Overlay - Shows while fetching jobs */}
+      {isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
+        <LoadingOverlay userName={currentUser.name} />
+      )}
 
       {/* Job Scoring Overlay - Shows when client has no jobs yet */}
       {showJobScoringOverlay && currentUser && (
