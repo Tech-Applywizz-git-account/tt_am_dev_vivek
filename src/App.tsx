@@ -27,7 +27,7 @@ import { supabaseAdmin } from './lib/supabaseAdminClient';
 import EmailConfirmed from './components/Auth/EmailConfirmed';
 import LinkExpired from './components/Auth/link-expired';
 import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/Layout/AppLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import FeedbackButton from './components/FeedbackButton';
@@ -2491,11 +2491,44 @@ function App() {
             />
 
           </Routes>
+
+          {/* Conditional Overlays - Only show on dashboard */}
+          <ConditionalOverlays
+            isJobsLoading={isJobsLoading}
+            showJobScoringOverlay={showJobScoringOverlay}
+            currentUser={currentUser}
+            optedJobLinks={optedJobLinks}
+            handleRefreshJobs={handleRefreshJobs}
+          />
         </BrowserRouter>
       </DialogProvider>
+    </>
+  );
+}
 
-      {/* Loading Overlay - Shows while fetching jobs */}
-      {isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
+// Component to conditionally render overlays based on current route
+function ConditionalOverlays({
+  isJobsLoading,
+  showJobScoringOverlay,
+  currentUser,
+  optedJobLinks,
+  handleRefreshJobs
+}: {
+  isJobsLoading: boolean;
+  showJobScoringOverlay: boolean;
+  currentUser: User | null;
+  optedJobLinks: boolean;
+  handleRefreshJobs: () => void;
+}) {
+  const location = useLocation();
+
+  // Only show LoadingOverlay on the dashboard page (root path)
+  const isDashboardPage = location.pathname === '/';
+
+  return (
+    <>
+      {/* Loading Overlay - Shows while fetching jobs on dashboard only */}
+      {isDashboardPage && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
         <LoadingOverlay userName={currentUser.name} />
       )}
 
@@ -2509,6 +2542,5 @@ function App() {
     </>
   );
 }
-
 
 export default App;
