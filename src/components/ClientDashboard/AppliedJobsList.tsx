@@ -245,6 +245,7 @@ const AppliedJobsList: React.FC<AppliedJobsListProps> = ({ applywizzId }) => {
                         </a>
                     </div>
 
+
                     {/* Right: Match Score Card */}
                     {percentage >= 20 && (
                         <div
