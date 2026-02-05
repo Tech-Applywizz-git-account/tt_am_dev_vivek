@@ -298,7 +298,7 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
             const payload: any = {
                 applywizz_id: selectedAccount.applywizz_id,
                 gender: formData.gender,
-                state_of_residence: formData.state_of_residence,
+                location: formData.state_of_residence,
                 experience: formData.experience,
                 visa_type: formData.visa_type,
                 work_preferences: formData.work_preferences,
