@@ -107,6 +107,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
     const [error, setError] = useState("");
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [companyLogos, setCompanyLogos] = useState<Record<string, string>>({});
     const itemsPerPage = 10;
 
     // Fetch summary
@@ -248,6 +249,37 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
         return { label: 'Good Match', bgColor: '', bgGradient, textColor: '#70FF84' };
     };
 
+    // Fetch company logo from Clearbit Autocomplete API
+    const fetchCompanyLogo = async (companyName: string): Promise<string | null> => {
+        if (!companyName) return null;
+
+        // Check cache first
+        if (companyLogos[companyName]) {
+            return companyLogos[companyName];
+        }
+
+        try {
+            const response = await fetch(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(companyName)}`);
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json();
+
+            if (data && data.length > 0 && data[0].logo) {
+                const logoUrl = data[0].logo;
+                // Cache the result
+                setCompanyLogos(prev => ({ ...prev, [companyName]: logoUrl }));
+                return logoUrl;
+            }
+        } catch (err) {
+            console.error("Error fetching company logo:", err);
+        }
+
+        return null;
+    };
+
     const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
         if (companyUrl) {
             try {
@@ -286,8 +318,33 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
         const matchData = getMatchQuality(job.score || 0);
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.generated_at);
-        const companyDomain = getCompanyDomain(job.company, job.company_url);
-        const faviconUrl = job.company_logo_url || (companyDomain ? `https://img.logo.dev/${companyDomain}?token=pk_X-rzlohGRwKjIu9R0F1jtQ` : null);
+        const [logoUrl, setLogoUrl] = React.useState<string | null>(null);
+
+        React.useEffect(() => {
+            const loadLogo = async () => {
+                // Priority 1: Use existing company_logo_url if available
+                if (job.company_logo_url) {
+                    setLogoUrl(job.company_logo_url);
+                    return;
+                }
+
+                // Priority 2: Try Clearbit Autocomplete API
+                const clearbitLogo = await fetchCompanyLogo(job.company);
+                if (clearbitLogo) {
+                    setLogoUrl(clearbitLogo);
+                    return;
+                }
+
+                // Priority 3: Fallback to domain-based logo
+                const companyDomain = getCompanyDomain(job.company, job.company_url);
+                if (companyDomain) {
+                    setLogoUrl(`https://logo.clearbit.com/${companyDomain}`);
+                }
+            };
+
+            loadLogo();
+        }, [job.company, job.company_logo_url, job.company_url]);
+
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
@@ -296,7 +353,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
                     <div className="flex-1">
                         {/* Header: Logo, Title, and Company */}
                         <div className="flex gap-3 items-start mb-1">
-                            <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
+                            <CompanyLogo company={job.company} logoUrl={logoUrl} fallbackColor="bg-blue-600" />
                             <div className="flex-1 min-w-0 mt-3">
                                 <h3
                                     className="text-xl font-bold mb-1"
