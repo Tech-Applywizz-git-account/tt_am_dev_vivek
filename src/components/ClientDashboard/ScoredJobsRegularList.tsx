@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, DollarSign, Building, Monitor, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import JobCalendar from "./Calendar";
 
+
 // ✅ Types
 interface JobItem {
     id: string;
@@ -51,6 +52,7 @@ interface ScoredJobsRegularListProps {
     expandedDate: string | null;
     setExpandedDate: (date: string | null) => void;
     onJobsEmpty?: (isEmpty: boolean) => void;
+    onLoadingChange?: (isLoading: boolean) => void;
 }
 
 export interface ScoredJobsRegularListRef {
@@ -120,7 +122,8 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     setFilteredDate,
     expandedDate,
     setExpandedDate,
-    onJobsEmpty
+    onJobsEmpty,
+    onLoadingChange
 }, ref) => {
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
@@ -194,13 +197,22 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
         fetchSummary();
     }, [applywizzId]);
 
-    // Notify parent when jobs list is empty
+    // Notify parent about loading state changes
+    useEffect(() => {
+        if (onLoadingChange) {
+            onLoadingChange(loading);
+        }
+    }, [loading, onLoadingChange]);
+
+    // Notify parent when jobs list is empty (only after loading completes)
     useEffect(() => {
         const allDates = Object.keys(summary);
-        if (onJobsEmpty) {
+        // Only notify if not loading to prevent premature overlay display
+        if (onJobsEmpty && !loading) {
             onJobsEmpty(allDates.length === 0);
         }
-    }, [summary, onJobsEmpty]);
+    }, [summary, onJobsEmpty, loading]);
+
 
     // Toggle date expansion and fetch jobs if needed
     const toggleDateExpansion = (date: string) => {
@@ -453,27 +465,29 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
                     </div>
 
                     {/* Right: Match Score Card */}
-                    <div
-                        className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
-                        style={{ background: matchData.bgGradient }}
-                    >
-                        <div className="relative w-20 h-20 mb-3">
-                            <svg className="w-20 h-20 transform -rotate-90">
-                                <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
-                                <circle
-                                    cx="40" cy="40" r="32" strokeWidth="6" fill="none"
-                                    strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
-                                    stroke={matchData.textColor}
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-white">{percentage}%</span>
+                    {percentage >= 20 && (
+                        <div
+                            className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                            style={{ background: matchData.bgGradient }}
+                        >
+                            <div className="relative w-20 h-20 mb-3">
+                                <svg className="w-20 h-20 transform -rotate-90">
+                                    <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
+                                    <circle
+                                        cx="40" cy="40" r="32" strokeWidth="6" fill="none"
+                                        strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
+                                        stroke={matchData.textColor}
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-white">{percentage}%</span>
+                                </div>
                             </div>
+                            <span className="text-xs font-bold text-white tracking-wide text-center">
+                                {matchData.label}
+                            </span>
                         </div>
-                        <span className="text-xs font-bold text-white tracking-wide text-center">
-                            {matchData.label}
-                        </span>
-                    </div>
+                    )}
                 </div>
 
                 {/* Bottom: Status Dropdown Only */}

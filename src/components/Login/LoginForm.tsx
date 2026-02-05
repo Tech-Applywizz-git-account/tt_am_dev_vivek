@@ -16,6 +16,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false); // New state for password visibility
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [resetLinkLoading, setResetLinkLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Typewriter animation states
@@ -79,6 +80,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   };
 
   const handleForgotPasswordClick = () => {
+    setError(""); // Clear any previous errors
     setShowResetModal(true);
   };
 
@@ -88,7 +90,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       return;
     }
 
+    setResetLinkLoading(true);
+    setError(""); // Clear any previous errors
+
     try {
+      // First, check if the email exists in the database
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', resetEmail.trim().toLowerCase())
+        .single();
+
+      if (checkError || !existingUser) {
+        // User not found in database
+        setError("User not registered. Please check your entered email.");
+        setResetLinkLoading(false);
+        return;
+      }
+
+      // User exists, proceed with sending reset link
       const response = await fetch(
         "https://zkebbnegghodwmgmkynt.supabase.co/functions/v1/request-password-reset",
         {
@@ -114,9 +134,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
       setShowResetModal(false);
       setResetEmail("");
+      setError(""); // Clear error on success
     } catch (err: any) {
       console.error('Reset password error:', err);
-      alert(err.message || "Unable to send reset link. Please try again.");
+      setError(err.message || "Unable to send reset link. Please try again.");
+    } finally {
+      setResetLinkLoading(false);
     }
   };
 
@@ -270,6 +293,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">Reset Password</h2>
             <p className="text-sm text-gray-600 mb-6">Enter your email to receive a reset link:</p>
+
+            {/* Error message in modal */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             <input
               type="email"
               placeholder="you@example.com"
@@ -279,16 +310,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
             />
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setShowResetModal(false)}
+                onClick={() => {
+                  setError(""); // Clear error when closing modal
+                  setShowResetModal(false);
+                }}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendResetLink}
-                className="px-6 py-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-colors"
+                disabled={resetLinkLoading}
+                className="px-6 py-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Send Reset Link
+                {resetLinkLoading ? 'Sending...' : 'Send Reset Link'}
               </button>
             </div>
           </div>
