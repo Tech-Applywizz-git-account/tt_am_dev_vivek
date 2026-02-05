@@ -565,27 +565,27 @@ function App() {
     }
   };
 
-  // Handler for jobs loading state with minimum 2-second display
+  // Handler for jobs loading state with minimum 1-second display
   const handleJobsLoading = (isLoading: boolean) => {
     if (isLoading) {
       // Loading started - record the start time
       setLoadingStartTime(Date.now());
       setIsJobsLoading(true);
     } else {
-      // Loading finished - ensure minimum 2 seconds have passed
+      // Loading finished - ensure minimum 1 second has passed
       const currentTime = Date.now();
       const elapsedTime = loadingStartTime ? currentTime - loadingStartTime : 0;
-      const minimumLoadingTime = 2000; // 2 seconds in milliseconds
+      const minimumLoadingTime = 1000; // 1 second in milliseconds
 
       if (elapsedTime < minimumLoadingTime) {
-        // Wait for the remaining time to reach 2 seconds
+        // Wait for the remaining time to reach 1 second
         const remainingTime = minimumLoadingTime - elapsedTime;
         setTimeout(() => {
           setIsJobsLoading(false);
           setLoadingStartTime(null);
         }, remainingTime);
       } else {
-        // Already been 2+ seconds, hide immediately
+        // Already been 1+ seconds, hide immediately
         setIsJobsLoading(false);
         setLoadingStartTime(null);
       }
