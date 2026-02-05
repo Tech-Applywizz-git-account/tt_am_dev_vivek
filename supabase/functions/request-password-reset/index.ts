@@ -68,7 +68,7 @@ async function getGraphToken() {
 async function sendGraphEmail(to: string, link: string) {
   try {
     const tokenData = await getGraphToken();
-    
+
     if (!tokenData.access_token) {
       throw new Error('No access token received from Microsoft Graph');
     }
@@ -162,12 +162,12 @@ Deno.serve(async (req) => {
   try {
     // Parse request body
     const body = await req.json();
-    
+
     // Check if this is a password reset request or password update
     if (body.action === "reset-password") {
       // 🔄 HANDLE PASSWORD RESET (from EmailConfirmed page)
       const { token, newPassword } = body;
-      
+
       if (!token || !newPassword) {
         return createResponse({ error: "Token and new password are required" }, 400);
       }
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
           .from("password_reset_tokens")
           .delete()
           .eq("token", token);
-        
+
         return createResponse({ error: "Token has expired" }, 400);
       }
 
@@ -223,14 +223,14 @@ Deno.serve(async (req) => {
 
       console.log(`Password successfully reset for user: ${tokenData.user_id}`);
 
-      return createResponse({ 
-        message: "Password reset successfully" 
+      return createResponse({
+        message: "Password reset successfully"
       });
 
     } else {
       // 📧 HANDLE PASSWORD RESET REQUEST (original logic)
       const { email } = body;
-      
+
       if (!email) {
         return createResponse({ error: "Email is required" }, 400);
       }
@@ -245,23 +245,23 @@ Deno.serve(async (req) => {
 
       // Find user by email
       const { data: users, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-      
+
       if (userError) {
         console.error("Error fetching users:", userError);
-        // Still return success for security
-        return createResponse({ 
-          message: "If an account exists with this email, a reset link has been sent." 
-        });
+        // Return error for database issues
+        return createResponse({
+          error: "Unable to process request. Please try again later."
+        }, 500);
       }
 
       const user = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
-      
-      // Return success even if user not found (security best practice)
+
+      // User not found - this shouldn't happen if client-side validation works
       if (!user) {
         console.log(`No user found with email: ${email}`);
-        return createResponse({ 
-          message: "If an account exists with this email, a reset link has been sent." 
-        });
+        return createResponse({
+          error: "User not found. Please check your email address."
+        }, 404);
       }
 
       console.log(`User found: ${user.id}`);
@@ -286,12 +286,12 @@ Deno.serve(async (req) => {
         console.log("Token stored successfully");
       }
 
-const baseUrl = FRONTEND_URL.replace(/\/+$/, '');
-const resetLink = `${baseUrl}/EmailConfirmed?token=${encodeURIComponent(token)}`;
+      const baseUrl = FRONTEND_URL.replace(/\/+$/, '');
+      const resetLink = `${baseUrl}/EmailConfirmed?token=${encodeURIComponent(token)}`;
 
 
       console.log(`Reset link created: ${resetLink}`);
-      
+
       // Send email if Microsoft Graph credentials are configured
       if (TENANT_ID && CLIENT_ID && CLIENT_SECRET && SENDER_EMAIL) {
         await sendGraphEmail(email, resetLink);
@@ -301,23 +301,23 @@ const resetLink = `${baseUrl}/EmailConfirmed?token=${encodeURIComponent(token)}`
         // In development, you might want to log the link instead of sending email
       }
 
-      return createResponse({ 
-        message: "If an account exists with this email, a reset link has been sent."
+      return createResponse({
+        message: "Password reset link has been sent to your email. Please check your inbox and spam folder."
       });
     }
 
   } catch (error) {
     console.error("Edge function error:", error);
-    
+
     // Return appropriate error based on the action
     if (body.action === "reset-password") {
-      return createResponse({ 
-        error: "An internal server error occurred while resetting password" 
+      return createResponse({
+        error: "An internal server error occurred while resetting password"
       }, 500);
     } else {
-      return createResponse({ 
-        message: "If an account exists with this email, a reset link has been sent." 
-      });
+      return createResponse({
+        error: "An error occurred while processing your request. Please try again."
+      }, 500);
     }
   }
 });
