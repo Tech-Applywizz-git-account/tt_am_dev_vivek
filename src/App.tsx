@@ -228,6 +228,7 @@ function App() {
   const [hasShownOverlayThisSession, setHasShownOverlayThisSession] = useState(false);
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -537,6 +538,7 @@ function App() {
       setHasShownOverlayThisSession(false);
       setIsJobsLoading(true); // Reset loading state for next login
       setLoadingStartTime(null); // Reset loading timer
+      setHasCompletedInitialLoad(false); // Reset initial load flag
 
       // 2. Clear account selection using context (handles selectedAccountId in localStorage)
       clearSelection();
@@ -568,26 +570,33 @@ function App() {
   // Handler for jobs loading state with minimum 1-second display
   const handleJobsLoading = (isLoading: boolean) => {
     if (isLoading) {
-      // Loading started - record the start time
-      setLoadingStartTime(Date.now());
-      setIsJobsLoading(true);
+      // Only show loading overlay if this is the first load
+      if (!hasCompletedInitialLoad) {
+        setLoadingStartTime(Date.now());
+        setIsJobsLoading(true);
+      }
     } else {
-      // Loading finished - ensure minimum 1 second has passed
-      const currentTime = Date.now();
-      const elapsedTime = loadingStartTime ? currentTime - loadingStartTime : 0;
-      const minimumLoadingTime = 1000; // 1 second in milliseconds
+      // Loading finished - mark initial load as complete
+      setHasCompletedInitialLoad(true);
 
-      if (elapsedTime < minimumLoadingTime) {
-        // Wait for the remaining time to reach 1 second
-        const remainingTime = minimumLoadingTime - elapsedTime;
-        setTimeout(() => {
+      // Only apply minimum time if we're actually showing the loading overlay
+      if (isJobsLoading) {
+        const currentTime = Date.now();
+        const elapsedTime = loadingStartTime ? currentTime - loadingStartTime : 0;
+        const minimumLoadingTime = 1000; // 1 second in milliseconds
+
+        if (elapsedTime < minimumLoadingTime) {
+          // Wait for the remaining time to reach 1 second
+          const remainingTime = minimumLoadingTime - elapsedTime;
+          setTimeout(() => {
+            setIsJobsLoading(false);
+            setLoadingStartTime(null);
+          }, remainingTime);
+        } else {
+          // Already been 1+ seconds, hide immediately
           setIsJobsLoading(false);
           setLoadingStartTime(null);
-        }, remainingTime);
-      } else {
-        // Already been 1+ seconds, hide immediately
-        setIsJobsLoading(false);
-        setLoadingStartTime(null);
+        }
       }
     }
   };
