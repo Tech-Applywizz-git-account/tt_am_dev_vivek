@@ -613,7 +613,8 @@ function App() {
     // 2. Jobs list is empty
     // 3. Overlay hasn't been shown yet in this session
     // 4. NOT currently loading (to prevent flash during initial load)
-    if (currentUser?.role === 'client' && optedJobLinks && isEmpty && !hasShownOverlayThisSession && !isJobsLoading) {
+    // 5. User is actually on the dashboard view
+    if (currentUser?.role === 'client' && optedJobLinks && isEmpty && !hasShownOverlayThisSession && !isJobsLoading && activeView === 'dashboard') {
       setShowJobScoringOverlay(true);
       setHasShownOverlayThisSession(true); // Mark as shown for this session
     } else if (!isEmpty) {
@@ -2538,8 +2539,8 @@ function ConditionalOverlays({
         <LoadingOverlay userName={currentUser.name} />
       )}
 
-      {/* Job Scoring Overlay - Shows when client has no jobs yet */}
-      {showJobScoringOverlay && currentUser && (
+      {/* Job Scoring Overlay - Shows when client has no jobs yet on dashboard */}
+      {isDashboardView && showJobScoringOverlay && currentUser && (
         <JobScoringOverlay
           userName={currentUser.name}
           onRefresh={handleRefreshJobs}

@@ -128,6 +128,7 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     const [summary, setSummary] = useState<Record<string, number>>({});
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
+    const [hasFetched, setHasFetched] = useState(false); // Track if we've completed at least one fetch
     const [error, setError] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -161,6 +162,7 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
             setError(err instanceof Error ? err.message : "Failed to load summary");
         } finally {
             setLoading(false);
+            setHasFetched(true); // Mark that we've finished at least one fetch attempt
         }
     };
 
@@ -194,6 +196,8 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     };
 
     useEffect(() => {
+        // Reset hasFetched when applywizzId changes to ensure we re-validate
+        setHasFetched(false);
         fetchSummary();
     }, [applywizzId]);
 
@@ -204,14 +208,15 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
         }
     }, [loading, onLoadingChange]);
 
-    // Notify parent when jobs list is empty (only after loading completes)
+    // Notify parent when jobs list is empty (only after a fetch has completed)
     useEffect(() => {
         const allDates = Object.keys(summary);
-        // Only notify if not loading to prevent premature overlay display
-        if (onJobsEmpty && !loading) {
+        // Only notify if we've finished the initial loading
+        // This prevents the JobScoringOverlay from flashing for a few milliseconds on mount
+        if (onJobsEmpty && !loading && hasFetched) {
             onJobsEmpty(allDates.length === 0);
         }
-    }, [summary, onJobsEmpty, loading]);
+    }, [summary, onJobsEmpty, loading, hasFetched]);
 
 
     // Toggle date expansion and fetch jobs if needed
