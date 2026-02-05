@@ -227,6 +227,7 @@ function App() {
   const [showJobScoringOverlay, setShowJobScoringOverlay] = useState(false);
   const [hasShownOverlayThisSession, setHasShownOverlayThisSession] = useState(false);
   const [isJobsLoading, setIsJobsLoading] = useState(true);
+  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -535,6 +536,7 @@ function App() {
       setActiveView('dashboard');
       setHasShownOverlayThisSession(false);
       setIsJobsLoading(true); // Reset loading state for next login
+      setLoadingStartTime(null); // Reset loading timer
 
       // 2. Clear account selection using context (handles selectedAccountId in localStorage)
       clearSelection();
@@ -563,9 +565,31 @@ function App() {
     }
   };
 
-  // Handler for jobs loading state
+  // Handler for jobs loading state with minimum 2-second display
   const handleJobsLoading = (isLoading: boolean) => {
-    setIsJobsLoading(isLoading);
+    if (isLoading) {
+      // Loading started - record the start time
+      setLoadingStartTime(Date.now());
+      setIsJobsLoading(true);
+    } else {
+      // Loading finished - ensure minimum 2 seconds have passed
+      const currentTime = Date.now();
+      const elapsedTime = loadingStartTime ? currentTime - loadingStartTime : 0;
+      const minimumLoadingTime = 2000; // 2 seconds in milliseconds
+
+      if (elapsedTime < minimumLoadingTime) {
+        // Wait for the remaining time to reach 2 seconds
+        const remainingTime = minimumLoadingTime - elapsedTime;
+        setTimeout(() => {
+          setIsJobsLoading(false);
+          setLoadingStartTime(null);
+        }, remainingTime);
+      } else {
+        // Already been 2+ seconds, hide immediately
+        setIsJobsLoading(false);
+        setLoadingStartTime(null);
+      }
+    }
   };
 
   // Handler for when jobs list is empty (shows overlay)
