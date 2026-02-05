@@ -27,7 +27,7 @@ import { supabaseAdmin } from './lib/supabaseAdminClient';
 import EmailConfirmed from './components/Auth/EmailConfirmed';
 import LinkExpired from './components/Auth/link-expired';
 import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/Layout/AppLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import FeedbackButton from './components/FeedbackButton';
@@ -171,8 +171,11 @@ function App() {
   const [filterPriority, setFilterPriority] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
   // State to store the clients
   const [clients, setClients] = useState<Client[]>([]);
-  // State to store the active view
-  const [activeView, setActiveView] = useState('dashboard');
+  // State to store the active view (load from localStorage if available)
+  const [activeView, setActiveView] = useState(() => {
+    const savedView = localStorage.getItem('activeView');
+    return savedView || 'dashboard';
+  });
   // State to store whether the create ticket modal is open
   const [isCreateTicketModalOpen, setIsCreateTicketModalOpen] = useState(false);
   // State to store whether the client onboarding modal is open
@@ -514,9 +517,10 @@ function App() {
     fetchApplywizzIdForSelectedAccount();
   }, [selectedAccountId, optedJobLinks]);
 
-  // Add this to save view changes
+  // Save activeView to storage when it changes
   useEffect(() => {
     if (currentUser) {
+      localStorage.setItem('activeView', activeView); // Persist across reloads
       sessionStorage.setItem('activeView', activeView);
       setSearchTerm('');
     }
@@ -546,6 +550,7 @@ function App() {
       // 3. Clear all other localStorage items
       localStorage.removeItem('currentUser');
       localStorage.removeItem('applywizz_user_email');
+      localStorage.removeItem('activeView'); // Clear saved view
 
       // 4. Clear all sessionStorage items
       sessionStorage.removeItem('activeView');
@@ -2494,6 +2499,7 @@ function App() {
 
           {/* Conditional Overlays - Only show on dashboard */}
           <ConditionalOverlays
+            activeView={activeView}
             isJobsLoading={isJobsLoading}
             showJobScoringOverlay={showJobScoringOverlay}
             currentUser={currentUser}
@@ -2506,29 +2512,29 @@ function App() {
   );
 }
 
-// Component to conditionally render overlays based on current route
+// Component to conditionally render overlays based on current view
 function ConditionalOverlays({
+  activeView,
   isJobsLoading,
   showJobScoringOverlay,
   currentUser,
   optedJobLinks,
   handleRefreshJobs
 }: {
+  activeView: string;
   isJobsLoading: boolean;
   showJobScoringOverlay: boolean;
   currentUser: User | null;
   optedJobLinks: boolean;
   handleRefreshJobs: () => void;
 }) {
-  const location = useLocation();
-
-  // Only show LoadingOverlay on the dashboard page (root path)
-  const isDashboardPage = location.pathname === '/';
+  // Only show LoadingOverlay on the dashboard view
+  const isDashboardView = activeView === 'dashboard';
 
   return (
     <>
       {/* Loading Overlay - Shows while fetching jobs on dashboard only */}
-      {isDashboardPage && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
+      {isDashboardView && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
         <LoadingOverlay userName={currentUser.name} />
       )}
 
