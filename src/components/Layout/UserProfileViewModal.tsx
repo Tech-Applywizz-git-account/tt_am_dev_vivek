@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { X, User as UserIcon, Mail, Phone, MapPin, Briefcase, DollarSign, FileText, Github, Linkedin, Download, Upload } from 'lucide-react';
+import { X, User as UserIcon, Mail, Phone, MapPin, Briefcase, DollarSign, FileText, Github, Linkedin, Download, Upload, Edit, Save, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'react-toastify';
 import { useAccount } from '../../contexts/AccountContext';
 import { uploadResumeToS3 } from '../../services/s3Service';
+import { CustomSelect } from '../common/CustomSelect';
+import { CustomMultiSelect } from '../common/CustomMultiSelect';
 
 interface UserProfileViewModalProps {
     isOpen: boolean;
@@ -45,6 +47,7 @@ interface AdditionalClientData {
     resume_url?: string;
     start_date?: string;
     desired_start_date?: string;
+    alternate_job_roles?: string[];
 }
 
 interface ProfileData {
@@ -57,10 +60,17 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
     const [profileData, setProfileData] = useState<ProfileData | null>(null);
     const [accounts, setAccounts] = useState<ClientAccount[]>([]);
     const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [formData, setFormData] = useState<any>({});
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+    const [isSaving, setIsSaving] = useState(false);
 
-    // Use AccountContext for persistent account selection
+    // Job roles state
+    const [jobRolesData, setJobRolesData] = useState<any[]>([]);
+    const [isLoadingJobRoles, setIsLoadingJobRoles] = useState(false);
+
     const { selectedAccountId, setSelectedAccountId } = useAccount();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Fetch all accounts for the user's email
     const fetchAccounts = useCallback(async () => {
@@ -126,6 +136,71 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
         }
     }, []);
 
+    // Constants for dropdown options
+    const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer Not to Say"];
+    const WORK_AUTH_OPTIONS = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
+    const WORK_PREF_OPTIONS = ["Remote", "Hybrid", "On-site", "All"];
+    const SALARY_RANGE_OPTIONS = [
+        "$50,000 - $70,000",
+        "$70,000 - $90,000",
+        "$90,000 - $120,000",
+        "$120,000 - $150,000",
+        "$150,000 - $200,000",
+        "$200,000+"
+    ];
+    const EXPERIENCE_OPTIONS = [
+        "1 Year", "2 Years", "3 Years", "4 Years", "5 Years",
+        "6 Years", "7 Years", "8 Years", "9 Years", "10 Years",
+        "11 Years", "12 Years", "13 Years", "14 Years", "15 Years", "15+ Years"
+    ];
+    const US_STATES = [
+        "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
+        "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+        "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan",
+        "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+        "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+        "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+        "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+        "Wisconsin", "Wyoming", "Other"
+    ];
+
+
+
+    // Fetch job roles from API on mount
+    useEffect(() => {
+        const fetchJobRoles = async () => {
+            setIsLoadingJobRoles(true);
+            try {
+                const response = await fetch('https://dashboard.apply-wizz.com/api/all-job-roles/', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    setJobRolesData(data);
+                } else {
+                    setJobRolesData([]);
+                }
+            } catch (error) {
+                console.error('Error fetching job roles:', error);
+                setJobRolesData([]);
+            } finally {
+                setIsLoadingJobRoles(false);
+            }
+        };
+
+        fetchJobRoles();
+    }, []);
+
     // Fetch accounts when modal opens
     useEffect(() => {
         if (isOpen && userEmail) {
@@ -143,6 +218,160 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
             }
         }
     }, [selectedAccountId, accounts, fetchProfileData]);
+
+    // Initialize form data when profile data loads
+    useEffect(() => {
+        if (profileData && !isEditMode) {
+            const client = profileData.client;
+            const additional = profileData.additional_information;
+
+            setFormData({
+                gender: additional?.gender || '',
+                state_of_residence: additional?.state_of_residence || '',
+                experience: additional?.experience || '',
+                visa_type: client?.visa_type || '',
+                work_preferences: additional?.work_preferences || '',
+                sponsorship: client?.sponsorship ? 'Yes' : 'No',
+                salary_range: client?.salary_range || '',
+                willing_to_relocate: additional?.willing_to_relocate ? 'Yes' : 'No',
+                github_url: additional?.github_url || '',
+                linked_in_url: additional?.linked_in_url || '',
+                job_role_preferences: Array.isArray(client?.job_role_preferences) ? client.job_role_preferences : [],
+                alternate_job_roles: Array.isArray(additional?.alternate_job_roles) ? additional.alternate_job_roles : []
+            });
+        }
+    }, [profileData, isEditMode]);
+
+    // Handle entering edit mode
+    const handleEditMode = () => {
+        setIsEditMode(true);
+        setValidationErrors({});
+    };
+
+    // Handle form input changes
+    const handleInputChange = (field: string, value: string) => {
+        setFormData((prev: any) => ({ ...prev, [field]: value }));
+        // Clear validation error for this field
+        if (validationErrors[field]) {
+            setValidationErrors((prev) => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
+        }
+    };
+
+    // Validate form data
+    const validateForm = (): boolean => {
+        const errors: Record<string, string> = {};
+
+        // No validation needed based on requirements
+        // GitHub/LinkedIn URLs: no validation
+        // Other fields: dropdown selections are inherently valid
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    // Handle save changes
+    const handleSaveChanges = async () => {
+        if (!validateForm()) {
+            toast.error('Please fix validation errors');
+            return;
+        }
+
+        const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+        if (!selectedAccount?.applywizz_id) {
+            toast.error('Unable to identify user account');
+            return;
+        }
+
+        setIsSaving(true);
+        const toastId = toast.loading('Saving changes...');
+
+        try {
+            const apiUrl = import.meta.env.VITE_TICKETING_TOOL_API_URL || '';
+            const syncEndpoint = apiUrl ? `${apiUrl}/api/sync-client` : '/api/sync-client';
+            const syncApiKey = import.meta.env.VITE_SYNC_API_KEY;
+
+            // Prepare payload
+            const payload: any = {
+                applywizz_id: selectedAccount.applywizz_id,
+                gender: formData.gender,
+                location: formData.state_of_residence,
+                experience: formData.experience,
+                visa_type: formData.visa_type,
+                work_preferences: formData.work_preferences,
+                sponsorship: formData.sponsorship === 'Yes',
+                salary_range: formData.salary_range,
+                willing_to_relocate: formData.willing_to_relocate === 'Yes',
+                github_url: formData.github_url,
+                linked_in_url: formData.linked_in_url,
+                job_role_preferences: formData.job_role_preferences,
+                alternate_job_roles: formData.alternate_job_roles
+            };
+
+            const response = await fetch(syncEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${syncApiKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save changes');
+            }
+
+            toast.update(toastId, {
+                render: 'Profile updated successfully!',
+                type: 'success',
+                isLoading: false,
+                autoClose: 3000,
+            });
+
+            // Refresh profile data
+            await fetchProfileData(selectedAccount.applywizz_id);
+            setIsEditMode(false);
+
+        } catch (error: any) {
+            console.error('Save error:', error);
+            toast.update(toastId, {
+                render: error.message || 'Failed to save changes',
+                type: 'error',
+                isLoading: false,
+                autoClose: 5000,
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Handle cancel edit mode
+    const handleCancelEdit = () => {
+        const client = profileData?.client;
+        const additional = profileData?.additional_information;
+
+        setIsEditMode(false);
+        setValidationErrors({});
+        // Reset form data to original values
+        setFormData({
+            gender: additional?.gender || '',
+            state_of_residence: additional?.state_of_residence || '',
+            experience: additional?.experience || '',
+            visa_type: client?.visa_type || '',
+            work_preferences: additional?.work_preferences || '',
+            sponsorship: client?.sponsorship ? 'Yes' : 'No',
+            salary_range: client?.salary_range || '',
+            willing_to_relocate: additional?.willing_to_relocate ? 'Yes' : 'No',
+            github_url: additional?.github_url || '',
+            linked_in_url: additional?.linked_in_url || '',
+            job_role_preferences: Array.isArray(client?.job_role_preferences) ? client.job_role_preferences : [],
+            alternate_job_roles: Array.isArray(additional?.alternate_job_roles) ? additional.alternate_job_roles : []
+        });
+    };
 
     if (!isOpen) return null;
 
@@ -273,10 +502,22 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                 {/* Header */}
                 <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
                     <div className="flex justify-between items-start gap-6">
-                        {/* Title */}
-                        <div className="flex-shrink-0">
-                            <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-                            <p className="text-sm text-gray-500 mt-1">View your profile information</p>
+                        {/* Title with Edit Button */}
+                        <div className="flex-shrink-0 flex items-center gap-3">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
+                                <p className="text-sm text-gray-500 mt-1">View your profile information</p>
+                            </div>
+                            {!isEditMode && !loading && client && (
+                                <button
+                                    onClick={handleEditMode}
+                                    className="p-2 rounded-full hover:bg-blue-50 transition-colors text-blue-600 hover:text-blue-700"
+                                    title="Edit Profile"
+                                    aria-label="Edit Profile"
+                                >
+                                    <Edit className="h-5 w-5" />
+                                </button>
+                            )}
                         </div>
 
                         {/* Right side: Account Selector and Close Button */}
@@ -440,16 +681,68 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(additional?.gender)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.gender || ''}
+                                                    onChange={(value) => handleInputChange('gender', value)}
+                                                    options={GENDER_OPTIONS}
+                                                    placeholder="Select Gender"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.gender && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.gender}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(additional?.gender)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">State of Residence</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50 flex items-center gap-2">
-                                            <MapPin className="h-4 w-4 text-gray-500" />
-                                            {displayValue(additional?.state_of_residence)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                {formData.state_of_residence === 'Other' || (formData.state_of_residence && !US_STATES.includes(formData.state_of_residence)) ? (
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={formData.state_of_residence === 'Other' ? '' : formData.state_of_residence}
+                                                            onChange={(e) => handleInputChange('state_of_residence', e.target.value)}
+                                                            disabled={isSaving}
+                                                            placeholder="Enter state/country"
+                                                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleInputChange('state_of_residence', '')}
+                                                            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                                            disabled={isSaving}
+                                                        >
+                                                            Back to dropdown
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <CustomSelect
+                                                        value={formData.state_of_residence || ''}
+                                                        onChange={(value) => handleInputChange('state_of_residence', value)}
+                                                        options={US_STATES}
+                                                        placeholder="Select State"
+                                                        disabled={isSaving}
+                                                        maxVisibleOptions={4}
+                                                    />
+                                                )}
+                                                {validationErrors.state_of_residence && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.state_of_residence}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50 flex items-center gap-2">
+                                                <MapPin className="h-4 w-4 text-gray-500" />
+                                                {displayValue(additional?.state_of_residence)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">ZIP / Country</label>
@@ -469,33 +762,150 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Experience (Years)</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(additional?.experience)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.experience || ''}
+                                                    onChange={(value) => handleInputChange('experience', value)}
+                                                    options={EXPERIENCE_OPTIONS}
+                                                    placeholder="Select Experience"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.experience && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.experience}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(additional?.experience)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Target Job Role</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(client.job_role_preferences)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.job_role_preferences?.[0] || ''}
+                                                    onChange={(value) => {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            job_role_preferences: [value],
+                                                            alternate_job_roles: [] // Clear alternate roles when target role changes
+                                                        }));
+                                                    }}
+                                                    options={jobRolesData.map(role => role.name)}
+                                                    placeholder={isLoadingJobRoles ? "Loading roles..." : "Select Job Role"}
+                                                    disabled={isSaving || isLoadingJobRoles}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.job_role_preferences && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.job_role_preferences}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(client.job_role_preferences)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Job Roles</label>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomMultiSelect
+                                                    value={formData.alternate_job_roles || []}
+                                                    onChange={(value) => setFormData(prev => ({ ...prev, alternate_job_roles: value }))}
+                                                    options={
+                                                        formData.job_role_preferences?.[0]
+                                                            ? (jobRolesData.find(role => role.name === formData.job_role_preferences[0])?.alternateRoles || [])
+                                                            : []
+                                                    }
+                                                    placeholder={
+                                                        !formData.job_role_preferences?.[0]
+                                                            ? "Select a Target Job Role first"
+                                                            : "Select Alternate Roles"
+                                                    }
+                                                    disabled={isSaving || !formData.job_role_preferences?.[0]}
+                                                    maxVisibleOptions={4}
+                                                    searchable={true}
+                                                />
+                                                {validationErrors.alternate_job_roles && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.alternate_job_roles}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(additional?.alternate_job_roles)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Visa Type</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(client.visa_type)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.visa_type || ''}
+                                                    onChange={(value) => handleInputChange('visa_type', value)}
+                                                    options={WORK_AUTH_OPTIONS}
+                                                    placeholder="Select Visa Type"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.visa_type && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.visa_type}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(client.visa_type)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Work Preferences</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(additional?.work_preferences)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.work_preferences || ''}
+                                                    onChange={(value) => handleInputChange('work_preferences', value)}
+                                                    options={WORK_PREF_OPTIONS}
+                                                    placeholder="Select Work Preference"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.work_preferences && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.work_preferences}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(additional?.work_preferences)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Sponsorship Required</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(client.sponsorship)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.sponsorship || ''}
+                                                    onChange={(value) => handleInputChange('sponsorship', value)}
+                                                    options={['Yes', 'No']}
+                                                    placeholder="Select Option"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.sponsorship && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.sponsorship}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(client.sponsorship)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -515,15 +925,47 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Salary Range</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(client.salary_range)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.salary_range || ''}
+                                                    onChange={(value) => handleInputChange('salary_range', value)}
+                                                    options={SALARY_RANGE_OPTIONS}
+                                                    placeholder="Select Salary Range"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.salary_range && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.salary_range}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(client.salary_range)}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Willing to Relocate</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {displayValue(additional?.willing_to_relocate)}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <CustomSelect
+                                                    value={formData.willing_to_relocate || ''}
+                                                    onChange={(value) => handleInputChange('willing_to_relocate', value)}
+                                                    options={['Yes', 'No']}
+                                                    placeholder="Select Option"
+                                                    disabled={isSaving}
+                                                    maxVisibleOptions={4}
+                                                />
+                                                {validationErrors.willing_to_relocate && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.willing_to_relocate}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {displayValue(additional?.willing_to_relocate)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -537,45 +979,108 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {additional?.github_url && additional.github_url !== 'NA' && additional.github_url !== 'N/A' ? (
-                                                <a
-                                                    href={additional.github_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:underline flex items-center gap-2"
-                                                >
-                                                    <Github className="h-4 w-4" />
-                                                    {additional.github_url}
-                                                </a>
-                                            ) : (
-                                                <span className="text-gray-500">Not specified</span>
-                                            )}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    value={formData.github_url || ''}
+                                                    onChange={(e) => handleInputChange('github_url', e.target.value)}
+                                                    disabled={isSaving}
+                                                    placeholder="https://github.com/yourusername"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                />
+                                                {validationErrors.github_url && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.github_url}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {additional?.github_url && additional.github_url !== 'NA' && additional.github_url !== 'N/A' ? (
+                                                    <a
+                                                        href={additional.github_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:underline flex items-center gap-2"
+                                                    >
+                                                        <Github className="h-4 w-4" />
+                                                        {additional.github_url}
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-gray-500">Not specified</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
-                                        <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
-                                            {additional?.linked_in_url && additional.linked_in_url !== 'NA' && additional.linked_in_url !== 'N/A' ? (
-                                                <a
-                                                    href={additional.linked_in_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:underline flex items-center gap-2"
-                                                >
-                                                    <Linkedin className="h-4 w-4" />
-                                                    {additional.linked_in_url}
-                                                </a>
-                                            ) : (
-                                                <span className="text-gray-500">Not specified</span>
-                                            )}
-                                        </div>
+                                        {isEditMode ? (
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    value={formData.linked_in_url || ''}
+                                                    onChange={(e) => handleInputChange('linked_in_url', e.target.value)}
+                                                    disabled={isSaving}
+                                                    placeholder="https://linkedin.com/in/yourprofile"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                />
+                                                {validationErrors.linked_in_url && (
+                                                    <p className="text-red-500 text-xs mt-1">{validationErrors.linked_in_url}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                                                {additional?.linked_in_url && additional.linked_in_url !== 'NA' && additional.linked_in_url !== 'N/A' ? (
+                                                    <a
+                                                        href={additional.linked_in_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:underline flex items-center gap-2"
+                                                    >
+                                                        <Linkedin className="h-4 w-4" />
+                                                        {additional.linked_in_url}
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-gray-500">Not specified</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* Sticky Footer with Save/Cancel Buttons - Only in Edit Mode */}
+                {isEditMode && (
+                    <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 flex justify-end gap-3 shadow-lg">
+                        <button
+                            onClick={handleCancelEdit}
+                            disabled={isSaving}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <XCircle className="h-4 w-4" />
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveChanges}
+                            disabled={isSaving}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="h-4 w-4" />
+                                    Save Changes
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
