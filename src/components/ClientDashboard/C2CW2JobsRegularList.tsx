@@ -540,7 +540,24 @@ const C2CW2JobsRegularList: React.FC<C2CW2JobsRegularListProps> = ({ applywizzId
                                     {jobs.length > 0 ? (
                                         <div className="space-y-4">
                                             {jobs
-                                                .sort((a, b) => (b.score || 0) - (a.score || 0))
+                                                .sort((a, b) => {
+                                                    // Primary sort: by match percentage (descending)
+                                                    const scoreDiff = (b.score || 0) - (a.score || 0);
+                                                    if (scoreDiff !== 0) return scoreDiff;
+
+                                                    // Secondary sort: by number of available fields (descending)
+                                                    // Count non-null fields: company, salary, experience_level, work_type
+                                                    const countFields = (job: JobItem) => {
+                                                        let count = 0;
+                                                        if (job.company) count++;
+                                                        if (job.salary) count++;
+                                                        if (job.experience_level) count++;
+                                                        if (job.work_type) count++;
+                                                        return count;
+                                                    };
+
+                                                    return countFields(b) - countFields(a);
+                                                })
                                                 .map((job) => renderJobCard(job, date))}
                                         </div>
                                     ) : (

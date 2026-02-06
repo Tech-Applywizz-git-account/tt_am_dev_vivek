@@ -238,7 +238,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
         </div>
 
         {/* ATS Resume Card */}
-        {/* <div
+        <div
           className="mt-4 rounded-lg p-2 cursor-pointer hover:opacity-90 transition-all"
           style={{
             background: 'linear-gradient(90deg, #171717 0%, #171717 30%, #816D46 50%, #171717 70%, #3F3F3F 100%)',
@@ -246,8 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
             animation: 'shine 3s ease-in-out infinite'
           }}
           onClick={() => {
-            // Add navigation logic here
-            console.log('Navigate to ATS Resume');
+            window.open('https://atsresume.apply-wizz.me/', '_blank');
           }}
         >
           <div className="flex items-center justify-between rounded-lg p-3" >
@@ -257,22 +256,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
             </div>
             <ArrowRight className="h-5 w-5 text-white" />
           </div>
-        </div> */}
+        </div>
+
+        {/* Logout Button */}
+        {onLogout && (
+          <div className="mt-16">
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 text-gray-600 hover:bg-white hover:text-black"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0 text-gray-400" />
+              <span className="font-medium text-sm">Logout</span>
+            </button>
+          </div>
+        )}
 
       </div>
-
-      {/* Logout Button Pinned to Bottom */}
-      {onLogout && (
-        <div className="p-4 border-t border-green-100">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 text-gray-600 hover:bg-white hover:text-black"
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0 text-gray-400" />
-            <span className="font-medium text-sm">Logout</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };
