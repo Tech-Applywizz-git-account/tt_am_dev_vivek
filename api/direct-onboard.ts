@@ -260,7 +260,7 @@ async function getMicrosoftAccessToken() {
 }
 
 // Helper to send notification email to Vivek
-async function sendNotificationToVivek(clientName: string, email: string) {
+async function sendNotificationToVivek(clientName: string, email: string, targetRole: string) {
     console.log(`Starting email notification for ${clientName}...`);
     try {
         if (!SENDER_EMAIL || !TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
@@ -277,7 +277,9 @@ async function sendNotificationToVivek(clientName: string, email: string) {
             <p>A new domain client has come to pending onboarding.</p>
             <p><strong>Client Name:</strong> ${clientName}</p>
             <p><strong>Client Email:</strong> ${email}</p>
+            <p><strong>Target Role:</strong> <code style="background: #f4f4f4; padding: 2px 5px; border-radius: 3px;">${targetRole}</code></p>
             <p><strong>Action Required:</strong> Please add this new job role in task management and onboard the client manually.</p>
+            <p style="color: #666; font-style: italic; margin-top: 15px;"><strong>Note:</strong> We kindly request that you ensure the domain is recorded exactly as provided, maintaining the original character casing.</p>
             <br/>
             <p><i>Automated Notification from ApplyWizz Onboarding System</i></p>
         `;
@@ -440,7 +442,10 @@ async function handlePendingClientSubmission(clientData: DirectOnboardData, res:
 
         // Send notification email to Vivek (Awaited to ensure completion in Serverless)
         try {
-            await sendNotificationToVivek(clientData.full_name, normalizedEmail);
+            const targetRole = Array.isArray(clientData.job_role_preferences)
+                ? clientData.job_role_preferences[0] || 'Not specified'
+                : 'Not specified';
+            await sendNotificationToVivek(clientData.full_name, normalizedEmail, targetRole);
         } catch (emailErr: any) {
             console.error('Email notification failed but continuing:', emailErr);
         }
