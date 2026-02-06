@@ -261,13 +261,16 @@ async function getMicrosoftAccessToken() {
 
 // Helper to send notification email to Vivek
 async function sendNotificationToVivek(clientName: string, email: string) {
+    console.log(`Starting email notification for ${clientName}...`);
     try {
-        if (!SENDER_EMAIL) {
-            console.error('SENDER_EMAIL is not configured');
+        if (!SENDER_EMAIL || !TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
+            console.error('❌ Email notification skipped: Missing one or more environment variables (SENDER_EMAIL, TENANT_ID, CLIENT_ID, CLIENT_SECRET)');
             return;
         }
 
         const token = await getMicrosoftAccessToken();
+        console.log('✅ Microsoft token acquired');
+
         const subject = `Pending Onboarding: ${clientName}`;
         const htmlBody = `
             <h3>New Pending Onboarding Request</h3>
@@ -435,10 +438,12 @@ async function handlePendingClientSubmission(clientData: DirectOnboardData, res:
             });
         }
 
-        // Send notification email to Vivek (non-blocking)
-        sendNotificationToVivek(clientData.full_name, normalizedEmail).catch((err: any) => {
-            console.error('Fire-and-forget email notification failed:', err);
-        });
+        // Send notification email to Vivek (Awaited to ensure completion in Serverless)
+        try {
+            await sendNotificationToVivek(clientData.full_name, normalizedEmail);
+        } catch (emailErr: any) {
+            console.error('Email notification failed but continuing:', emailErr);
+        }
 
         // Return success response
         return res.status(200).json({

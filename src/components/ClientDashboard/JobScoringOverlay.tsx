@@ -24,9 +24,9 @@ const JobScoringOverlay: React.FC<JobScoringOverlayProps> = ({ userName, onRefre
                 </div>
 
                 {/* Greeting */}
-                <h1 className="text-3xl font-bold text-gray-900 text-center mb-2">
+                {/* <h1 className="text-3xl font-bold text-gray-900 text-center mb-2">
                     Hi 👋 {userName}
-                </h1>
+                </h1> */}
 
                 {/* Welcome Title */}
                 <h2 className="text-2xl font-semibold text-blue-600 text-center mb-6">
