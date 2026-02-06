@@ -238,25 +238,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
         </div>
 
         {/* ATS Resume Card */}
-        <div
-          className="mt-4 rounded-lg p-2 cursor-pointer hover:opacity-90 transition-all"
-          style={{
-            background: 'linear-gradient(90deg, #171717 0%, #171717 30%, #816D46 50%, #171717 70%, #3F3F3F 100%)',
-            backgroundSize: '200% 100%',
-            animation: 'shine 3s ease-in-out infinite'
-          }}
-          onClick={() => {
-            window.open('https://atsresume.apply-wizz.me/', '_blank');
-          }}
-        >
-          <div className="flex items-center justify-between rounded-lg p-3" >
-            <div>
-              <h3 className="text-white font-semibold text-sm">ATS RESUME</h3>
-              <p className="text-gray-300 text-xs mt-1">Offer ends in {countdown}</p>
+        {(user.role === 'client') && (optedJobLinks) && (
+          <div
+            className="mt-4 rounded-lg p-2 cursor-pointer hover:opacity-90 transition-all"
+            style={{
+              background: 'linear-gradient(90deg, #171717 0%, #171717 30%, #816D46 50%, #171717 70%, #3F3F3F 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shine 3s ease-in-out infinite'
+            }}
+            onClick={() => {
+              window.open('https://atsresume.apply-wizz.me/', '_blank');
+            }}
+          >
+            <div className="flex items-center justify-between rounded-lg p-3" >
+              <div>
+                <h3 className="text-white font-semibold text-sm">ATS RESUME</h3>
+                <p className="text-gray-300 text-xs mt-1">Offer ends in {countdown}</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-white" />
             </div>
-            <ArrowRight className="h-5 w-5 text-white" />
           </div>
-        </div>
+        )}
 
         {/* Logout Button */}
         {onLogout && (
