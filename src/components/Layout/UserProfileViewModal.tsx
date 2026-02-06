@@ -299,7 +299,7 @@ export const UserProfileViewModal: React.FC<UserProfileViewModalProps> = ({ isOp
                 applywizz_id: selectedAccount.applywizz_id,
                 gender: formData.gender,
                 location: formData.state_of_residence,
-                experience: formData.experience,
+                experience: formData.experience ? parseInt(formData.experience) : null,
                 visa_type: formData.visa_type,
                 work_preferences: formData.work_preferences,
                 sponsorship: formData.sponsorship === 'Yes',
