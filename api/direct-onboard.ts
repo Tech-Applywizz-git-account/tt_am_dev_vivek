@@ -10,6 +10,14 @@ const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL;
 const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
 const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
 
+// Email Configuration (Microsoft Graph API)
+const TENANT_ID = process.env.TENANT_ID;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const SENDER_EMAIL = process.env.SENDER_EMAIL;
+const VIVEK_EMAIL = 'vivek@applywizz.com';
+const CC_EMAILS = ['nikhil@applywizz.com', 'bhanuteja@applywizz.com'];
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing Supabase environment variables');
 }
@@ -228,6 +236,78 @@ async function extractLeadData(leadId: number) {
     return result;
 }
 
+// Helper to get Microsoft Graph Access Token
+async function getMicrosoftAccessToken() {
+    if (!TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
+        throw new Error('Missing Microsoft Graph environment variables');
+    }
+
+    const url = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
+    const params = new URLSearchParams();
+    params.append('client_id', CLIENT_ID);
+    params.append('scope', 'https://graph.microsoft.com/.default');
+    params.append('client_secret', CLIENT_SECRET);
+    params.append('grant_type', 'client_credentials');
+
+    const res = await fetch(url, { method: 'POST', body: params });
+    const data: any = await res.json();
+
+    if (!res.ok) {
+        throw new Error(`Failed to get Microsoft access token: ${JSON.stringify(data)}`);
+    }
+
+    return data.access_token;
+}
+
+// Helper to send notification email to Vivek
+async function sendNotificationToVivek(clientName: string, email: string) {
+    try {
+        if (!SENDER_EMAIL) {
+            console.error('SENDER_EMAIL is not configured');
+            return;
+        }
+
+        const token = await getMicrosoftAccessToken();
+        const subject = `Pending Onboarding: ${clientName}`;
+        const htmlBody = `
+            <h3>New Pending Onboarding Request</h3>
+            <p>A new domain client has come to pending onboarding.</p>
+            <p><strong>Client Name:</strong> ${clientName}</p>
+            <p><strong>Client Email:</strong> ${email}</p>
+            <p><strong>Action Required:</strong> Please add this new job role in task management and onboard the client manually.</p>
+            <br/>
+            <p><i>Automated Notification from ApplyWizz Onboarding System</i></p>
+        `;
+
+        const payload = {
+            message: {
+                subject,
+                body: { contentType: 'HTML', content: htmlBody },
+                toRecipients: [{ emailAddress: { address: VIVEK_EMAIL } }],
+                ccRecipients: CC_EMAILS.map(email => ({ emailAddress: { address: email } })),
+            },
+        };
+
+        const res = await fetch(`https://graph.microsoft.com/v1.0/users/${SENDER_EMAIL}/sendMail`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            const text = await res.text();
+            console.error('Failed to send notification email to Vivek:', text);
+        } else {
+            console.log('✅ Notification email sent to Vivek for', clientName);
+        }
+    } catch (error) {
+        console.error('Error in sendNotificationToVivek:', error);
+    }
+}
+
 // Handle Pending Client Submission
 async function handlePendingClientSubmission(clientData: DirectOnboardData, res: VercelResponse) {
     try {
@@ -354,6 +434,11 @@ async function handlePendingClientSubmission(clientData: DirectOnboardData, res:
                 details: insertError.message
             });
         }
+
+        // Send notification email to Vivek (non-blocking)
+        sendNotificationToVivek(clientData.full_name, normalizedEmail).catch((err: any) => {
+            console.error('Fire-and-forget email notification failed:', err);
+        });
 
         // Return success response
         return res.status(200).json({
