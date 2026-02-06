@@ -114,6 +114,77 @@ const ADDITIONAL_INFO_TABLE_FIELDS = new Set([
   'google_drive_resume_link'
 ]);
 
+// Define fields that belong to pending_clients table
+const PENDING_CLIENT_FIELDS = new Set([
+  'full_name',
+  'personal_email',
+  'whatsapp_number',
+  'callable_phone',
+  'company_email',
+  'job_role_preferences',
+  'salary_range',
+  'location_preferences',
+  'work_auth_details',
+  'submitted_by',
+  'visa_type',
+  'applywizz_id',
+  'sponsorship',
+  'badge_value',
+  'resume_url',
+  'resume_path',
+  'start_date',
+  'end_date',
+  'no_of_applications',
+  'is_over_18',
+  'eligible_to_work_in_us',
+  'authorized_without_visa',
+  'require_future_sponsorship',
+  'can_perform_essential_functions',
+  'worked_for_company_before',
+  'discharged_for_policy_violation',
+  'referred_by_agency',
+  'highest_education',
+  'university_name',
+  'cumulative_gpa',
+  'desired_start_date',
+  'willing_to_relocate',
+  'can_work_3_days_in_office',
+  'role',
+  'experience',
+  'work_preferences',
+  'alternate_job_roles',
+  'exclude_companies',
+  'convicted_of_felony',
+  'felony_explanation',
+  'pending_investigation',
+  'willing_background_check',
+  'willing_drug_screen',
+  'failed_or_refused_drug_test',
+  'uses_substances_affecting_duties',
+  'substances_description',
+  'can_provide_legal_docs',
+  'gender',
+  'is_hispanic_latino',
+  'race_ethnicity',
+  'veteran_status',
+  'disability_status',
+  'has_relatives_in_company',
+  'relatives_details',
+  'state_of_residence',
+  'zip_or_country',
+  'main_subject',
+  'graduation_year',
+  'add_ons_info',
+  'github_url',
+  'linked_in_url',
+  'client_form_fill_date',
+  'cover_letter_path',
+  'full_address',
+  'date_of_birth',
+  'primary_phone',
+  'is_new_domain'
+]);
+
 // Define the structure of the incoming client data
 interface ClientSyncData {
   applywizz_id?: string;  // The common AWL-XXXXX ID
@@ -295,6 +366,42 @@ function splitClientData(data: ClientSyncData): {
   return { clientsData, additionalInfoData };
 }
 
+// Map data to pending_clients table format
+function mapToPendingClientData(data: ClientSyncData): Record<string, any> {
+  const pendingData: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (PENDING_CLIENT_FIELDS.has(key)) {
+      pendingData[key] = value;
+    }
+  }
+
+  // Handle aliases/alternate names
+  if (data.phone) {
+    if (pendingData.whatsapp_number === undefined) pendingData.whatsapp_number = data.phone;
+    if (pendingData.callable_phone === undefined) pendingData.callable_phone = data.phone;
+    if (pendingData.primary_phone === undefined) pendingData.primary_phone = data.phone;
+  }
+
+  if (data.email && pendingData.company_email === undefined) {
+    pendingData.company_email = data.email;
+  }
+
+  if ((data.work_auth || data.visa_type) && pendingData.visa_type === undefined) {
+    pendingData.visa_type = data.work_auth || data.visa_type;
+  }
+
+  if (data.resume_s3_path && pendingData.resume_path === undefined) {
+    pendingData.resume_path = data.resume_s3_path;
+  }
+
+  if (data.services_opted && pendingData.add_ons_info === undefined) {
+    pendingData.add_ons_info = data.services_opted;
+  }
+
+  return pendingData;
+}
+
 // ✅ Map data to Django's expected format
 function mapToDjangoData(data: ClientSyncData): any {
   return {
@@ -462,6 +569,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({
         error: 'Validation failed',
         details: validation.errors
+      });
+    }
+
+    // FIRST: Check if the client exists in pending_clients table
+    const { data: existingPending, error: pendingFetchError } = await supabaseAdmin
+      .from('pending_clients')
+      .select('id')
+      .eq('applywizz_id', applywizzId)
+      .limit(1)
+      .maybeSingle();
+
+    if (pendingFetchError) {
+      console.error('Error checking pending_clients:', pendingFetchError);
+      // We continue to check full clients if this check fails
+    } else if (existingPending) {
+      console.log(`Found applywizz_id ${applywizzId} in pending_clients. Updating...`);
+      const pendingUpdateData = mapToPendingClientData(clientData);
+
+      const { error: pendingUpdateError } = await supabaseAdmin
+        .from('pending_clients')
+        .update(pendingUpdateData)
+        .eq('applywizz_id', applywizzId);
+
+      if (pendingUpdateError) {
+        console.error('Error updating pending_clients:', pendingUpdateError);
+        return res.status(500).json({ error: 'Failed to update pending client data', details: pendingUpdateError.message });
+      }
+
+      return res.status(200).json({
+        message: 'Client data updated in pending_clients successfully',
+        applywizz_id: applywizzId,
+        status: 'pending'
       });
     }
 
