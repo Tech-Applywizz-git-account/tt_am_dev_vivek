@@ -89,7 +89,7 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-blue-100 text-sm font-medium">Regular Applications</p>
+                            <p className="text-blue-100 text-sm font-medium">Career Portal Applications</p>
                             <p className="text-3xl font-bold mt-2">{totalRegular}</p>
                             <p className="text-blue-100 text-xs mt-1">
                                 {totalApplications > 0 ? Math.round((totalRegular / totalApplications) * 100) : 0}% of total
@@ -199,7 +199,7 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                             {/* Regular Applications Bar */}
                             <Bar
                                 dataKey="regularCount"
-                                name="Regular Applications"
+                                name="Career Portal Applications"
                                 fill="url(#colorRegular)"
                                 radius={[8, 8, 0, 0]}
                                 maxBarSize={50}
