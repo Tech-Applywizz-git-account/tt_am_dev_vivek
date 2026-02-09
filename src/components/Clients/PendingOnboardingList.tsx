@@ -42,8 +42,8 @@ interface Props {
     pendingClientId: string,
     clientData: any,
     roleAssignments: any
-  ) => void;
-  onDirectOnboard?: (client: PendingClient) => void; // Make this prop optional
+  ) => Promise<void>;
+  onDirectOnboard?: (client: PendingClient) => Promise<void>; // Make this prop optional
 }
 
 export const PendingOnboardingList: React.FC<Props> = ({
@@ -58,6 +58,9 @@ export const PendingOnboardingList: React.FC<Props> = ({
     careerassociateid: "",
     scraperid: "",
   });
+
+  const [loadingClientId, setLoadingClientId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [usersByRole, setUsersByRole] = useState<{
     [key: string]: { id: string; name: string }[];
@@ -97,7 +100,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
     fetchUsers();
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (
       !roleAssignments.accountManagerId ||
       !roleAssignments.careerassociatemanagerid ||
@@ -108,20 +111,39 @@ export const PendingOnboardingList: React.FC<Props> = ({
       return;
     }
 
-    onAssignRoles(selectedClient!.id, selectedClient, roleAssignments);
-    setSelectedClient(null);
-    setRoleAssignments({
-      accountManagerId: "",
-      careerassociatemanagerid: "",
-      careerassociateid: "",
-      scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376", // Default scraper ID
-    });
+    setIsSubmitting(true);
+    try {
+      await onAssignRoles(selectedClient!.id, selectedClient, roleAssignments);
+      setSelectedClient(null);
+      setRoleAssignments({
+        accountManagerId: "",
+        careerassociatemanagerid: "",
+        careerassociateid: "",
+        scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376", // Default scraper ID
+      });
+    } catch (error) {
+      console.error("Error assigning roles:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDirectOnboardClick = async (client: PendingClient) => {
+    if (!onDirectOnboard) return;
+    setLoadingClientId(client.id);
+    try {
+      await onDirectOnboard(client);
+    } catch (error) {
+      console.error("Error during direct onboarding:", error);
+    } finally {
+      setLoadingClientId(null);
+    }
   };
 
   // Check if client has job-links in add_ons_info
   const hasJobLinks = (client: PendingClient): boolean => {
     if (!client.add_ons_info) return false;
-    
+
     if (typeof client.add_ons_info === 'string') {
       try {
         const parsed = JSON.parse(client.add_ons_info);
@@ -130,11 +152,11 @@ export const PendingOnboardingList: React.FC<Props> = ({
         return false;
       }
     }
-    
+
     if (Array.isArray(client.add_ons_info)) {
       return client.add_ons_info.includes('job-links');
     }
-    
+
     return false;
   };
 
@@ -173,15 +195,20 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 <div className="flex gap-2">
                   {hasJobLinks(client) && onDirectOnboard ? (
                     <button
-                      onClick={() => onDirectOnboard(client)} // Use the prop function
-                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                      onClick={() => handleDirectOnboardClick(client)}
+                      disabled={loadingClientId !== null}
+                      className={`px-4 py-2 rounded text-white ${loadingClientId === client.id
+                        ? "bg-green-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                        }`}
                     >
-                      Onboard Directly
+                      {loadingClientId === client.id ? "Onboarding..." : "Onboard Directly"}
                     </button>
                   ) : (
                     <button
                       onClick={() => setSelectedClient(client)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                      disabled={loadingClientId !== null}
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
                     >
                       Assign Roles
                     </button>
@@ -231,14 +258,19 @@ export const PendingOnboardingList: React.FC<Props> = ({
               <button
                 onClick={() => setSelectedClient(null)}
                 className="px-4 py-2 border rounded"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                disabled={isSubmitting}
+                className={`px-4 py-2 rounded text-white ${isSubmitting
+                  ? "bg-green-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700"
+                  }`}
               >
-                Complete Onboarding
+                {isSubmitting ? "Assigning Roles..." : "Complete Onboarding"}
               </button>
             </div>
           </div>

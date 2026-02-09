@@ -13,6 +13,7 @@ import { RUTicketEditModal } from './components/Tickets/ResumeUpdate/RUTicketEdi
 import { CSTicketEditModal } from './components/Tickets/CallSupport/CSTicketEditModel';
 import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModal';
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
+import { OnboardingSuccessModal } from './components/Clients/OnboardingSuccessModal';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
 import { ClientProfileView } from './components/Clients/ClientProfileView';
 import { ClientsListView } from './components/Clients/ClientsListView';
@@ -248,6 +249,14 @@ function App() {
   const [emailSubjectAttachment, setEmailSubjectAttachment] = useState('Subject with Attachment');
   const [emailMessageAttachment, setEmailMessageAttachment] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
+  // Success modal state for direct onboarding
+  const [isOnboardingSuccessModalOpen, setIsOnboardingSuccessModalOpen] = useState(false);
+  const [onboardingSuccessData, setOnboardingSuccessData] = useState<{
+    fullName: string;
+    email: string;
+    jbId: string;
+  } | null>(null);
 
   // Get selectedAccountId and clearSelection from context for multi-account support
   const { selectedAccountId, clearSelection } = useAccount();
@@ -767,6 +776,56 @@ function App() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setAttachmentFile(e.target.files[0]);
+    }
+  };
+
+  // Function to send onboarding welcome email
+  const sendOnboardingWelcomeEmail = async (data: { fullName: string; email: string; jbId: string }) => {
+    const { fullName, email: to, jbId } = data;
+    const subject = `🚀 Welcome to ApplyWizz - Your Login Credentials (${jbId || 'ApplyWizz'})`;
+    const htmlBody = `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
+            <div style="max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; border: 1px solid #ddd;">
+                <div style="text-align:center; margin-bottom:20px;">
+                  <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" 
+                       alt="ApplyWizz Logo" 
+                       style="max-width: 100%; height: auto; width: 150px;"/>
+                </div>
+                <h2 style="color: #1e3a8a;">Welcome to ApplyWizz!</h2>
+                <p>Hi <strong>${fullName}</strong>,</p>
+                <p>Your profile registration is successful. Use the credentials below to access your dashboard:</p>
+                
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Email:</strong> ${to}</p>
+                    <p style="margin: 5px 0;"><strong>Password: </strong>Applywizz@2026</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="https://apply-wizz.me/login" style="background: #2563eb; color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to your Account</a>
+                </div>
+
+                <p style="font-size: 12px; color: #777; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
+                    For security, we recommend changing your password after your first login.
+                </p>
+            </div>
+        </body>
+        </html>`;
+
+    const response = await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to,
+        subject,
+        htmlBody
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to send email: ${response.status}`);
     }
   };
 
@@ -1293,11 +1352,20 @@ function App() {
       }
 
       console.log('✅ Client onboarded successfully:', result);
-      alert(`Client successfully onboarded!\nApplyWizz ID: ${result.applywizz_id}`);
+
+      // Store success data for the modal
+      setOnboardingSuccessData({
+        fullName: client.full_name,
+        email: client.company_email.trim().toLowerCase(),
+        jbId: result.applywizz_id || client.applywizz_id
+      });
 
       // Remove from pending clients and refresh
       await supabase.from('pending_clients').delete().eq('id', client.id);
       await fetchData();
+
+      // Open the success modal (which triggers the email workflow)
+      setIsOnboardingSuccessModalOpen(true);
 
     } catch (error: any) {
       console.error('❌ Error calling direct-onboard API:', error);
@@ -2506,6 +2574,17 @@ function App() {
             currentUser={currentUser}
             optedJobLinks={optedJobLinks}
             handleRefreshJobs={handleRefreshJobs}
+          />
+
+          {/* Onboarding Success Modal */}
+          <OnboardingSuccessModal
+            isOpen={isOnboardingSuccessModalOpen}
+            onClose={() => {
+              setIsOnboardingSuccessModalOpen(false);
+              setOnboardingSuccessData(null);
+            }}
+            clientData={onboardingSuccessData}
+            onSendEmail={sendOnboardingWelcomeEmail}
           />
         </BrowserRouter>
       </DialogProvider>
