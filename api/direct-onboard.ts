@@ -116,7 +116,7 @@ interface DirectOnboardData {
     primary_phone?: string;
     is_new_domain?: boolean;
     add_ons_info?: string[];
-    exclude_companies?: string;
+    exclude_companies?: string | string[];
     [key: string]: any;
 }
 
@@ -314,7 +314,11 @@ async function sendNotificationToVivek(clientName: string, email: string, target
 }
 
 // Handle Pending Client Submission
-async function handlePendingClientSubmission(clientData: DirectOnboardData, res: VercelResponse) {
+async function handlePendingClientSubmission(
+    clientData: DirectOnboardData,
+    res: VercelResponse,
+    defaults: { workPreferences: string, addOnsInfo: string[], excludeCompanies: string[], resumeUrl: string }
+) {
     try {
         // Normalize email
         const normalizedEmail = clientData.email.trim().toLowerCase();
@@ -383,9 +387,9 @@ async function handlePendingClientSubmission(clientData: DirectOnboardData, res:
             can_work_3_days_in_office: clientData.can_work_3_days_in_office ?? null,
             role: clientData.role || null,
             experience: clientData.experience || '0',
-            work_preferences: clientData.work_preferences || null,
+            work_preferences: defaults.workPreferences,
             alternate_job_roles: clientData.alternate_job_roles || null,
-            exclude_companies: clientData.exclude_companies || 'NA',
+            exclude_companies: defaults.excludeCompanies,
             convicted_of_felony: clientData.convicted_of_felony ?? null,
             felony_explanation: clientData.felony_explanation || null,
             pending_investigation: clientData.pending_investigation ?? null,
@@ -406,7 +410,7 @@ async function handlePendingClientSubmission(clientData: DirectOnboardData, res:
             zip_or_country: clientData.zip_or_country,
             main_subject: clientData.main_subject || null,
             graduation_year: clientData.graduation_year || null,
-            add_ons_info: clientData.add_ons_info || null,
+            add_ons_info: defaults.addOnsInfo,
             github_url: clientData.github_url || null,
             linked_in_url: clientData.linked_in_url || null,
             client_form_fill_date: clientData.client_form_fill_date || null,
@@ -527,16 +531,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // Check submission type - handle pending clients separately
-        if (clientData.submission_type === 'pending') {
-            return await handlePendingClientSubmission(clientData, res);
-        }
-
         // Set defaults
         const workPreferences = clientData.work_preferences || "All";
         const addOnsInfo = clientData.add_ons_info || ["job-links"];
-        const excludeCompanies = clientData.exclude_companies || ["NA"];
+        const excludeCompanies = Array.isArray(clientData.exclude_companies)
+            ? clientData.exclude_companies
+            : clientData.exclude_companies
+                ? [clientData.exclude_companies]
+                : ["NA"];
         const resumeUrl = clientData.resume_s3_path ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_s3_path}` : "";
+
+        // Check submission type - handle pending clients separately
+        if (clientData.submission_type === 'pending') {
+            return await handlePendingClientSubmission(clientData, res, {
+                workPreferences,
+                addOnsInfo,
+                excludeCompanies,
+                resumeUrl
+            });
+        }
 
         // Generate a unique ID for the client
         const clientId = crypto.randomUUID();

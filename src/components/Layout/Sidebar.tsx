@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'job-tracking',
       label: 'Job Tracking',
       icon: Briefcase,
-      show: user.role === 'client',
+      show: user.role === 'client' && !optedJobLinks,
     },
     {
       id: 'pricing',
