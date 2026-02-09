@@ -54,7 +54,8 @@ const CLIENTS_TABLE_FIELDS = new Set([
   'lab_id_2',
   'mcq_results',
   'test_results',
-  'status'
+  'status',
+  'role_last_updated'
 ]);
 
 // Define fields that belong to clients_additional_information table
