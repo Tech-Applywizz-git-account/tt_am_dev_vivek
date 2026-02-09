@@ -228,7 +228,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-gray-700 text-sm font-medium">Regular Applications</p>
+                            <p className="text-gray-700 text-sm font-medium">Career Portal Applications</p>
                             <p className="text-3xl font-bold mt-2">{totalRegular}</p>
                             <p className="text-gray-700 text-xs mt-1">
                                 {totalApplications > 0 ? Math.round((totalRegular / totalApplications) * 100) : 0}% of total
@@ -328,7 +328,7 @@ const ScoredJobsDashboard: React.FC<ScoredJobsDashboardProps> = ({ applywizzId }
                             {/* Regular Applications Bar */}
                             <Bar
                                 dataKey="regularCount"
-                                name="Regular Applications"
+                                name="Career Portal Applications"
                                 fill="url(#colorRegular)"
                                 shape={<CustomBarShape />}
                                 maxBarSize={50}

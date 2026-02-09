@@ -803,7 +803,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                 <div className="flex items-center gap-2 mb-4">
                                     <Briefcase className="h-5 w-5 text-blue-600" />
                                     <h3 className="text-lg font-semibold text-gray-900">
-                                        Regular Applications ({jobs.length})
+                                        Career Portal Applications ({jobs.length})
                                     </h3>
                                 </div>
 
@@ -813,7 +813,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                     </div>
                                 ) : (
                                     <div className="text-center py-8 text-gray-500">
-                                        No regular applications available
+                                        No Career Portal applications available
                                     </div>
                                 )}
                             </div>
@@ -896,7 +896,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                                     <div className="flex items-center gap-2 mb-4">
                                                         <Briefcase className="h-5 w-5 text-blue-600" />
                                                         <h4 className="text-md font-semibold text-gray-900">
-                                                            Regular Applications ({regularJobsForDate.length})
+                                                            Career Portal Applications ({regularJobsForDate.length})
                                                         </h4>
                                                     </div>
 
@@ -906,7 +906,7 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                                                         </div>
                                                     ) : (
                                                         <div className="text-center py-8 text-gray-500">
-                                                            No regular applications for this date
+                                                            No Career Portal applications for this date
                                                         </div>
                                                     )}
                                                 </div>

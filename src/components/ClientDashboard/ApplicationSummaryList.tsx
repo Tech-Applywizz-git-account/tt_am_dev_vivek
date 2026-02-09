@@ -338,7 +338,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
                       <div className="flex items-center gap-2 mb-3">
                         <Briefcase size={18} className="text-blue-600" />
                         <h3 className="font-semibold text-gray-800">
-                          Regular Applications ({tasks.length})
+                          Career Portal Applications ({tasks.length})
                         </h3>
                       </div>
                       <div className="space-y-3">
