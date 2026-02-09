@@ -93,6 +93,7 @@ export interface Client {
   // New consolidated column
   test_results?: TestResult[] | null;
   coding_lab_url?: string;
+  role_last_updated?: string;
 }
 
 export interface Ticket {
@@ -124,7 +125,7 @@ export interface TicketComment {
   content: string;
   createdAt: Date;
   isInternal: boolean;
-  show_to_client:boolean;
+  show_to_client: boolean;
 }
 
 export type SLAConfig = {

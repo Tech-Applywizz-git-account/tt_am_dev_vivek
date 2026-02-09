@@ -79,8 +79,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                                 type="button"
                                 onClick={() => handleSelect(option)}
                                 className={`w-full px-3 py-2.5 text-left hover:bg-blue-50 transition-colors ${value === option
-                                        ? 'bg-blue-100 text-blue-700 font-medium'
-                                        : 'text-gray-900'
+                                    ? 'bg-blue-100 text-blue-700 font-medium'
+                                    : 'text-gray-900'
                                     }`}
                                 style={{ height: `${optionHeight}px` }}
                             >
