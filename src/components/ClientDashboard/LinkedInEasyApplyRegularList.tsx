@@ -73,81 +73,19 @@ const statusOptions = [
     { value: "Job Not Found", label: "Job Not Found" },
 ];
 
-// Cache for storing favicon check results to avoid redundant requests
-const faviconCache = new Map<string, boolean>();
-
 const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
     const [error, setError] = React.useState(false);
-    const [isDefaultIcon, setIsDefaultIcon] = React.useState(false);
-    const [imageReady, setImageReady] = React.useState(false);
     const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
-
-    React.useEffect(() => {
-        if (!logoUrl) {
-            setError(true);
-            return;
-        }
-
-        // For Google favicon URLs, pre-check if it redirects to the default icon
-        if (logoUrl.includes('google.com/s2/favicons')) {
-            // Check cache first
-            if (faviconCache.has(logoUrl)) {
-                const isDefault = faviconCache.get(logoUrl);
-                if (isDefault) {
-                    setIsDefaultIcon(true);
-                } else {
-                    setImageReady(true);
-                }
-                return;
-            }
-
-            // Use fetch to check the final URL after redirects
-            fetch(logoUrl, { method: 'HEAD', redirect: 'follow' })
-                .then(response => {
-                    // Check if the final URL contains indicators of the default icon
-                    const finalUrl = response.url;
-
-                    // Google's default icon URLs typically contain patterns like:
-                    // - "gstatic.com/favicon" (generic favicon)
-                    // - "default" in the URL
-                    const isDefault = finalUrl.includes('gstatic.com/favicon') ||
-                        finalUrl.includes('default') ||
-                        response.status === 404;
-
-                    // Cache the result
-                    faviconCache.set(logoUrl, isDefault);
-
-                    if (isDefault) {
-                        setIsDefaultIcon(true);
-                    } else {
-                        setImageReady(true);
-                    }
-                })
-                .catch(() => {
-                    // If fetch fails, cache as not default and try to load the image anyway
-                    faviconCache.set(logoUrl, false);
-                    setImageReady(true);
-                });
-        } else {
-            setImageReady(true);
-        }
-    }, [logoUrl]);
 
     const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
         const img = e.currentTarget;
-
         // If the image is too small (likely a placeholder), treat it as an error
         if (img.naturalWidth < 16 || img.naturalHeight < 16) {
             setError(true);
-            return;
         }
     };
 
-    const handleImageError = () => {
-        setError(true);
-    };
-
-    if (error || !logoUrl || isDefaultIcon) {
+    if (error || !logoUrl) {
         return (
             <div
                 className="shrink-0 inline-flex items-center justify-center text-white text-2xl font-bold"
@@ -183,7 +121,7 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
                 alt={company}
                 className="object-contain"
                 style={{ width: '80px', height: '80px' }}
-                onError={handleImageError}
+                onError={() => setError(true)}
                 onLoad={handleImageLoad}
             />
         </div>
