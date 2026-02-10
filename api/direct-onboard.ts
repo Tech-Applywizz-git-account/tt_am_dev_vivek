@@ -15,8 +15,8 @@ const TENANT_ID = process.env.TENANT_ID;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const SENDER_EMAIL = process.env.SENDER_EMAIL;
-const VIVEK_EMAIL = 'vivek@applywizz.com';
-const CC_EMAILS = ['nikhil@applywizz.com', 'bhanuteja@applywizz.com'];
+const VIVEK_EMAIL = 'kalyan@applywizz.com';
+const CC_EMAILS = ['shyam@applywizz.com', 'ramakrishna@applywizz.com', 'abhilash@applywizz.com', 'nikhil@applywizz.com', 'vivek@applywizz.com', 'bhanuteja@applywizz.com'];
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing Supabase environment variables');
