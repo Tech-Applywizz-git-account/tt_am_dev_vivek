@@ -455,7 +455,7 @@ async function handlePendingClientSubmission(
             const targetRole = Array.isArray(clientData.job_role_preferences)
                 ? clientData.job_role_preferences[0] || 'Not specified'
                 : 'Not specified';
-            await sendNotificationToVivek(clientData.full_name, normalizedEmail, targetRole);
+            await sendNotificationToVivek(clientData.full_name, normalizedEmail, clientData.phone, targetRole);
         } catch (emailErr: any) {
             console.error('Email notification failed but continuing:', emailErr);
         }
