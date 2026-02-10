@@ -75,15 +75,75 @@ const statusOptions = [
 
 const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
     const [error, setError] = React.useState(false);
+    const [imageLoaded, setImageLoaded] = React.useState(false);
+    const imgRef = React.useRef<HTMLImageElement>(null);
     const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
+
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget;
+
+        // If the image is too small (likely a placeholder), treat it as an error
+        if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+            setError(true);
+            return;
+        }
+
+        // Check if this is Google's default globe icon
+        // Google's default favicon is typically 128x128 or 16x16 with specific characteristics
+        // We'll detect it by checking if it's a square image from Google's favicon service
+        if (logoUrl?.includes('google.com/s2/favicons')) {
+            // Create a canvas to analyze the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            if (ctx) {
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                ctx.drawImage(img, 0, 0);
+
+                try {
+                    // Get image data from center pixel
+                    const imageData = ctx.getImageData(
+                        Math.floor(img.naturalWidth / 2),
+                        Math.floor(img.naturalHeight / 2),
+                        1,
+                        1
+                    );
+
+                    // Google's globe icon has a distinctive blue/gray color in the center
+                    // Check if the center pixel is close to the globe's typical color
+                    const r = imageData.data[0];
+                    const g = imageData.data[1];
+                    const b = imageData.data[2];
+                    const a = imageData.data[3];
+
+                    // Google's default globe icon typically has blue-ish tones (around RGB: 66, 133, 244)
+                    // or gray tones for the generic icon
+                    const isBlueish = (b > r && b > g && b > 200) || (r > 200 && g > 200 && b > 200);
+                    const isGrayish = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && Math.abs(r - b) < 30;
+
+                    // If it looks like the default icon, treat as error
+                    if ((isBlueish || isGrayish) && img.naturalWidth === 128 && img.naturalHeight === 128) {
+                        setError(true);
+                        return;
+                    }
+                } catch (e) {
+                    // CORS error or other issue - if we can't analyze, assume it's valid
+                    console.log('Could not analyze image:', e);
+                }
+            }
+        }
+
+        setImageLoaded(true);
+    };
 
     if (error || !logoUrl) {
         return (
             <div
-                className="shrink-0 inline-flex items-center justify-end text-white text-2xl font-bold"
+                className="shrink-0 inline-flex items-center justify-center text-white text-2xl font-bold"
                 style={{
-                    height: '160px',
-                    padding: '17px 13px 18px 22px',
+                    height: '80px',
+                    width: '80px',
                     borderRadius: '9px',
                     border: '1px solid #D3D3D3',
                     background: '#F1F1F1',
@@ -109,11 +169,14 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
             }}
         >
             <img
+                ref={imgRef}
                 src={logoUrl}
                 alt={company}
                 className="object-contain"
                 style={{ width: '80px', height: '80px' }}
                 onError={() => setError(true)}
+                onLoad={handleImageLoad}
+                crossOrigin="anonymous"
             />
         </div>
     );
@@ -406,7 +469,7 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company, job.company_url);
-        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
+        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null);
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>

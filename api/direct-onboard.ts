@@ -260,7 +260,7 @@ async function getMicrosoftAccessToken() {
 }
 
 // Helper to send notification email to Vivek
-async function sendNotificationToVivek(clientName: string, email: string, targetRole: string) {
+async function sendNotificationToVivek(clientName: string, email: string, phone: string, targetRole: string) {
     console.log(`Starting email notification for ${clientName}...`);
     try {
         if (!SENDER_EMAIL || !TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
@@ -277,8 +277,14 @@ async function sendNotificationToVivek(clientName: string, email: string, target
             <p>A new domain client has come to pending onboarding.</p>
             <p><strong>Client Name:</strong> ${clientName}</p>
             <p><strong>Client Email:</strong> ${email}</p>
+            <p><strong>Client Phone:</strong> ${phone}</p>
             <p><strong>Target Role:</strong> <code style="background: #f4f4f4; padding: 2px 5px; border-radius: 3px;">${targetRole}</code></p>
-            <p><strong>Action Required:</strong> Please add this new job role in task management and onboard the client manually.</p>
+            <p><strong>Action Required:</strong></p>
+            <ol style="margin-left: 20px; line-height: 1.6;">
+                <li>Please add this new job role to the task management system.</li>
+                <li>Once the role is created, kindly proceed to the <strong>Customer Dashboard</strong> and navigate to the <strong>Pending Onboarding</strong> section.</li>
+                <li>Locate the client in the list and click the <strong>"Onboard Directly"</strong> button to send the onboarding credentials to the client.</li>
+            </ol>
             <p style="color: #666; font-style: italic; margin-top: 15px;"><strong>Note:</strong> We kindly request that you ensure the domain is recorded exactly as provided, maintaining the original character casing.</p>
             <br/>
             <p><i>Automated Notification from ApplyWizz Onboarding System</i></p>
@@ -449,7 +455,7 @@ async function handlePendingClientSubmission(
             const targetRole = Array.isArray(clientData.job_role_preferences)
                 ? clientData.job_role_preferences[0] || 'Not specified'
                 : 'Not specified';
-            await sendNotificationToVivek(clientData.full_name, normalizedEmail, targetRole);
+            await sendNotificationToVivek(clientData.full_name, normalizedEmail, clientData.phone, targetRole);
         } catch (emailErr: any) {
             console.error('Email notification failed but continuing:', emailErr);
         }
