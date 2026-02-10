@@ -73,11 +73,65 @@ const statusOptions = [
     { value: "Job Not Found", label: "Job Not Found" },
 ];
 
+// Cache for storing favicon check results to avoid redundant requests
+const faviconCache = new Map<string, boolean>();
+
 const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
     const [error, setError] = React.useState(false);
-    const [imageLoaded, setImageLoaded] = React.useState(false);
-    const imgRef = React.useRef<HTMLImageElement>(null);
+    const [isDefaultIcon, setIsDefaultIcon] = React.useState(false);
+    const [imageReady, setImageReady] = React.useState(false);
     const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
+
+    React.useEffect(() => {
+        if (!logoUrl) {
+            setError(true);
+            return;
+        }
+
+        // For Google favicon URLs, pre-check if it redirects to the default icon
+        if (logoUrl.includes('google.com/s2/favicons')) {
+            // Check cache first
+            if (faviconCache.has(logoUrl)) {
+                const isDefault = faviconCache.get(logoUrl);
+                if (isDefault) {
+                    setIsDefaultIcon(true);
+                } else {
+                    setImageReady(true);
+                }
+                return;
+            }
+
+            // Use fetch to check the final URL after redirects
+            fetch(logoUrl, { method: 'HEAD', redirect: 'follow' })
+                .then(response => {
+                    // Check if the final URL contains indicators of the default icon
+                    const finalUrl = response.url;
+
+                    // Google's default icon URLs typically contain patterns like:
+                    // - "gstatic.com/favicon" (generic favicon)
+                    // - "default" in the URL
+                    const isDefault = finalUrl.includes('gstatic.com/favicon') ||
+                        finalUrl.includes('default') ||
+                        response.status === 404;
+
+                    // Cache the result
+                    faviconCache.set(logoUrl, isDefault);
+
+                    if (isDefault) {
+                        setIsDefaultIcon(true);
+                    } else {
+                        setImageReady(true);
+                    }
+                })
+                .catch(() => {
+                    // If fetch fails, cache as not default and try to load the image anyway
+                    faviconCache.set(logoUrl, false);
+                    setImageReady(true);
+                });
+        } else {
+            setImageReady(true);
+        }
+    }, [logoUrl]);
 
     const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
         const img = e.currentTarget;
@@ -87,57 +141,13 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
             setError(true);
             return;
         }
-
-        // Check if this is Google's default globe icon
-        // Google's default favicon is typically 128x128 or 16x16 with specific characteristics
-        // We'll detect it by checking if it's a square image from Google's favicon service
-        if (logoUrl?.includes('google.com/s2/favicons')) {
-            // Create a canvas to analyze the image
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            if (ctx) {
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                ctx.drawImage(img, 0, 0);
-
-                try {
-                    // Get image data from center pixel
-                    const imageData = ctx.getImageData(
-                        Math.floor(img.naturalWidth / 2),
-                        Math.floor(img.naturalHeight / 2),
-                        1,
-                        1
-                    );
-
-                    // Google's globe icon has a distinctive blue/gray color in the center
-                    // Check if the center pixel is close to the globe's typical color
-                    const r = imageData.data[0];
-                    const g = imageData.data[1];
-                    const b = imageData.data[2];
-                    const a = imageData.data[3];
-
-                    // Google's default globe icon typically has blue-ish tones (around RGB: 66, 133, 244)
-                    // or gray tones for the generic icon
-                    const isBlueish = (b > r && b > g && b > 200) || (r > 200 && g > 200 && b > 200);
-                    const isGrayish = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && Math.abs(r - b) < 30;
-
-                    // If it looks like the default icon, treat as error
-                    if ((isBlueish || isGrayish) && img.naturalWidth === 128 && img.naturalHeight === 128) {
-                        setError(true);
-                        return;
-                    }
-                } catch (e) {
-                    // CORS error or other issue - if we can't analyze, assume it's valid
-                    console.log('Could not analyze image:', e);
-                }
-            }
-        }
-
-        setImageLoaded(true);
     };
 
-    if (error || !logoUrl) {
+    const handleImageError = () => {
+        setError(true);
+    };
+
+    if (error || !logoUrl || isDefaultIcon) {
         return (
             <div
                 className="shrink-0 inline-flex items-center justify-center text-white text-2xl font-bold"
@@ -169,14 +179,12 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
             }}
         >
             <img
-                ref={imgRef}
                 src={logoUrl}
                 alt={company}
                 className="object-contain"
                 style={{ width: '80px', height: '80px' }}
-                onError={() => setError(true)}
+                onError={handleImageError}
                 onLoad={handleImageLoad}
-                crossOrigin="anonymous"
             />
         </div>
     );
