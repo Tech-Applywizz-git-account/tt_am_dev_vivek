@@ -260,7 +260,7 @@ async function getMicrosoftAccessToken() {
 }
 
 // Helper to send notification email to Vivek
-async function sendNotificationToVivek(clientName: string, email: string, targetRole: string) {
+async function sendNotificationToVivek(clientName: string, email: string, phone: string, targetRole: string) {
     console.log(`Starting email notification for ${clientName}...`);
     try {
         if (!SENDER_EMAIL || !TENANT_ID || !CLIENT_ID || !CLIENT_SECRET) {
@@ -277,6 +277,7 @@ async function sendNotificationToVivek(clientName: string, email: string, target
             <p>A new domain client has come to pending onboarding.</p>
             <p><strong>Client Name:</strong> ${clientName}</p>
             <p><strong>Client Email:</strong> ${email}</p>
+            <p><strong>Client Phone:</strong> ${phone}</p>
             <p><strong>Target Role:</strong> <code style="background: #f4f4f4; padding: 2px 5px; border-radius: 3px;">${targetRole}</code></p>
             <p><strong>Action Required:</strong> Please add this new job role in task management and onboard the client manually.</p>
             <p style="color: #666; font-style: italic; margin-top: 15px;"><strong>Note:</strong> We kindly request that you ensure the domain is recorded exactly as provided, maintaining the original character casing.</p>
