@@ -77,13 +77,21 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
     const [error, setError] = React.useState(false);
     const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
 
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget;
+        // If the image is too small (likely a placeholder), treat it as an error
+        if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+            setError(true);
+        }
+    };
+
     if (error || !logoUrl) {
         return (
             <div
-                className="shrink-0 inline-flex items-center justify-end text-white text-2xl font-bold"
+                className="shrink-0 inline-flex items-center justify-center text-white text-2xl font-bold"
                 style={{
-                    height: '160px',
-                    padding: '17px 13px 18px 22px',
+                    height: '80px',
+                    width: '80px',
                     borderRadius: '9px',
                     border: '1px solid #D3D3D3',
                     background: '#F1F1F1',
@@ -114,6 +122,7 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
                 className="object-contain"
                 style={{ width: '80px', height: '80px' }}
                 onError={() => setError(true)}
+                onLoad={handleImageLoad}
             />
         </div>
     );
