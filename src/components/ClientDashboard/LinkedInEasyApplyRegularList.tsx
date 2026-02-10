@@ -406,7 +406,7 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         const percentage = Math.round(job.score || 0);
         const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company, job.company_url);
-        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
+        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null);
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
