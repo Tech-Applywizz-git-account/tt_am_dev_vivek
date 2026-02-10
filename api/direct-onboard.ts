@@ -279,7 +279,12 @@ async function sendNotificationToVivek(clientName: string, email: string, phone:
             <p><strong>Client Email:</strong> ${email}</p>
             <p><strong>Client Phone:</strong> ${phone}</p>
             <p><strong>Target Role:</strong> <code style="background: #f4f4f4; padding: 2px 5px; border-radius: 3px;">${targetRole}</code></p>
-            <p><strong>Action Required:</strong> Please add this new job role in task management and onboard the client manually.</p>
+            <p><strong>Action Required:</strong></p>
+            <ol style="margin-left: 20px; line-height: 1.6;">
+                <li>Please add this new job role to the task management system.</li>
+                <li>Once the role is created, kindly proceed to the <strong>Customer Dashboard</strong> and navigate to the <strong>Pending Onboarding</strong> section.</li>
+                <li>Locate the client in the list and click the <strong>"Onboard Directly"</strong> button to send the onboarding credentials to the client.</li>
+            </ol>
             <p style="color: #666; font-style: italic; margin-top: 15px;"><strong>Note:</strong> We kindly request that you ensure the domain is recorded exactly as provided, maintaining the original character casing.</p>
             <br/>
             <p><i>Automated Notification from ApplyWizz Onboarding System</i></p>
