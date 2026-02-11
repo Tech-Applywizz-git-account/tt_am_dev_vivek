@@ -129,6 +129,7 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [hasFetched, setHasFetched] = useState(false); // Track if we've completed at least one fetch
+    const [loadingDates, setLoadingDates] = useState<Record<string, boolean>>({}); // Track loading state per date
     const [error, setError] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -170,6 +171,9 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
     const fetchJobsForDate = async (date: string) => {
         if (!applywizzId) return;
 
+        // Set loading state for this date
+        setLoadingDates(prev => ({ ...prev, [date]: true }));
+
         try {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}`);
@@ -192,6 +196,14 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
             }));
         } catch (err) {
             console.error("Error fetching jobs for date:", err);
+            // Set empty array on error so we show "No jobs found" instead of infinite loading
+            setJobsData(prev => ({
+                ...prev,
+                [date]: []
+            }));
+        } finally {
+            // Clear loading state for this date
+            setLoadingDates(prev => ({ ...prev, [date]: false }));
         }
     };
 
@@ -652,7 +664,12 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
 
                                     {isExpanded && (
                                         <div className="mt-3">
-                                            {jobs.length > 0 ? (
+                                            {loadingDates[date] ? (
+                                                <div className="space-y-4">
+                                                    <SkeletonJobCard />
+                                                    <SkeletonJobCard />
+                                                </div>
+                                            ) : jobs.length > 0 ? (
                                                 <div className="space-y-4">
                                                     {jobs
                                                         .sort((a, b) => {
@@ -676,9 +693,8 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
                                                         .map((job) => renderJobCard(job, date))}
                                                 </div>
                                             ) : (
-                                                <div className="space-y-4">
-                                                    <SkeletonJobCard />
-                                                    <SkeletonJobCard />
+                                                <div className="p-6 bg-gray-50 rounded-lg text-center border border-gray-200">
+                                                    <p className="text-gray-600 font-medium">No jobs found on the selected date.</p>
                                                 </div>
                                             )}
                                         </div>
