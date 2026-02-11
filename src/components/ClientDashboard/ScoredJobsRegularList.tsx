@@ -259,6 +259,11 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
         } else {
             // Set filtered date to show the "no jobs" message
             setFilteredDate(dateStr);
+            setCurrentPage(1);
+
+            // Expand the date to show "No jobs found" message
+            setExpandedDate(dateStr);
+
             setShowCalendar(false);
         }
     };
