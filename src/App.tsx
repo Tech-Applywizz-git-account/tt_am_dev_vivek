@@ -1281,7 +1281,7 @@ function App() {
         gender: client.gender,
         state_of_residence: client.state_of_residence,
         zip_or_country: client.zip_or_country,
-        resume_s3_path: client.resume_url,
+        resume_s3_path: client.resume_path,
         start_date: client.start_date,
         job_role_preferences: client.job_role_preferences,
         visa_type: client.visa_type,
