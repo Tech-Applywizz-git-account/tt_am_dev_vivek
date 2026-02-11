@@ -42,6 +42,21 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     }
 });
 
+// Helper function to safely construct S3 URL
+function getS3Url(s3Path: string | null | undefined): string | null {
+    if (!s3Path) return null;
+
+    const S3_BASE_URL = 'https://applywizz-prod.s3.us-east-2.amazonaws.com/';
+
+    // Check if the path already contains the S3 base URL
+    if (s3Path.includes(S3_BASE_URL)) {
+        return s3Path;
+    }
+
+    // Otherwise, append the base URL
+    return `${S3_BASE_URL}${s3Path}`;
+}
+
 // Validation Constants
 const ALLOWED_GENDERS = ["Male", "Female", "Other", "Prefer Not to Say"];
 const ALLOWED_WORK_AUTH = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
@@ -373,7 +388,7 @@ async function handlePendingClientSubmission(
             applywizz_id: clientData.applywizz_id,
             sponsorship: clientData.sponsorship || false,
             badge_value: clientData.badge_value || 0,
-            resume_url: clientData.resume_s3_path ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_s3_path}` : null,
+            resume_url: getS3Url(clientData.resume_s3_path),
             resume_path: clientData.resume_s3_path,
             start_date: clientData.start_date,
             end_date: clientData.end_date || null,
@@ -545,7 +560,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             : clientData.exclude_companies
                 ? [clientData.exclude_companies]
                 : ["NA"];
-        const resumeUrl = clientData.resume_s3_path ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_s3_path}` : "";
+        const resumeUrl = getS3Url(clientData.resume_s3_path) || "";
 
         // Check submission type - handle pending clients separately
         if (clientData.submission_type === 'pending') {
