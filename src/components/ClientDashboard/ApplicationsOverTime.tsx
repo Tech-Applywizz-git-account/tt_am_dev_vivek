@@ -34,7 +34,9 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
     // Custom tooltip
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
-            const date = new Date(label);
+            // Parse date as local date to avoid timezone conversion
+            const [year, month, day] = label.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
             const formattedDate = date.toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
@@ -165,11 +167,13 @@ const ApplicationsOverTime: React.FC<ApplicationsOverTimeProps> = ({ data, loadi
                                 height={80}
                                 tick={{ fill: '#6b7280', fontSize: 12 }}
                                 tickFormatter={(value: string) => {
-                                    const date = new Date(value);
+                                    // Parse date as local date to avoid timezone conversion
+                                    const [year, month, day] = value.split('-').map(Number);
+                                    const date = new Date(year, month - 1, day);
                                     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                                    const month = monthNames[date.getMonth()];
-                                    const day = String(date.getDate()).padStart(2, "0");
-                                    return `${month} ${day}`;
+                                    const monthName = monthNames[date.getMonth()];
+                                    const dayStr = String(date.getDate()).padStart(2, "0");
+                                    return `${monthName} ${dayStr}`;
                                 }}
                                 stroke="#9ca3af"
                             />

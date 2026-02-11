@@ -291,7 +291,9 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
 
       <div className="space-y-3">
         {data.map((item) => {
-          const dateObj = new Date(item.date);
+          // Parse date as local dait t. ateid timezone conversion
+          const [year, month, day] = item.date.split('-').map(Number);
+          const dateObj = new Date(year, month - 1, day);
           const formattedDate = dateObj.toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
