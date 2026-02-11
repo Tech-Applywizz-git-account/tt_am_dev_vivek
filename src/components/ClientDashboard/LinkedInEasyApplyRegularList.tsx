@@ -295,10 +295,12 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         } else {
             // Set filtered date to show the "no jobs" message
             setFilteredDate(dateStr);
-            setShowCalendar(false);
+            setCurrentPage(1);
 
-            // Show alert
-            alert("No jobs found on the selected date.");
+            // Expand the date to show "No jobs found" message
+            setExpandedDate(dateStr);
+
+            setShowCalendar(false);
         }
     };
 
@@ -714,9 +716,8 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
                                                     .map((job) => renderJobCard(job, date))}
                                             </div>
                                         ) : (
-                                            <div className="space-y-4">
-                                                <SkeletonJobCard />
-                                                <SkeletonJobCard />
+                                            <div className="p-6 bg-gray-50 rounded-lg text-center border border-gray-200">
+                                                <p className="text-gray-600 font-medium">No jobs found on the selected date.</p>
                                             </div>
                                         )}
                                     </div>
