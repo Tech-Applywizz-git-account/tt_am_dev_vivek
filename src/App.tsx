@@ -197,7 +197,7 @@ function App() {
   const [showFloatingButton, setShowFloatingButton] = useState(false);
   const [isScoringTriggered, setIsScoringTriggered] = useState(false);
 
-  // Calendar state for LinkedIn Easy Apply
+  // Shared calendar states for all job list components
   const [showCalendar, setShowCalendar] = useState(false);
   const [filteredDate, setFilteredDate] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -534,6 +534,12 @@ function App() {
       setSearchTerm('');
     }
   }, [activeView, currentUser]); // Runs whenever activeView or currentUser changes
+
+  // Reset expanded dates when tab changes
+  useEffect(() => {
+    // Reset expandedDate state when user switches tabs
+    setExpandedDate(null);
+  }, [activeView]); // Runs whenever activeView changes
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
