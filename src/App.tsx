@@ -197,10 +197,21 @@ function App() {
   const [showFloatingButton, setShowFloatingButton] = useState(false);
   const [isScoringTriggered, setIsScoringTriggered] = useState(false);
 
-  // Calendar state for LinkedIn Easy Apply
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [filteredDate, setFilteredDate] = useState<string | null>(null);
-  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  // Separate calendar states for each component
+  // ScoredJobsRegularList (shared between both instances)
+  const [scoredJobsShowCalendar, setScoredJobsShowCalendar] = useState(false);
+  const [scoredJobsFilteredDate, setScoredJobsFilteredDate] = useState<string | null>(null);
+  const [scoredJobsExpandedDate, setScoredJobsExpandedDate] = useState<string | null>(null);
+
+  // LinkedInEasyApplyRegularList
+  const [linkedInShowCalendar, setLinkedInShowCalendar] = useState(false);
+  const [linkedInFilteredDate, setLinkedInFilteredDate] = useState<string | null>(null);
+  const [linkedInExpandedDate, setLinkedInExpandedDate] = useState<string | null>(null);
+
+  // IndeedEasyApplyRegularList
+  const [indeedShowCalendar, setIndeedShowCalendar] = useState(false);
+  const [indeedFilteredDate, setIndeedFilteredDate] = useState<string | null>(null);
+  const [indeedExpandedDate, setIndeedExpandedDate] = useState<string | null>(null);
   const linkedInEasyApplyRef = React.useRef<LinkedInEasyApplyRegularListRef>(null);
   const indeedEasyApplyRef = React.useRef<IndeedEasyApplyRegularListRef>(null);
   const scoredJobsRef = React.useRef<ScoredJobsRegularListRef>(null);
@@ -1849,12 +1860,12 @@ function App() {
                     <ScoredJobsRegularList
                       ref={scoredJobsRef}
                       applywizzId={applywizzId}
-                      showCalendar={showCalendar}
-                      setShowCalendar={setShowCalendar}
-                      filteredDate={filteredDate}
-                      setFilteredDate={setFilteredDate}
-                      expandedDate={expandedDate}
-                      setExpandedDate={setExpandedDate}
+                      showCalendar={scoredJobsShowCalendar}
+                      setShowCalendar={setScoredJobsShowCalendar}
+                      filteredDate={scoredJobsFilteredDate}
+                      setFilteredDate={setScoredJobsFilteredDate}
+                      expandedDate={scoredJobsExpandedDate}
+                      setExpandedDate={setScoredJobsExpandedDate}
                       onJobsEmpty={handleJobsEmpty}
                       onLoadingChange={handleJobsLoading}
                     />
@@ -2045,7 +2056,7 @@ function App() {
                 <div style={{ position: 'relative' }}>
                   <div
                     onClick={() => {
-                      setShowCalendar(!showCalendar);
+                      setLinkedInShowCalendar(!linkedInShowCalendar);
                     }}
                     style={{
                       display: 'inline-flex',
@@ -2060,21 +2071,21 @@ function App() {
                     }}
                   >
                     <h1 className="text-sm font-medium">
-                      {filteredDate
-                        ? filteredDate.split('-').reverse().join('-')
+                      {linkedInFilteredDate
+                        ? linkedInFilteredDate.split('-').reverse().join('-')
                         : new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
                     </h1>
                     <img
                       src="/chevron-bottom.svg"
                       alt="chevron"
                       style={{
-                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transform: linkedInShowCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
                         transition: 'transform 0.2s'
                       }}
                     />
                   </div>
 
-                  {showCalendar && (
+                  {linkedInShowCalendar && (
                     <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px', right: 0 }}>
                       <JobCalendar onDateSelect={(date) => {
                         if (linkedInEasyApplyRef.current) {
@@ -2104,12 +2115,12 @@ function App() {
               setShowFloatingButton={setShowFloatingButton}
               isScoringTriggered={isScoringTriggered}
               setIsScoringTriggered={setIsScoringTriggered}
-              showCalendar={showCalendar}
-              setShowCalendar={setShowCalendar}
-              filteredDate={filteredDate}
-              setFilteredDate={setFilteredDate}
-              expandedDate={expandedDate}
-              setExpandedDate={setExpandedDate}
+              showCalendar={linkedInShowCalendar}
+              setShowCalendar={setLinkedInShowCalendar}
+              filteredDate={linkedInFilteredDate}
+              setFilteredDate={setLinkedInFilteredDate}
+              expandedDate={linkedInExpandedDate}
+              setExpandedDate={setLinkedInExpandedDate}
             />
           </div>
         );
@@ -2124,7 +2135,7 @@ function App() {
                 <div style={{ position: 'relative' }}>
                   <div
                     onClick={() => {
-                      setShowCalendar(!showCalendar);
+                      setIndeedShowCalendar(!indeedShowCalendar);
                     }}
                     style={{
                       display: 'inline-flex',
@@ -2139,21 +2150,21 @@ function App() {
                     }}
                   >
                     <h1 className="text-sm font-medium">
-                      {filteredDate
-                        ? filteredDate.split('-').reverse().join('-')
+                      {indeedFilteredDate
+                        ? indeedFilteredDate.split('-').reverse().join('-')
                         : new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
                     </h1>
                     <img
                       src="/chevron-bottom.svg"
                       alt="chevron"
                       style={{
-                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transform: indeedShowCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
                         transition: 'transform 0.2s'
                       }}
                     />
                   </div>
 
-                  {showCalendar && (
+                  {indeedShowCalendar && (
                     <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px', right: 0 }}>
                       <JobCalendar onDateSelect={(date) => {
                         if (indeedEasyApplyRef.current) {
@@ -2183,12 +2194,12 @@ function App() {
               setShowFloatingButton={setShowFloatingButton}
               isScoringTriggered={isScoringTriggered}
               setIsScoringTriggered={setIsScoringTriggered}
-              showCalendar={showCalendar}
-              setShowCalendar={setShowCalendar}
-              filteredDate={filteredDate}
-              setFilteredDate={setFilteredDate}
-              expandedDate={expandedDate}
-              setExpandedDate={setExpandedDate}
+              showCalendar={indeedShowCalendar}
+              setShowCalendar={setIndeedShowCalendar}
+              filteredDate={indeedFilteredDate}
+              setFilteredDate={setIndeedFilteredDate}
+              expandedDate={indeedExpandedDate}
+              setExpandedDate={setIndeedExpandedDate}
             />
           </div>
         );
@@ -2209,7 +2220,7 @@ function App() {
                 <div style={{ position: 'relative' }}>
                   <div
                     onClick={() => {
-                      setShowCalendar(!showCalendar);
+                      setScoredJobsShowCalendar(!scoredJobsShowCalendar);
                     }}
                     style={{
                       display: 'inline-flex',
@@ -2224,21 +2235,21 @@ function App() {
                     }}
                   >
                     <h1 className="text-sm font-medium">
-                      {filteredDate
-                        ? filteredDate.split('-').reverse().join('-')
+                      {scoredJobsFilteredDate
+                        ? scoredJobsFilteredDate.split('-').reverse().join('-')
                         : new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
                     </h1>
                     <img
                       src="/chevron-bottom.svg"
                       alt="chevron"
                       style={{
-                        transform: showCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transform: scoredJobsShowCalendar ? 'rotate(180deg)' : 'rotate(0deg)',
                         transition: 'transform 0.2s'
                       }}
                     />
                   </div>
 
-                  {showCalendar && (
+                  {scoredJobsShowCalendar && (
                     <div style={{ position: 'absolute', zIndex: 50, marginTop: '8px', right: 0 }}>
                       <JobCalendar onDateSelect={(date) => {
                         if (scoredJobsRef.current) {
@@ -2256,12 +2267,12 @@ function App() {
                 <ScoredJobsRegularList
                   ref={scoredJobsRef}
                   applywizzId={applywizzId}
-                  showCalendar={showCalendar}
-                  setShowCalendar={setShowCalendar}
-                  filteredDate={filteredDate}
-                  setFilteredDate={setFilteredDate}
-                  expandedDate={expandedDate}
-                  setExpandedDate={setExpandedDate}
+                  showCalendar={scoredJobsShowCalendar}
+                  setShowCalendar={setScoredJobsShowCalendar}
+                  filteredDate={scoredJobsFilteredDate}
+                  setFilteredDate={setScoredJobsFilteredDate}
+                  expandedDate={scoredJobsExpandedDate}
+                  setExpandedDate={setScoredJobsExpandedDate}
                 />
               ) : (
                 <ApplicationSummaryList
