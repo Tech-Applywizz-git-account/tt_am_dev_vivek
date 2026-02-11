@@ -847,7 +847,9 @@ const JobLinksList: React.FC<JobLinksListProps> = ({ currentUserEmail }) => {
                 <div>
                     <div className="space-y-3">
                         {groupedJobs.map((group) => {
-                            const dateObj = new Date(group.date);
+                            // Parse date as local date to avoid timezone conversion
+                            const [year, month, day] = group.date.split('-').map(Number);
+                            const dateObj = new Date(year, month - 1, day);
                             const formattedDate = dateObj.toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",

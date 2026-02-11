@@ -619,7 +619,9 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
                             const count = summary[date] || 0;
                             const jobs = jobsData[date] || [];
                             const isExpanded = expandedDate === date;
-                            const dateObj = new Date(date);
+                            // Parse date as local date to avoid timezone conversion
+                            const [year, month, day] = date.split('-').map(Number);
+                            const dateObj = new Date(year, month - 1, day);
                             const formattedDate = dateObj.toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
