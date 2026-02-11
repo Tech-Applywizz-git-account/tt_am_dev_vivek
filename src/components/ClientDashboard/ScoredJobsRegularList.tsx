@@ -676,8 +676,9 @@ const ScoredJobsRegularList = React.forwardRef<ScoredJobsRegularListRef, ScoredJ
                                                         .map((job) => renderJobCard(job, date))}
                                                 </div>
                                             ) : (
-                                                <div className="p-6 bg-gray-50 rounded-lg text-center border border-gray-200">
-                                                    <p className="text-gray-600 font-medium">No jobs found on the selected date.</p>
+                                                <div className="space-y-4">
+                                                    <SkeletonJobCard />
+                                                    <SkeletonJobCard />
                                                 </div>
                                             )}
                                         </div>
