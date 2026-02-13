@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Check } from "lucide-react";
 
+
 // ✅ Types
 export interface TaskCount {
   date: string;
