@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Check } from "lucide-react";
+
 
 // ✅ Types
 export interface TaskCount {
@@ -20,6 +21,7 @@ interface JobItem {
   dueDate: string;
   score: number;
   jobUrl: string | null;
+  is_email_received?: boolean;
 }
 
 interface JobsResponse {
@@ -166,6 +168,13 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
 
       const apiData = await response.json();
 
+      // Debug: Log the API response to check if is_email_received is included
+      console.log("API Response for date:", date, apiData);
+      if (apiData.tasks && apiData.tasks.length > 0) {
+        console.log("First task data:", apiData.tasks[0]);
+        console.log("is_email_received field:", apiData.tasks[0].is_email_received);
+      }
+
       // Backend returns only tasks (no easyapply for regular application summary)
       return {
         tasks: apiData.tasks || [],
@@ -281,6 +290,14 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
           <ExternalLink size={14} />
           View Job Posting
         </a>
+        {job.is_email_received && (
+          <div
+            className="bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1 text-sm"
+          >
+            <Check size={16} />
+            Email Verified
+          </div>
+        )}
       </div>
     </div>
   );
