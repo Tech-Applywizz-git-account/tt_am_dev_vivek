@@ -147,11 +147,13 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
     const [jobsData, setJobsData] = useState<Record<string, JobItem[]>>({});
     const [loading, setLoading] = useState(false);
     const [loadingDates, setLoadingDates] = useState<Record<string, boolean>>({}); // Track loading state per date
+    const [processingDates, setProcessingDates] = useState<Record<string, boolean>>({}); // Track scoring processing per date
+    const [startDate, setStartDate] = useState<string | null>(null);
     const [error, setError] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    // Fetch summary
+    // Fetch summary and client details
     const fetchSummary = async () => {
         if (!applywizzId) {
             setError("Applywizz ID not available");
@@ -163,28 +165,44 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
             setError("");
 
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const baseApiUrl = window.location.origin; // Assuming the internal API is on the same origin
+
             if (!apiUrl) {
-                throw new Error('VITE_EXTERNAL_API_URL is not defined');
+                throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
             }
 
-            const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
+            // Parallel fetch: Client details and Job Summary
+            const [summaryRes, clientRes] = await Promise.all([
+                fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`),
+                fetch(`${baseApiUrl}/api/get-client-details?applywizz_id=${applywizzId}`)
+            ]);
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch summary: ${response.status}`);
-            }
+            if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.status}`);
 
-            const data: any = await response.json();
-
-            // When using apply_type=EASY_APPLY, the API returns easy_apply_jobs instead of jobs
-            const summaryData = data.easy_apply_jobs || {};
+            const summaryDataResult = await summaryRes.json();
+            const summaryData = summaryDataResult.easy_apply_jobs || {};
             setSummary(summaryData);
 
-            // Check if today's date exists in the summary
-            const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-            const hasTodayJobs = summaryData.hasOwnProperty(today);
+            if (clientRes.ok) {
+                const clientData = await clientRes.json();
+                if (clientData.additional_information?.start_date) {
+                    setStartDate(clientData.additional_information.start_date);
+                } else {
+                    // Fallback to 2 days ago if no start_date
+                    const d = new Date();
+                    d.setDate(d.getDate() - 2);
+                    setStartDate(d.toISOString().split('T')[0]);
+                }
+            } else {
+                // Fallback to 2 days ago on error
+                const d = new Date();
+                d.setDate(d.getDate() - 2);
+                setStartDate(d.toISOString().split('T')[0]);
+            }
 
-            // Show modal if summary is empty or today's date is missing
-            if (Object.keys(summaryData).length === 0 || !hasTodayJobs) {
+            // Check if today's date exists in the summary
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (Object.keys(summaryData).length === 0 || !summaryData.hasOwnProperty(todayStr)) {
                 setShowScoringModal(true);
             }
         } catch (err) {
@@ -240,20 +258,39 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         setShowFloatingButton(true);
     };
 
-    const handleStartScoring = async () => {
-        if (!applywizzId || isScoringTriggered) return;
+    const handleStartScoring = async (date?: string) => {
+        if (!applywizzId) return;
+
+        const targetDate = date || new Date().toISOString().split('T')[0];
+
+        if (date) {
+            setProcessingDates(prev => ({ ...prev, [date]: true }));
+        } else if (isScoringTriggered) {
+            return;
+        }
 
         try {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
-            await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${applywizzId}`);
+            const queryParam = date ? `&job_date=${date}` : '';
+            await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${applywizzId}${queryParam}`);
 
-            // Mark as triggered and close modal
-            setIsScoringTriggered(true);
-            setShowScoringModal(false);
-            setShowFloatingButton(false);
+            if (!date) {
+                setIsScoringTriggered(true);
+                setShowScoringModal(false);
+                setShowFloatingButton(false);
+            } else {
+                // If it was a specific date, briefly show success or just clear processing
+                setTimeout(() => {
+                    setProcessingDates(prev => ({ ...prev, [date]: false }));
+                    // Fetch summary again to see if jobs appeared (though background process might take time)
+                    fetchSummary();
+                }, 2000);
+            }
         } catch (err) {
-            // Silent fail as per requirements
             console.error("Error triggering job scoring:", err);
+            if (date) {
+                setProcessingDates(prev => ({ ...prev, [date]: false }));
+            }
         }
     };
 
@@ -269,6 +306,9 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
 
     // Toggle date expansion and fetch jobs if needed
     const toggleDateExpansion = (date: string) => {
+        // If this date has no jobs, don't allow expansion
+        if (!summary[date]) return;
+
         const isCurrentlyExpanded = expandedDate === date;
         setExpandedDate(isCurrentlyExpanded ? null : date);
 
@@ -278,7 +318,28 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         }
     };
 
-    const allDates = Object.keys(summary).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    // Generate continuous range of dates from startDate to today
+    const generateAllDates = () => {
+        if (!startDate) return [];
+
+        const dates = [];
+        const current = new Date();
+        current.setHours(0, 0, 0, 0);
+
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+
+        // Iterate from today backwards to start date
+        const iter = new Date(current);
+        while (iter >= start) {
+            dates.push(iter.toISOString().split('T')[0]);
+            iter.setDate(iter.getDate() - 1);
+        }
+
+        return dates;
+    };
+
+    const allDates = generateAllDates();
 
     const handleDateSelect = async (selectedDate: Date) => {
         // Construct YYYY-MM-DD string using local time components to match summary keys
@@ -670,9 +731,11 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
                         </div>
                     )}
                     {currentDates.map((date, index) => {
-                        const count = summary[date] || 0;
-                        const jobs = jobsData[date] || [];
+                        const hasJobs = summary.hasOwnProperty(date);
                         const isExpanded = expandedDate === date;
+                        const isProcessing = processingDates[date];
+                        const jobs = jobsData[date] || [];
+
                         // Parse date as local date to avoid timezone conversion
                         const [year, month, day] = date.split('-').map(Number);
                         const dateObj = new Date(year, month - 1, day);
@@ -685,20 +748,43 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
                         return (
                             <div key={date}>
                                 <div
-                                    onClick={() => toggleDateExpansion(date)}
-                                    className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
+                                    onClick={() => hasJobs && toggleDateExpansion(date)}
+                                    className={`flex justify-between items-center p-4 rounded-lg transition ${hasJobs ? 'cursor-pointer hover:bg-[#d4f9da]' : 'cursor-default'}`}
                                     style={{ backgroundColor: '#E3FFE7' }}
                                 >
                                     <div className="flex items-center gap-32">
                                         <span className="font-semibold text-lg" style={{ color: '#22201C' }}>{startIndex + index + 1}.</span>
                                         <span className="font-medium" style={{ color: '#615642' }}>{formattedDate}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-blue-700 font-semibold">
-                                        <img
-                                            src="/chevron-icon.svg"
-                                            alt="chevron"
-                                            className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                                        />
+                                    <div className="flex items-center gap-3">
+                                        {hasJobs ? (
+                                            <img
+                                                src="/chevron-icon.svg"
+                                                alt="chevron"
+                                                className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                            />
+                                        ) : (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleStartScoring(date);
+                                                }}
+                                                disabled={isProcessing}
+                                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 shadow-sm ${isProcessing
+                                                    ? 'bg-gray-400 text-white cursor-wait'
+                                                    : 'bg-[#2C76FF] text-white hover:bg-blue-600 active:scale-95'
+                                                    }`}
+                                            >
+                                                {isProcessing ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Loader2 className="animate-spin" size={14} />
+                                                        <span>Processing...</span>
+                                                    </div>
+                                                ) : (
+                                                    'Scoring'
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
