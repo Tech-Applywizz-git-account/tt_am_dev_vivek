@@ -269,6 +269,7 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
             return;
         }
 
+
         try {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
             const queryParam = date ? `&job_date=${date}` : '';
