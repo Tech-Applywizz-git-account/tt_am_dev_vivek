@@ -424,7 +424,7 @@ function mapToDjangoData(data: ClientSyncData): any {
     expected_salary: data.salary_range || data.expected_salary,
     github_url: data.github_url,
     linkedin_url: data.linked_in_url || data.linkedin_url,
-    sponsorship: data.sponsorship,
+    sponsorship: data.sponsorship === true ? 'Yes' : (data.sponsorship === false ? 'No' : data.sponsorship),
     status: data.status,
     google_drive_resume_link: Array.isArray(data.google_drive_resume_link) ? data.google_drive_resume_link[0] : data.google_drive_resume_link
   };
