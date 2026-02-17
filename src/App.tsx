@@ -995,19 +995,11 @@ function App() {
           }
         })(),
         "work_preference": (() => {
-          // If location_preferences is an array
-          if (Array.isArray(clientData.location_preferences)) {
-            // If more than 1 location, send "All"
-            if (clientData.location_preferences.length > 1) {
-              return "All";
-            }
-            // If exactly 1 location, send that location
-            if (clientData.location_preferences.length === 1) {
-              return clientData.location_preferences[0];
-            }
+          const pref = clientData.work_preferences;
+          if (pref === "All") {
+            return "All";
           }
-          // Default to "All" if empty or not an array
-          return "All";
+          return "Remote";
         })(),
         "sponsorship": clientData.sponsorship ? "yes" : "No",
 

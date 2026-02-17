@@ -741,15 +741,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             willing_to_relocate: Boolean(clientData.willing_to_relocate),
             work_auth: clientData.visa_type || "",
             work_preference: (() => {
-                if (Array.isArray(clientData.location_preferences)) {
-                    if (clientData.location_preferences.length > 1) {
-                        return "All";
-                    }
-                    if (clientData.location_preferences.length === 1) {
-                        return clientData.location_preferences[0];
-                    }
+                const pref = clientData.work_preferences;
+                if (pref === "All") {
+                    return "All";
                 }
-                return "All";
+                return "Remote";
             })(),
             sponsorship: clientData.sponsorship ? "yes" : "No",
             gender: clientData.gender || "",
