@@ -108,6 +108,7 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+    const [applyPopupJob, setApplyPopupJob] = useState<{ jobId: string; date: string } | null>(null);
 
     // Fetch summary
     const fetchSummary = async () => {
@@ -366,16 +367,17 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
 
                     {/* Middle: Apply Now Button */}
                     <div className="flex-shrink-0 flex items-center">
-                        <a
-                            href={job.url || "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <button
+                            onClick={() => {
+                                window.open(job.url || "#", "_blank", "noopener,noreferrer");
+                                setApplyPopupJob({ jobId: job.id, date });
+                            }}
                             className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
                             style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
                         >
                             <span>APPLY NOW</span>
                             <ArrowRight className="h-5 w-5 text-white" />
-                        </a>
+                        </button>
                     </div>
 
                     {/* Right: Match Score Card */}
@@ -498,6 +500,47 @@ const C2CJobsRegularList: React.FC<C2CJobsRegularListProps> = ({ applywizzId }) 
 
     return (
         <div>
+            {/* Apply Confirmation Popup */}
+            {applyPopupJob && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+                    onClick={() => setApplyPopupJob(null)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-5"
+                        style={{ minWidth: '340px', maxWidth: '420px' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <img src="/tick.png" alt="tick" className="w-14 h-14" />
+                        <h2 className="text-xl font-bold text-center" style={{ color: '#282828', fontFamily: 'Darker Grotesque' }}>
+                            Did you apply for this job?
+                        </h2>
+                        <p className="text-sm text-gray-500 text-center">
+                            Let us know so we can track your application status.
+                        </p>
+                        <div className="flex gap-3 w-full mt-2">
+                            <button
+                                onClick={() => {
+                                    handleStatusChange(applyPopupJob.jobId, 'Completed', applyPopupJob.date);
+                                    setApplyPopupJob(null);
+                                }}
+                                className="flex-1 py-2.5 rounded-lg font-bold text-white transition-all duration-200 hover:opacity-90"
+                                style={{ backgroundColor: '#000000ff' }}
+                            >
+                                Yes, I Applied!
+                            </button>
+                            <button
+                                onClick={() => setApplyPopupJob(null)}
+                                className="flex-1 py-2.5 rounded-lg font-bold transition-all duration-200 border border-gray-300 hover:bg-gray-100"
+                                style={{ color: '#282828' }}
+                            >
+                                Not Yet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-2">
                 {currentDates.map((date, index) => {
