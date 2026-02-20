@@ -59,7 +59,7 @@ function getS3Url(s3Path: string | null | undefined): string | null {
 
 // Validation Constants
 const ALLOWED_GENDERS = ["Male", "Female", "Other", "Prefer Not to Say"];
-const ALLOWED_WORK_AUTH = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
+const ALLOWED_WORK_AUTH = ["F1", "OPT", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
 const ALLOWED_WORK_PREF = ["Remote", "Hybrid", "On-site", "All"];
 
 // Define the structure of the incoming client data
@@ -541,6 +541,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 error: 'Invalid request body format',
                 details: 'Request body must be a JSON object'
             });
+        }
+
+        // Map OPT → F1 before validation and all downstream processing
+        if (clientData.visa_type === "OPT") {
+            console.log('ℹ️ OPT visa type received — mapping to F1 before processing');
+            clientData.visa_type = "F1";
         }
 
         // Validate the client data
