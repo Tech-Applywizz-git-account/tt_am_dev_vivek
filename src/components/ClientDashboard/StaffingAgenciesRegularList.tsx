@@ -370,7 +370,9 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
                         <button
                             onClick={() => {
                                 window.open(job.url || "#", "_blank", "noopener,noreferrer");
-                                setApplyPopupJob({ jobId: job.id, date });
+                                if (job.status !== 'Completed') {
+                                    setApplyPopupJob({ jobId: job.id, date });
+                                }
                             }}
                             className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
                             style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
@@ -507,10 +509,17 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
                     onClick={() => setApplyPopupJob(null)}
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-5"
+                        className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-5 relative"
                         style={{ minWidth: '340px', maxWidth: '420px' }}
                         onClick={(e) => e.stopPropagation()}
                     >
+                        <button
+                            onClick={() => setApplyPopupJob(null)}
+                            className="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none transition-colors"
+                            aria-label="Close"
+                        >
+                            &times;
+                        </button>
                         <img src="/tick.png" alt="tick" className="w-14 h-14" />
                         <h2 className="text-xl font-bold text-center" style={{ color: '#282828', fontFamily: 'Darker Grotesque' }}>
                             Did you apply for this job?
