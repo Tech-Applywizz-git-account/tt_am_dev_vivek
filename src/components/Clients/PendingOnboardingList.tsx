@@ -354,7 +354,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
                       Opted for Job Links
                     </span>
                   )}
-                  <p className="text-lg font-semibold">{client.full_name}</p>
+                  <p className="text-lg font-semibold">{client.full_name} ({client.applywizz_id || 'not found'})</p>
                   <p className="text-sm text-gray-600">{client.company_email}</p>
                   <p className="text-sm">
                     Job Prefs: {client.job_role_preferences?.join(", ")}
@@ -421,7 +421,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 Map to Different Role
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Client: <span className="font-medium text-gray-700">{mapRoleClient.full_name}</span>
+                Client: <span className="font-medium text-gray-700">{mapRoleClient.full_name} ({mapRoleClient.applywizz_id || 'not found'})</span>
               </p>
             </div>
 
@@ -535,7 +535,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg space-y-4">
             <h3 className="text-xl font-semibold">
-              Assign Roles for {selectedClient.full_name}
+              Assign Roles for {selectedClient.full_name} ({selectedClient.applywizz_id || 'not found'})
             </h3>
 
             {[
