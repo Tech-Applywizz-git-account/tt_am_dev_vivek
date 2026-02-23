@@ -26,7 +26,7 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Send email if it's a job board client
-        if (isJobBoardClient) {
+        // if (isJobBoardClient) {
             const emailSubject = type === 'cancel' ? "cancel subscription ticket raised" : "call support ticket raised";
             const emailTo = "nikhil@applywizz.com"; // Hardcoded dummy email
             const emailCc = ["vivek@applywizz.com", "bhanuteja@applywizz.com"];   // Multiple dummy emails
@@ -60,7 +60,7 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
             } catch (error) {
                 console.error("Failed to send support email:", error);
             }
-        }
+        // }
 
         if (type === 'cancel') {
             toast.success("we will contact you within 4 hours and process the cancel subscription process", {
