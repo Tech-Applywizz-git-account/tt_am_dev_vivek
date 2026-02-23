@@ -246,37 +246,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
 
 
         {/* Support Module */}
-        <div className="mt-4 px-3">
-          <button
-            onClick={() => setIsSupportOpen(!isSupportOpen)}
-            className="w-full flex items-center justify-between py-2 text-gray-600 hover:text-black transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Headphones className="h-5 w-5 text-gray-400" />
-              <span className="font-medium text-sm">Need support?</span>
-            </div>
-            {isSupportOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
+        {(user.role === 'scraping_team') && (
+          <div className="mt-4 px-3">
+            <button
+              onClick={() => setIsSupportOpen(!isSupportOpen)}
+              className="w-full flex items-center justify-between py-2 text-gray-600 hover:text-black transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <Headphones className="h-5 w-5 text-gray-400" />
+                <span className="font-medium text-sm">Need support?</span>
+              </div>
+              {isSupportOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
 
-          {isSupportOpen && (
-            <div className="mt-1 ml-8 space-y-1 animate-in slide-in-from-top-1 duration-200">
-              <button
-                onClick={() => onOpenSupport('call')}
-                className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
-              >
-                <Phone className="h-4 w-4" />
-                <span>Call with team</span>
-              </button>
-              <button
-                onClick={() => onOpenSupport('cancel')}
-                className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
-              >
-                <UserX className="h-4 w-4" />
-                <span>Cancel subscription</span>
-              </button>
-            </div>
-          )}
-        </div>
+            {isSupportOpen && (
+              <div className="mt-1 ml-8 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                <button
+                  onClick={() => onOpenSupport('call')}
+                  className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
+                >
+                  <Phone className="h-4 w-4" />
+                  <span>Call with team</span>
+                </button>
+                <button
+                  onClick={() => onOpenSupport('cancel')}
+                  className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
+                >
+                  <UserX className="h-4 w-4" />
+                  <span>Cancel subscription</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ATS Resume Card */}
         {(user.role === 'client') && (optedJobLinks) && (
