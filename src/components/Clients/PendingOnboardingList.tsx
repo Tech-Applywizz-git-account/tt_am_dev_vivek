@@ -17,7 +17,6 @@ function JobRoleSelector({
   label?: string;
 }) {
   const [jobRolesData, setJobRolesData] = useState<{ id: number; name: string }[]>([]);
-  const [fetchError, setFetchError] = useState<string>('');
   const [isLoadingJobRoles, setIsLoadingJobRoles] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,7 +31,6 @@ function JobRoleSelector({
   useEffect(() => {
     const fetchJobRoles = async () => {
       setIsLoadingJobRoles(true);
-      setFetchError('');
       try {
         const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
         if (!baseUrl) {
@@ -48,7 +46,6 @@ function JobRoleSelector({
         setJobRolesData(Array.isArray(data) && data.length > 0 ? data : []);
       } catch (error: any) {
         console.error('Error fetching job roles:', error.message);
-        setFetchError(error.message);
         setJobRolesData([]);
       } finally {
         setIsLoadingJobRoles(false);
@@ -195,14 +192,14 @@ export const PendingOnboardingList: React.FC<Props> = ({
     scraperid: "",
   });
 
-  const [loadingClientId, setLoadingClientId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ── Map to Different Role state ───────────────────────────────────────────
   const [mapRoleClient, setMapRoleClient] = useState<PendingClient | null>(null);   // which client's modal is open
   const [mappedRole, setMappedRole] = useState<string>('');                          // selected role from dropdown
   const [showMapRoleConfirm, setShowMapRoleConfirm] = useState(false);              // confirmation popup visibility
-  const [isCreatingRole, setIsCreatingRole] = useState(false);                      // loading state for new role creation flow
+  const [isCreatingRole, setIsCreatingRole] = useState(false);   // loading state for all onboarding flows
+  const [loadingMessage, setLoadingMessage] = useState('');       // contextual message for the loading overlay
 
   const [usersByRole, setUsersByRole] = useState<{
     [key: string]: { id: string; name: string }[];
@@ -272,13 +269,15 @@ export const PendingOnboardingList: React.FC<Props> = ({
 
   const handleDirectOnboardClick = async (client: PendingClient) => {
     if (!onDirectOnboard) return;
-    setLoadingClientId(client.id);
+    setLoadingMessage('Onboarding the client directly. This may take a few moments...');
+    setIsCreatingRole(true);
     try {
       await onDirectOnboard(client);
     } catch (error) {
       console.error("Error during direct onboarding:", error);
     } finally {
-      setLoadingClientId(null);
+      setIsCreatingRole(false);
+      setLoadingMessage('');
     }
   };
 
@@ -297,7 +296,6 @@ export const PendingOnboardingList: React.FC<Props> = ({
 
   const handleMapRoleConfirm = async () => {
     if (!mapRoleClient || !mappedRole || !onDirectOnboard) return;
-    // Build a modified copy of the client with the overridden job_role_preferences
     const modifiedClient: PendingClient = {
       ...mapRoleClient,
       job_role_preferences: [mappedRole],
@@ -305,13 +303,15 @@ export const PendingOnboardingList: React.FC<Props> = ({
     setShowMapRoleConfirm(false);
     setMapRoleClient(null);
     setMappedRole('');
-    setLoadingClientId(modifiedClient.id);
+    setLoadingMessage('Onboarding the client with the mapped role. This may take a few moments...');
+    setIsCreatingRole(true);
     try {
       await onDirectOnboard(modifiedClient);
     } catch (error) {
       console.error("Error during mapped role onboarding:", error);
     } finally {
-      setLoadingClientId(null);
+      setIsCreatingRole(false);
+      setLoadingMessage('');
     }
   };
 
@@ -322,6 +322,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
     }
 
     const roleName = client.job_role_preferences[0];
+    setLoadingMessage(`Creating the new job role "${roleName}" and onboarding the client. This may take a few moments...`);
     setIsCreatingRole(true);
 
     try {
@@ -355,6 +356,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
       alert(error.message || "Something went wrong.");
     } finally {
       setIsCreatingRole(false);
+      setLoadingMessage('');
     }
   };
 
@@ -416,20 +418,20 @@ export const PendingOnboardingList: React.FC<Props> = ({
                       {/* ── Onboard Directly ── */}
                       <button
                         onClick={() => handleDirectOnboardClick(client)}
-                        disabled={loadingClientId !== null}
-                        className={`px-4 py-2 rounded text-white ${loadingClientId === client.id
+                        disabled={isCreatingRole}
+                        className={`px-4 py-2 rounded text-white ${isCreatingRole
                           ? "bg-green-400 cursor-not-allowed"
                           : "bg-green-600 hover:bg-green-700"
                           }`}
                       >
-                        {loadingClientId === client.id ? "Onboarding..." : "Onboard Directly"}
+                        {isCreatingRole ? "Onboarding..." : "Onboard Directly"}
                       </button>
 
                       {/* ── Map to Different Role ── */}
                       <button
                         onClick={() => openMapRoleModal(client)}
-                        disabled={loadingClientId !== null || isCreatingRole}
-                        className={`px-4 py-2 rounded text-white ${loadingClientId !== null || isCreatingRole
+                        disabled={isCreatingRole}
+                        className={`px-4 py-2 rounded text-white ${isCreatingRole
                           ? "bg-purple-300 cursor-not-allowed"
                           : "bg-purple-600 hover:bg-purple-700"
                           }`}
@@ -440,8 +442,8 @@ export const PendingOnboardingList: React.FC<Props> = ({
                       {/* ── Create New Role & Onboard ── */}
                       <button
                         onClick={() => handleCreateRoleAndOnboard(client)}
-                        disabled={loadingClientId !== null || isCreatingRole}
-                        className={`px-4 py-2 rounded text-white ${loadingClientId !== null || isCreatingRole
+                        disabled={isCreatingRole}
+                        className={`px-4 py-2 rounded text-white ${isCreatingRole
                           ? "bg-indigo-300 cursor-not-allowed"
                           : "bg-indigo-600 hover:bg-indigo-700"
                           }`}
@@ -452,7 +454,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
                   ) : (
                     <button
                       onClick={() => setSelectedClient(client)}
-                      disabled={loadingClientId !== null}
+                      disabled={isSubmitting}
                       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
                     >
                       Assign Roles
@@ -656,7 +658,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
               Processing Request
             </h3>
             <p className="text-gray-500 text-center text-sm leading-relaxed">
-              We are creating the new job role and onboarding the client. This may take a few moments...
+              {loadingMessage || 'Please wait...'}
             </p>
           </div>
         </div>
