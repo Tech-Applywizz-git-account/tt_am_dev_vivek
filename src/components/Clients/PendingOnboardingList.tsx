@@ -202,6 +202,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
   const [mapRoleClient, setMapRoleClient] = useState<PendingClient | null>(null);   // which client's modal is open
   const [mappedRole, setMappedRole] = useState<string>('');                          // selected role from dropdown
   const [showMapRoleConfirm, setShowMapRoleConfirm] = useState(false);              // confirmation popup visibility
+  const [isCreatingRole, setIsCreatingRole] = useState(false);                      // loading state for new role creation flow
 
   const [usersByRole, setUsersByRole] = useState<{
     [key: string]: { id: string; name: string }[];
@@ -314,6 +315,49 @@ export const PendingOnboardingList: React.FC<Props> = ({
     }
   };
 
+  const handleCreateRoleAndOnboard = async (client: PendingClient) => {
+    if (!onDirectOnboard || !client.job_role_preferences?.[0]) {
+      alert("No job role found to create.");
+      return;
+    }
+
+    const roleName = client.job_role_preferences[0];
+    setIsCreatingRole(true);
+
+    try {
+      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+      if (!baseUrl) {
+        throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
+      }
+
+      // Step 1: Create the new job role
+      const response = await fetch(`${baseUrl}/api/add-job-role/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: roleName })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create job role');
+      }
+
+      console.log('Success:', data.message);
+
+      // Step 2: Trigger direct onboarding
+      await onDirectOnboard(client);
+
+    } catch (error: any) {
+      console.error('Request failed:', error);
+      alert(error.message || "Something went wrong.");
+    } finally {
+      setIsCreatingRole(false);
+    }
+  };
+
   // Check if client has job-links in add_ons_info
   const hasJobLinks = (client: PendingClient): boolean => {
     if (!client.add_ons_info) return false;
@@ -384,13 +428,25 @@ export const PendingOnboardingList: React.FC<Props> = ({
                       {/* ── Map to Different Role ── */}
                       <button
                         onClick={() => openMapRoleModal(client)}
-                        disabled={loadingClientId !== null}
-                        className={`px-4 py-2 rounded text-white ${loadingClientId !== null
+                        disabled={loadingClientId !== null || isCreatingRole}
+                        className={`px-4 py-2 rounded text-white ${loadingClientId !== null || isCreatingRole
                           ? "bg-purple-300 cursor-not-allowed"
                           : "bg-purple-600 hover:bg-purple-700"
                           }`}
                       >
                         Map to Different Role
+                      </button>
+
+                      {/* ── Create New Role & Onboard ── */}
+                      <button
+                        onClick={() => handleCreateRoleAndOnboard(client)}
+                        disabled={loadingClientId !== null || isCreatingRole}
+                        className={`px-4 py-2 rounded text-white ${loadingClientId !== null || isCreatingRole
+                          ? "bg-indigo-300 cursor-not-allowed"
+                          : "bg-indigo-600 hover:bg-indigo-700"
+                          }`}
+                      >
+                        Create this new role and onboard the client
                       </button>
                     </>
                   ) : (
@@ -582,6 +638,26 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 {isSubmitting ? "Assigning Roles..." : "Complete Onboarding"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Full Screen Loading Overlay                                         */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {isCreatingRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4">
+            <div className="relative w-20 h-20 mb-6">
+              <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-t-indigo-600 rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">
+              Processing Request
+            </h3>
+            <p className="text-gray-500 text-center text-sm leading-relaxed">
+              We are creating the new job role and onboarding the client. This may take a few moments...
+            </p>
           </div>
         </div>
       )}
