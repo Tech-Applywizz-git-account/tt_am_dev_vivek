@@ -8,6 +8,8 @@ import { UserManagementModal } from '../Admin/UserManagementModal';
 import { VLTicketEditModal } from '../Tickets/VolumeShortfall/VLTicketEditModal';
 import { RUTicketEditModal } from '../Tickets/ResumeUpdate/RUTicketEditModel';
 import { Ticket, Client, AssignedUser, User } from '@/types';
+import { SupportDialog } from './SupportDialog';
+import { useState } from 'react';
 
 interface Props {
   currentUser: User;
@@ -64,6 +66,14 @@ const AppLayout: React.FC<Props> = ({
   onViewLabResults,
   optedJobLinks = false,
 }) => {
+  const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
+  const [supportType, setSupportType] = useState<'call' | 'cancel' | null>(null);
+
+  const handleOpenSupport = (type: 'call' | 'cancel') => {
+    setSupportType(type);
+    setIsSupportDialogOpen(true);
+  };
+
   // Hide sidebar for clients with opted_job_links = true
   const showSidebar = !(currentUser.role === 'client' && optedJobLinks);
   return (
@@ -78,6 +88,7 @@ const AppLayout: React.FC<Props> = ({
           pendingClientsCount={pendingClientsCount}
           optedJobLinks={optedJobLinks}
           onLogout={handleLogout}
+          onOpenSupport={handleOpenSupport}
         />
         <main className="flex-1 p-8" style={{ borderTopLeftRadius: '30px', borderTopRightRadius: '30px', border: '1px solid #000000', background: '#FFFFFF' }}>
           {renderMainContent()}
@@ -118,6 +129,14 @@ const AppLayout: React.FC<Props> = ({
         onClose={() => setIsUserManagementModalOpen(false)}
         onUpdateUser={handleUpdateUser}
         onDeleteUser={handleDeleteUser}
+      />
+
+      <SupportDialog
+        isOpen={isSupportDialogOpen}
+        onClose={() => setIsSupportDialogOpen(false)}
+        type={supportType}
+        currentUser={currentUser}
+        isJobBoardClient={optedJobLinks}
       />
     </div>
   );
