@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase, supabase2 } from '../../lib/supabaseClient';
-import { uploadResumeToS3 } from '../../services/s3Service';
+import { uploadResumeToS3Dev } from '../../services/s3ServiceDev';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, LogIn, Mail } from 'lucide-react';
 
@@ -511,7 +511,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
             let uploadedResumeKey = formData.resume_url;
             if (resumeFile) {
                 if (!formData.applywizz_id) throw new Error('JB ID is required before uploading resume.');
-                uploadedResumeKey = await uploadResumeToS3(resumeFile, formData.applywizz_id);
+                uploadedResumeKey = await uploadResumeToS3Dev(resumeFile, formData.applywizz_id);
             } else if (!uploadedResumeKey) {
                 throw new Error('Please upload a resume file.');
             }
