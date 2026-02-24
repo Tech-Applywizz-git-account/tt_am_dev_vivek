@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // CORS helper — allow all Vercel preview deployments and localhost
 function cors(req: VercelRequest, res: VercelResponse, status = 200, body: any = {}) {
@@ -20,12 +21,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== "POST") return cors(req, res, 405, { error: "Method not allowed" });
 
     try {
-        const { applywizz_id, fileType, fileContent } = typeof req.body === "string"
+        const { applywizz_id, fileType } = typeof req.body === "string"
             ? JSON.parse(req.body)
             : req.body;
 
         if (!applywizz_id) return cors(req, res, 400, { error: "Missing applywizz_id" });
-        if (!fileContent) return cors(req, res, 400, { error: "Missing fileContent (base64)" });
 
         // ── DEV-only environment variables (_DEV suffix required) ──────────────
         const region = process.env.VITE_AWS_REGION_DEV;
@@ -54,21 +54,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
         const key = `resumes/${sanitizedId}-${timestamp}-resume.${ext}`;
 
-        // ── Server-side upload: browser never touches S3 directly ──────────────
-        const fileBuffer = Buffer.from(fileContent, 'base64');
+        console.log(`[DEV] ✨ Generating presigned URL for: ${key} in bucket: ${bucketName}`);
 
-        await s3Client.send(new PutObjectCommand({
+        // Generate Presigned URL for browser PUT
+        const command = new PutObjectCommand({
             Bucket: bucketName,
             Key: key,
-            Body: fileBuffer,
             ContentType: fileType || 'application/pdf',
-        }));
+        });
 
-        console.log(`[DEV] ✅ Uploaded: ${key} → s3://${bucketName}`);
+        const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
         return cors(req, res, 200, {
+            uploadUrl,
             key,
-            message: `[DEV] Resume uploaded server-side: "${key}"`,
+            message: `[DEV] New resume upload: "${key}"`,
         });
 
     } catch (error: any) {

@@ -1,46 +1,63 @@
 /**
  * S3 Resume Upload Service — DEV
- * POSTs file as base64 to /api/upload-resume-dev, which uploads server-side.
- * The browser never talks to S3 directly → no S3 CORS/IAM issues.
+ * Uses /api/upload-resume-dev (reads _DEV env vars → dev S3 bucket).
  * Keep s3Service.ts (production) untouched.
  */
 
+interface UploadResumeResponse {
+    uploadUrl: string;
+    key: string;
+    message: string;
+}
+
 /**
- * Upload resume to DEV S3 bucket via server-side POST.
- * File is converted to base64 and sent to /api/upload-resume-dev,
- * which uploads directly to S3 using the AWS SDK.
+ * Upload resume to DEV S3 bucket via presigned PUT URL.
+ * Calls /api/upload-resume-dev via relative URL (current deployment's function).
  */
 export const uploadResumeToS3Dev = async (file: File, applywizzId: string): Promise<string> => {
-    console.log("[DEV] 🔍 Starting server-side S3 upload...");
+    console.log("[DEV] 🔍 Starting Secure S3 Upload...");
 
     if (!file || !applywizzId) {
         throw new Error("File and ApplyWizz ID are required");
     }
 
     try {
-        // Convert file to base64
-        const base64Data = await fileToBase64(file);
+        // Relative URL — always hits the current deployment's own function
+        const endpoint = '/api/upload-resume-dev';
 
-        console.log(`[DEV] 📡 POSTing ${file.name} (${(file.size / 1024).toFixed(1)} KB) to /api/upload-resume-dev...`);
+        console.log(`[DEV] 📡 Requesting presigned URL for: ${applywizzId}`);
 
-        // POST to our Vercel function — server uploads to S3, no browser→S3 PUT needed
-        const response = await fetch('/api/upload-resume-dev', {
+        const presignedResponse = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 applywizz_id: applywizzId,
                 fileType: file.type,
-                fileContent: base64Data,   // base64 string (no data URL prefix)
             }),
         });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        if (!presignedResponse.ok) {
+            const errorData = await presignedResponse.json();
+            throw new Error(errorData.error || 'Failed to get dev upload URL');
         }
 
-        const { key } = await response.json();
-        console.log(`[DEV] ✅ Resume uploaded: ${key}`);
+        const { uploadUrl, key, message }: UploadResumeResponse = await presignedResponse.json();
+
+        console.log(`[DEV] 📤 ${message}`);
+        console.log(`[DEV] 📤 Uploading to S3: ${key}`);
+
+        // PUT file directly to S3 using presigned URL
+        const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': file.type },
+        });
+
+        if (!uploadResponse.ok) {
+            throw new Error(`[DEV] S3 Upload failed with status: ${uploadResponse.status}`);
+        }
+
+        console.log(`[DEV] ✅ Resume uploaded successfully: ${key}`);
         return key;
 
     } catch (error: any) {
@@ -48,20 +65,6 @@ export const uploadResumeToS3Dev = async (file: File, applywizzId: string): Prom
         throw new Error(`Resume upload failed: ${error.message}`);
     }
 };
-
-/** Convert a File to a plain base64 string (no data URL prefix) */
-async function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            const result = reader.result as string;
-            // Strip "data:<mime>;base64," prefix → pure base64 bytes
-            resolve(result.split(',')[1]);
-        };
-        reader.onerror = (err) => reject(err);
-    });
-}
 
 /**
  * Get the full DEV S3 URL from an S3 key
