@@ -1,6 +1,140 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from '../../lib/supabaseClient';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// JobRoleSelector – Reusable searchable job-role dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+
+function JobRoleSelector({
+  value = '',
+  onChange,
+  required = false,
+  label = 'Target Job Role',
+}: {
+  value?: string;
+  onChange: (roleName: string) => void;
+  required?: boolean;
+  label?: string;
+}) {
+  const [jobRolesData, setJobRolesData] = useState<{ id: number; name: string }[]>([]);
+  const [isLoadingJobRoles, setIsLoadingJobRoles] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredJobRoles = jobRolesData.filter(role =>
+    role.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const displayValue = value || (isLoadingJobRoles ? 'Loading roles…' : 'Select Job Role');
+
+  useEffect(() => {
+    const fetchJobRoles = async () => {
+      setIsLoadingJobRoles(true);
+      try {
+        const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+        if (!baseUrl) {
+          throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
+        }
+        const response = await fetch(`${baseUrl}/api/all-job-roles/`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        setJobRolesData(Array.isArray(data) && data.length > 0 ? data : []);
+      } catch (error: any) {
+        console.error('Error fetching job roles:', error.message);
+        setJobRolesData([]);
+      } finally {
+        setIsLoadingJobRoles(false);
+      }
+    };
+    fetchJobRoles();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  const handleRoleSelect = (roleName: string) => {
+    onChange(roleName);
+    setIsDropdownOpen(false);
+    setSearchTerm('');
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {label}{required && ' *'}
+      </label>
+
+      {/* Trigger */}
+      <div
+        className="w-full bg-white border border-gray-300 text-gray-700 rounded-lg p-3 cursor-pointer flex justify-between items-center transition-shadow shadow-sm hover:shadow-md"
+        onClick={() => setIsDropdownOpen(prev => !prev)}
+      >
+        <span className="truncate">{displayValue}</span>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+
+      {/* Dropdown panel */}
+      {isDropdownOpen && (
+        <div className="absolute z-[60] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-52 overflow-y-auto">
+          {/* Sticky search bar */}
+          <div className="sticky top-0 bg-gray-50 p-2 border-b border-gray-200">
+            <input
+              type="text"
+              placeholder="Search roles..."
+              className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm outline-none"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          {/* Role list */}
+          {filteredJobRoles.length > 0 ? (
+            filteredJobRoles.map(roleObj => (
+              <label
+                key={roleObj.id}
+                className="flex items-center px-4 py-2 hover:bg-blue-50 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="job_role_selector_map"
+                  checked={value === roleObj.name}
+                  onChange={() => handleRoleSelect(roleObj.name)}
+                  className="mr-3 w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700 text-sm">{roleObj.name}</span>
+              </label>
+            ))
+          ) : (
+            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              {isLoadingJobRoles ? 'Loading…' : 'No roles found'}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PendingClient interface
+// ─────────────────────────────────────────────────────────────────────────────
 interface PendingClient {
   id: string;
   full_name: string;
@@ -16,7 +150,6 @@ interface PendingClient {
   sponsorship?: string;
   applywizz_id?: string;
   submitted_by: string;
-  // New fields for external API sync
   gender?: string;
   years_experience?: number;
   country?: string;
@@ -33,7 +166,8 @@ interface PendingClient {
   work_preference?: string;
   start_date?: string;
   end_date?: string;
-  add_ons_info?: string[]; // Add this field
+  add_ons_info?: string[];
+  is_new_domain?: boolean;
 }
 
 interface Props {
@@ -43,13 +177,13 @@ interface Props {
     clientData: any,
     roleAssignments: any
   ) => Promise<void>;
-  onDirectOnboard?: (client: PendingClient) => Promise<void>; // Make this prop optional
+  onDirectOnboard?: (client: PendingClient) => Promise<void>;
 }
 
 export const PendingOnboardingList: React.FC<Props> = ({
   pendingClients,
   onAssignRoles,
-  onDirectOnboard, // Destructure the prop
+  onDirectOnboard,
 }) => {
   const [selectedClient, setSelectedClient] = useState<PendingClient | null>(null);
   const [roleAssignments, setRoleAssignments] = useState({
@@ -59,8 +193,15 @@ export const PendingOnboardingList: React.FC<Props> = ({
     scraperid: "",
   });
 
-  const [loadingClientId, setLoadingClientId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Map to Different Role state ───────────────────────────────────────────
+  const [mapRoleClient, setMapRoleClient] = useState<PendingClient | null>(null);   // which client's modal is open
+  const [mappedRole, setMappedRole] = useState<string>('');                          // selected role from dropdown
+  const [showMapRoleConfirm, setShowMapRoleConfirm] = useState(false);              // confirmation popup visibility
+  const [isCreatingRole, setIsCreatingRole] = useState(false);   // loading state for all onboarding flows
+  const [loadingMessage, setLoadingMessage] = useState('');       // contextual message for the loading overlay
+  const [showCreateRoleConfirm, setShowCreateRoleConfirm] = useState<PendingClient | null>(null); // confirm before create-role-onboard
 
   const [usersByRole, setUsersByRole] = useState<{
     [key: string]: { id: string; name: string }[];
@@ -119,7 +260,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
         accountManagerId: "",
         careerassociatemanagerid: "",
         careerassociateid: "",
-        scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376", // Default scraper ID
+        scraperid: "51ce13f8-52fa-4e74-b346-450643b6a376",
       });
     } catch (error) {
       console.error("Error assigning roles:", error);
@@ -130,13 +271,94 @@ export const PendingOnboardingList: React.FC<Props> = ({
 
   const handleDirectOnboardClick = async (client: PendingClient) => {
     if (!onDirectOnboard) return;
-    setLoadingClientId(client.id);
+    setLoadingMessage('Onboarding the client directly. This may take a few moments...');
+    setIsCreatingRole(true);
     try {
       await onDirectOnboard(client);
     } catch (error) {
       console.error("Error during direct onboarding:", error);
     } finally {
-      setLoadingClientId(null);
+      setIsCreatingRole(false);
+      setLoadingMessage('');
+    }
+  };
+
+  // ── Map to Different Role handlers ────────────────────────────────────────
+  const openMapRoleModal = (client: PendingClient) => {
+    setMapRoleClient(client);
+    setMappedRole('');
+    setShowMapRoleConfirm(false);
+  };
+
+  const closeMapRoleModal = () => {
+    setMapRoleClient(null);
+    setMappedRole('');
+    setShowMapRoleConfirm(false);
+  };
+
+  const handleMapRoleConfirm = async () => {
+    if (!mapRoleClient || !mappedRole || !onDirectOnboard) return;
+    const modifiedClient: PendingClient = {
+      ...mapRoleClient,
+      job_role_preferences: [mappedRole],
+    };
+    setShowMapRoleConfirm(false);
+    setMapRoleClient(null);
+    setMappedRole('');
+    setLoadingMessage('Onboarding the client with the mapped role. This may take a few moments...');
+    setIsCreatingRole(true);
+    try {
+      await onDirectOnboard(modifiedClient);
+    } catch (error) {
+      console.error("Error during mapped role onboarding:", error);
+    } finally {
+      setIsCreatingRole(false);
+      setLoadingMessage('');
+    }
+  };
+
+  const handleCreateRoleAndOnboard = async (client: PendingClient) => {
+    if (!onDirectOnboard || !client.job_role_preferences?.[0]) {
+      alert("No job role found to create.");
+      return;
+    }
+
+    const roleName = client.job_role_preferences[0];
+    setLoadingMessage(`Creating the new job role "${roleName}" and onboarding the client. This may take a few moments...`);
+    setIsCreatingRole(true);
+
+    try {
+      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+      if (!baseUrl) {
+        throw new Error('VITE_EXTERNAL_API_URL is not defined');
+      }
+
+      // Step 1: Create the new job role
+      const response = await fetch(`${baseUrl}/add-job-role/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: roleName })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create job role');
+      }
+
+      console.log('Success:', data.message);
+
+      // Step 2: Trigger direct onboarding
+      await onDirectOnboard(client);
+
+    } catch (error: any) {
+      console.error('Request failed:', error);
+      alert(error.message || "Something went wrong.");
+    } finally {
+      setIsCreatingRole(false);
+      setLoadingMessage('');
     }
   };
 
@@ -180,7 +402,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
                       Opted for Job Links
                     </span>
                   )}
-                  <p className="text-lg font-semibold">{client.full_name}</p>
+                  <p className="text-lg font-semibold">{client.full_name} ({client.applywizz_id || 'not found'})</p>
                   <p className="text-sm text-gray-600">{client.company_email}</p>
                   <p className="text-sm">
                     Job Prefs: {client.job_role_preferences?.join(", ")}
@@ -192,22 +414,54 @@ export const PendingOnboardingList: React.FC<Props> = ({
                     Salary: {client.salary_range}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 items-end">
                   {hasJobLinks(client) && onDirectOnboard ? (
-                    <button
-                      onClick={() => handleDirectOnboardClick(client)}
-                      disabled={loadingClientId !== null}
-                      className={`px-4 py-2 rounded text-white ${loadingClientId === client.id
-                        ? "bg-green-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                        }`}
-                    >
-                      {loadingClientId === client.id ? "Onboarding..." : "Onboard Directly"}
-                    </button>
+                    <>
+                      {/* ── Onboard Directly ── */}
+                      <button
+                        onClick={() => handleDirectOnboardClick(client)}
+                        disabled={isCreatingRole}
+                        className={`px-4 py-2 rounded text-white ${isCreatingRole
+                          ? "bg-green-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                          }`}
+                      >
+                        {isCreatingRole ? "Onboarding..." : "Onboard Directly"}
+                      </button>
+
+                      {/* ── Map to Different Role & Create Role – only if is_new_domain ── */}
+                      {client.is_new_domain && (
+                        <>
+                          {/* ── Map to Different Role ── */}
+                          <button
+                            onClick={() => openMapRoleModal(client)}
+                            disabled={isCreatingRole}
+                            className={`px-4 py-2 rounded text-white ${isCreatingRole
+                              ? "bg-purple-300 cursor-not-allowed"
+                              : "bg-purple-600 hover:bg-purple-700"
+                              }`}
+                          >
+                            Map to Different Role
+                          </button>
+
+                          {/* ── Create New Role & Onboard ── */}
+                          <button
+                            onClick={() => setShowCreateRoleConfirm(client)}
+                            disabled={isCreatingRole}
+                            className={`px-4 py-2 rounded text-white ${isCreatingRole
+                              ? "bg-indigo-300 cursor-not-allowed"
+                              : "bg-indigo-600 hover:bg-indigo-700"
+                              }`}
+                          >
+                            Create this new role and onboard the client
+                          </button>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <button
                       onClick={() => setSelectedClient(client)}
-                      disabled={loadingClientId !== null}
+                      disabled={isSubmitting}
                       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
                     >
                       Assign Roles
@@ -220,19 +474,139 @@ export const PendingOnboardingList: React.FC<Props> = ({
         </ul>
       )}
 
-      {/* Role Assignment Modal */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Map to Different Role Modal                                          */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {mapRoleClient && !showMapRoleConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg space-y-5 shadow-xl">
+            {/* Header */}
+            <div>
+              <h3 className="text-xl font-semibold text-gray-800">
+                Map to Different Role
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Client: <span className="font-medium text-gray-700">{mapRoleClient.full_name} ({mapRoleClient.applywizz_id || 'not found'})</span>
+              </p>
+            </div>
+
+            {/* Current role display */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700">
+              <span className="font-semibold">Current Role(s): </span>
+              {mapRoleClient.job_role_preferences?.join(", ") || "—"}
+            </div>
+
+            {/* Job role selector */}
+            <JobRoleSelector
+              value={mappedRole}
+              onChange={(role) => setMappedRole(role)}
+              label="Select New Target Role"
+              required
+            />
+
+            {/* Role change message – shown after a role is selected */}
+            {mappedRole && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
+                ⚠️ Updating client role:{" "}
+                <span className="font-semibold line-through text-red-500">
+                  {mapRoleClient.job_role_preferences?.join(", ") || "—"}
+                </span>{" "}
+                →{" "}
+                <span className="font-semibold text-green-700">{mappedRole}</span>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={closeMapRoleModal}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setShowMapRoleConfirm(true)}
+                disabled={!mappedRole}
+                className={`px-4 py-2 rounded text-white ${!mappedRole
+                  ? "bg-purple-300 cursor-not-allowed"
+                  : "bg-purple-600 hover:bg-purple-700"
+                  }`}
+              >
+                Confirm & Onboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Confirmation Popup (second step)                                     */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {mapRoleClient && showMapRoleConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl space-y-4">
+            {/* Header */}
+            <h3 className="text-xl font-semibold text-gray-800">
+              Confirm Onboarding
+            </h3>
+
+            {/* Summary */}
+            <p className="text-sm text-gray-600">
+              You are about to onboard{" "}
+              <span className="font-semibold text-gray-800">{mapRoleClient.full_name}</span>{" "}
+              with a <span className="font-semibold text-purple-700">mapped role</span>:
+            </p>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 space-y-1 text-sm">
+              <div>
+                <span className="text-gray-500">Original Role: </span>
+                <span className="font-medium text-red-600 line-through">
+                  {mapRoleClient.job_role_preferences?.join(", ") || "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500">New Role: </span>
+                <span className="font-semibold text-green-700">{mappedRole}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400">
+              This will trigger the direct onboarding process with the new role. This action cannot be undone.
+            </p>
+
+            {/* Action buttons */}
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => setShowMapRoleConfirm(false)}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleMapRoleConfirm}
+                className="px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
+              >
+                Yes, Onboard Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Role Assignment Modal (existing)                                     */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
       {selectedClient && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg space-y-4">
             <h3 className="text-xl font-semibold">
-              Assign Roles for {selectedClient.full_name}
+              Assign Roles for {selectedClient.full_name} ({selectedClient.applywizz_id || 'not found'})
             </h3>
 
             {[
               { label: "Account Manager", key: "accountManagerId", role: "account_manager" },
               { label: "CA Team Lead", key: "careerassociatemanagerid", role: "ca_team_lead" },
               { label: "Career Associate", key: "careerassociateid", role: "career_associate" },
-              // { label: "Scraper", key: "scraperid", role: "scraping_team" },
             ].map(({ label, key, role }) => (
               <div key={key}>
                 <label className="block text-sm font-medium mb-1">{label}</label>
@@ -273,6 +647,76 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 {isSubmitting ? "Assigning Roles..." : "Complete Onboarding"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Create Role Confirmation Modal                                       */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {showCreateRoleConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl space-y-4">
+            {/* Header */}
+            <h3 className="text-xl font-semibold text-gray-800">
+              Confirm Role Creation
+            </h3>
+
+            {/* Message */}
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Are you sure? By performing this operation, it will create a new role{" "}
+              <span className="font-semibold text-indigo-700">
+                &quot;{showCreateRoleConfirm.job_role_preferences?.[0]}&quot;
+              </span>{" "}
+              in the task management tool and onboard{" "}
+              <span className="font-semibold text-gray-800">
+                {showCreateRoleConfirm.full_name}
+              </span>.
+            </p>
+
+            <p className="text-xs text-gray-400">
+              This action cannot be undone.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => setShowCreateRoleConfirm(null)}
+                className="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  const client = showCreateRoleConfirm;
+                  setShowCreateRoleConfirm(null);
+                  handleCreateRoleAndOnboard(client);
+                }}
+                className="px-6 py-2 rounded text-white bg-indigo-600 hover:bg-indigo-700 font-medium"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Full Screen Loading Overlay                                         */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {isCreatingRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4">
+            <div className="relative w-20 h-20 mb-6">
+              <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-t-indigo-600 rounded-full animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">
+              Processing Request
+            </h3>
+            <p className="text-gray-500 text-center text-sm leading-relaxed">
+              {loadingMessage || 'Please wait...'}
+            </p>
           </div>
         </div>
       )}
