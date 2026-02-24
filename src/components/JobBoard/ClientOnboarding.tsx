@@ -579,8 +579,9 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
 
             console.log('🚀 Submitting Onboarding Payload:', JSON.stringify(apiPayload, null, 2));
 
-            // C. Submit to jobboard-onboard route (skips auth creation, user already exists)
-            const apiUrl = 'https://ticketingtoolapplywizz.vercel.app/api/jobboard-onboard';
+            // C. Submit to jobboard-onboard route — relative URL hits this deployment's own function
+            //    jobboard-onboard.ts already uses _DEV env vars (VITE_EXTERNAL_API_URL_DEV etc.)
+            const apiUrl = '/api/jobboard-onboard';
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
