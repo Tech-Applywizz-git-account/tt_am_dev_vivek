@@ -32,7 +32,7 @@ function JobRoleSelector({
     const fetchJobRoles = async () => {
       setIsLoadingJobRoles(true);
       try {
-        const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+        const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL_DEV;
         if (!baseUrl) {
           throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
         }
@@ -167,6 +167,7 @@ interface PendingClient {
   start_date?: string;
   end_date?: string;
   add_ons_info?: string[];
+  is_new_domain?: boolean;
 }
 
 interface Props {
@@ -200,6 +201,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
   const [showMapRoleConfirm, setShowMapRoleConfirm] = useState(false);              // confirmation popup visibility
   const [isCreatingRole, setIsCreatingRole] = useState(false);   // loading state for all onboarding flows
   const [loadingMessage, setLoadingMessage] = useState('');       // contextual message for the loading overlay
+  const [showCreateRoleConfirm, setShowCreateRoleConfirm] = useState<PendingClient | null>(null); // confirm before create-role-onboard
 
   const [usersByRole, setUsersByRole] = useState<{
     [key: string]: { id: string; name: string }[];
@@ -326,9 +328,9 @@ export const PendingOnboardingList: React.FC<Props> = ({
     setIsCreatingRole(true);
 
     try {
-      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL_DEV;
       if (!baseUrl) {
-        throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
+        throw new Error('VITE_EXTERNAL_API_URL_DEV is not defined');
       }
 
       // Step 1: Create the new job role
@@ -349,7 +351,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
       console.log('Success:', data.message);
 
       // Step 2: Trigger direct onboarding
-      await onDirectOnboard(client);
+      // await onDirectOnboard(client);
 
     } catch (error: any) {
       console.error('Request failed:', error);
@@ -427,29 +429,34 @@ export const PendingOnboardingList: React.FC<Props> = ({
                         {isCreatingRole ? "Onboarding..." : "Onboard Directly"}
                       </button>
 
-                      {/* ── Map to Different Role ── */}
-                      <button
-                        onClick={() => openMapRoleModal(client)}
-                        disabled={isCreatingRole}
-                        className={`px-4 py-2 rounded text-white ${isCreatingRole
-                          ? "bg-purple-300 cursor-not-allowed"
-                          : "bg-purple-600 hover:bg-purple-700"
-                          }`}
-                      >
-                        Map to Different Role
-                      </button>
+                      {/* ── Map to Different Role & Create Role – only if is_new_domain ── */}
+                      {client.is_new_domain && (
+                        <>
+                          {/* ── Map to Different Role ── */}
+                          <button
+                            onClick={() => openMapRoleModal(client)}
+                            disabled={isCreatingRole}
+                            className={`px-4 py-2 rounded text-white ${isCreatingRole
+                              ? "bg-purple-300 cursor-not-allowed"
+                              : "bg-purple-600 hover:bg-purple-700"
+                              }`}
+                          >
+                            Map to Different Role
+                          </button>
 
-                      {/* ── Create New Role & Onboard ── */}
-                      <button
-                        onClick={() => handleCreateRoleAndOnboard(client)}
-                        disabled={isCreatingRole}
-                        className={`px-4 py-2 rounded text-white ${isCreatingRole
-                          ? "bg-indigo-300 cursor-not-allowed"
-                          : "bg-indigo-600 hover:bg-indigo-700"
-                          }`}
-                      >
-                        Create this new role and onboard the client
-                      </button>
+                          {/* ── Create New Role & Onboard ── */}
+                          <button
+                            onClick={() => setShowCreateRoleConfirm(client)}
+                            disabled={isCreatingRole}
+                            className={`px-4 py-2 rounded text-white ${isCreatingRole
+                              ? "bg-indigo-300 cursor-not-allowed"
+                              : "bg-indigo-600 hover:bg-indigo-700"
+                              }`}
+                          >
+                            Create this new role and onboard the client
+                          </button>
+                        </>
+                      )}
                     </>
                   ) : (
                     <button
@@ -638,6 +645,56 @@ export const PendingOnboardingList: React.FC<Props> = ({
                   }`}
               >
                 {isSubmitting ? "Assigning Roles..." : "Complete Onboarding"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {/* Create Role Confirmation Modal                                       */}
+      {/* ──────────────────────────────────────────────────────────────────── */}
+      {showCreateRoleConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl space-y-4">
+            {/* Header */}
+            <h3 className="text-xl font-semibold text-gray-800">
+              Confirm Role Creation
+            </h3>
+
+            {/* Message */}
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Are you sure? By performing this operation, it will create a new role{" "}
+              <span className="font-semibold text-indigo-700">
+                &quot;{showCreateRoleConfirm.job_role_preferences?.[0]}&quot;
+              </span>{" "}
+              in the task management tool and onboard{" "}
+              <span className="font-semibold text-gray-800">
+                {showCreateRoleConfirm.full_name}
+              </span>.
+            </p>
+
+            <p className="text-xs text-gray-400">
+              This action cannot be undone.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => setShowCreateRoleConfirm(null)}
+                className="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  const client = showCreateRoleConfirm;
+                  setShowCreateRoleConfirm(null);
+                  handleCreateRoleAndOnboard(client);
+                }}
+                className="px-6 py-2 rounded text-white bg-indigo-600 hover:bg-indigo-700 font-medium"
+              >
+                Yes
               </button>
             </div>
           </div>
