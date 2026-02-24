@@ -487,8 +487,34 @@ function App() {
           setClientDashboardData(formattedData);
         } else {
           // For opted_job_links clients, clear dashboard data but keep applywizzId
-          console.log("Scored jobs client detected - components will fetch their own data");
+          console.log("Scored jobs client detected - checking for today's jobs...");
           setClientDashboardData([]);
+
+          const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+          if (apiUrl && fetchedApplywizzId) {
+            try {
+              const summaryResponse = await fetch(`${apiUrl}/api/job-links?lead_id=${fetchedApplywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
+
+              if (summaryResponse.ok) {
+                const data = await summaryResponse.json();
+                const summaryData = data.easy_apply_jobs || {};
+
+                // Check if today's date exists in the summary (Format: YYYY-MM-DD)
+                const today = new Date().toISOString().split('T')[0];
+                const hasTodayJobs = summaryData.hasOwnProperty(today);
+
+                if (!hasTodayJobs) {
+                  // console.log("Today's jobs not found for job board client, triggering scoring...");
+                  await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${fetchedApplywizzId}`);
+                  setIsScoringTriggered(true); // Assuming this state should be updated to show progress if needed
+                } else {
+                  // console.log("Today's jobs found, no scoring trigger needed.");
+                }
+              }
+            } catch (err) {
+              console.error("Error checking or triggering jobs for opted_job_links client:", err);
+            }
+          }
         }
       } catch (err) {
         console.error("Error fetching client dashboard data:", err);
