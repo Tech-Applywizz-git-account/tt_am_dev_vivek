@@ -334,7 +334,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
       }
 
       // Step 1: Create the new job role
-      const response = await fetch(`${baseUrl}/api/add-job-role/`, {
+      const response = await fetch(`${baseUrl}/add-job-role/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
