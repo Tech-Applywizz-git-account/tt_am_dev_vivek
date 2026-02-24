@@ -32,7 +32,7 @@ function JobRoleSelector({
     const fetchJobRoles = async () => {
       setIsLoadingJobRoles(true);
       try {
-        const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL_DEV;
+        const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
         if (!baseUrl) {
           throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
         }
@@ -328,9 +328,9 @@ export const PendingOnboardingList: React.FC<Props> = ({
     setIsCreatingRole(true);
 
     try {
-      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL_DEV;
+      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
       if (!baseUrl) {
-        throw new Error('VITE_EXTERNAL_API_URL_DEV is not defined');
+        throw new Error('VITE_EXTERNAL_API_URL is not defined');
       }
 
       // Step 1: Create the new job role
@@ -351,7 +351,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
       console.log('Success:', data.message);
 
       // Step 2: Trigger direct onboarding
-      // await onDirectOnboard(client);
+      await onDirectOnboard(client);
 
     } catch (error: any) {
       console.error('Request failed:', error);
