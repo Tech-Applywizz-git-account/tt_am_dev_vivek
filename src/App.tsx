@@ -64,6 +64,8 @@ import PricingSection from './components/Pricing/PricingSection';
 import JobScoringOverlay from './components/ClientDashboard/JobScoringOverlay';
 import LoadingOverlay from './components/ClientDashboard/LoadingOverlay';
 import SuccessPage from './components/Payment/SuccessPage';
+import JobBoardSignUpForm from './components/JobBoard/JobBoardSignUpForm';
+import ClientOnboarding from './components/JobBoard/ClientOnboarding';
 
 
 function App() {
@@ -220,6 +222,8 @@ function App() {
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
+  // null = still checking | true = has a clients row | false = no clients row yet (needs onboarding)
+  const [clientExists, setClientExists] = useState<boolean | null>(null);
 
   // Client dashboard data
   const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
@@ -380,7 +384,7 @@ function App() {
     fetchData(); // Keep existing fetchData call
   }, []); // Empty dependency array = runs only once on mount
 
-  // Fetch opted_job_links status when user changes
+  // Fetch opted_job_links status AND whether the client row exists when user changes
   useEffect(() => {
     const fetchClientJobLinksStatus = async () => {
       if (!currentUser?.email || currentUser?.role !== 'client') return;
@@ -395,6 +399,9 @@ function App() {
           console.error('Error fetching opted_job_links:', error);
           return;
         }
+
+        // clientExists = whether any row was found in the clients table
+        setClientExists(data !== null && data.length > 0);
 
         if (data && data.length > 0) {
           // Check if any of the client accounts have opted for job links
@@ -2526,46 +2533,68 @@ function App() {
                   : (<Navigate to="/" replace />)
               }
             />
+            {/* Job Board Sign Up route */}
+            <Route
+              path="/jobboard-signup"
+              element={
+                !currentUser
+                  ? (<JobBoardSignUpForm />)
+                  : (<Navigate to="/" replace />)
+              }
+            />
             {/* Protected main app routes */}
             <Route
               path="/*"
               element={
                 <ProtectedRoute currentUser={currentUser}>
-                  <AppLayout
-                    currentUser={currentUser}
-                    activeView={activeView}
-                    setActiveView={setActiveView}
-                    renderMainContent={renderMainContent}
-                    renderTicketEditModal={renderTicketEditModal}
-                    isCreateTicketModalOpen={isCreateTicketModalOpen}
-                    setIsCreateTicketModalOpen={setIsCreateTicketModalOpen}
-                    isClientOnboardingModalOpen={isClientOnboardingModalOpen}
-                    setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
-                    isClientEditModalOpen={isClientEditModalOpen}
-                    setIsClientEditModalOpen={setIsClientEditModalOpen}
+                  <>
+                    <AppLayout
+                      currentUser={currentUser}
+                      activeView={activeView}
+                      setActiveView={setActiveView}
+                      renderMainContent={renderMainContent}
+                      renderTicketEditModal={renderTicketEditModal}
+                      isCreateTicketModalOpen={isCreateTicketModalOpen}
+                      setIsCreateTicketModalOpen={setIsCreateTicketModalOpen}
+                      isClientOnboardingModalOpen={isClientOnboardingModalOpen}
+                      setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
+                      isClientEditModalOpen={isClientEditModalOpen}
+                      setIsClientEditModalOpen={setIsClientEditModalOpen}
 
-                    isUserManagementModalOpen={isUserManagementModalOpen}
-                    setIsUserManagementModalOpen={setIsUserManagementModalOpen}
-                    selectedTicket={selectedTicket}
-                    selectedClient={selectedClient}
-                    setSelectedClient={setSelectedClient}
-                    handleLogout={handleLogout}
-                    handleCreateTicket={handleCreateTicket}
-                    handleUpdateClient={handleUpdateClient}
-                    handleUpdateUser={handleUpdateUser}
-                    handleDeleteUser={handleDeleteUser}
-                    fetchData={fetchData}
-                    pendingClientsCount={pendingClients.length}
-                    optedJobLinks={optedJobLinks}
-                    onViewLabResults={handleViewLabResults}
-                  />
-                  <LabResultsModal
-                    user={currentUser}
-                    labId={selectedLabId}
-                    isOpen={isLabResultsModalOpen}
-                    onClose={() => setIsLabResultsModalOpen(false)}
-                  />
+                      isUserManagementModalOpen={isUserManagementModalOpen}
+                      setIsUserManagementModalOpen={setIsUserManagementModalOpen}
+                      selectedTicket={selectedTicket}
+                      selectedClient={selectedClient}
+                      setSelectedClient={setSelectedClient}
+                      handleLogout={handleLogout}
+                      handleCreateTicket={handleCreateTicket}
+                      handleUpdateClient={handleUpdateClient}
+                      handleUpdateUser={handleUpdateUser}
+                      handleDeleteUser={handleDeleteUser}
+                      fetchData={fetchData}
+                      pendingClientsCount={pendingClients.length}
+                      optedJobLinks={optedJobLinks}
+                      onViewLabResults={handleViewLabResults}
+                    />
+                    <LabResultsModal
+                      user={currentUser}
+                      labId={selectedLabId}
+                      isOpen={isLabResultsModalOpen}
+                      onClose={() => setIsLabResultsModalOpen(false)}
+                    />
 
+                    {/* ── Onboarding overlay for new job board clients ── */}
+                    {currentUser?.role === 'client' && clientExists === false && (
+                      <div
+                        className="fixed inset-0 z-[200] overflow-y-auto"
+                        style={{ backdropFilter: 'blur(6px)', backgroundColor: 'rgba(0,0,0,0.55)' }}
+                      >
+                        <div className="min-h-full flex items-start justify-center py-8 px-4">
+                          <ClientOnboarding onComplete={() => setClientExists(true)} />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 </ProtectedRoute>
               }
             />
