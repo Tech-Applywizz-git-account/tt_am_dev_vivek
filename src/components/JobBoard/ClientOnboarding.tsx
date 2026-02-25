@@ -664,7 +664,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
 
     return (
         <div className={onComplete ? 'w-full max-w-4xl' : 'min-h-screen bg-gray-50 flex flex-col items-center py-5 px-4 sm:px-6 lg:px-8 font-sans'}>
-            <div className="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+            <div className={`max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 ${loading ? 'hidden' : ''}`}>
                 <div className="bg-gradient-to-r from-blue-700 to-indigo-800 px-8 py-10">
                     <div className="flex flex-col items-center gap-4">
                         <div className="flex items-center gap-4">
