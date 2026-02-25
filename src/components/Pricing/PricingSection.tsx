@@ -34,7 +34,7 @@ const PricingSection = ({ user }: PricingSectionProps) => {
                 "Resume optimization tools",
                 "Priority customer support"
             ],
-            ctaText: "Start 1 Month Trial",
+            ctaText: "Renewal for next month",
             ctaStyle: "outline"
         },
         {
