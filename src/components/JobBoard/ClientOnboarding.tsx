@@ -707,6 +707,13 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                 }
             }
 
+            // E. Redirect immediately if "Others" (Custom Role)
+            if (isOthersSelected) {
+                onComplete?.();
+                window.location.reload();
+                return;
+            }
+
             setShowSuccessModal(true);
         } catch (error: unknown) {
             const e = error as Error;

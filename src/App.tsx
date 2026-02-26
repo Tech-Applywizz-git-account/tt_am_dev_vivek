@@ -20,7 +20,7 @@ import { ClientsListView } from './components/Clients/ClientsListView';
 import { ClientApplicationsView } from './components/Clients/ClientApplicationsView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
-import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard, AlertCircle } from 'lucide-react';
+import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard, AlertCircle, Clock, Send, CheckCircle } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
@@ -242,6 +242,8 @@ function App() {
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const [reminderSent, setReminderSent] = useState(false);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -433,6 +435,53 @@ function App() {
 
     fetchClientStatus();
   }, [currentUser?.email, currentUser?.role]);
+
+  const getRemainingTimeForReminder = () => {
+    if (!pendingReviewData?.onboarding_reminder_sent_at) return 0;
+    const lastSent = new Date(pendingReviewData.onboarding_reminder_sent_at).getTime();
+    const now = new Date().getTime();
+    const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+    const remaining = lastSent + cooldown - now;
+    return remaining > 0 ? remaining : 0;
+  };
+
+  const handleSendReminder = async () => {
+    if (!pendingReviewData || isSendingReminder || reminderSent) return;
+
+    setIsSendingReminder(true);
+    try {
+      const { error: fnError } = await supabase.functions.invoke('send-onboarding-reminder', {
+        body: {
+          to: 'vivek@applywizz.com',
+          clientEmail: pendingReviewData.email,
+          clientName: pendingReviewData.full_name || 'Valued Customer',
+          jobRole: pendingReviewData.job_role_preferences?.[0] || 'Custom Role',
+        },
+      });
+
+      if (fnError) throw fnError;
+
+      // Update the timestamp in the database
+      const { error: updateError } = await supabase
+        .from('pending_clients')
+        .update({ onboarding_reminder_sent_at: new Date().toISOString() })
+        .eq('id', pendingReviewData.id);
+
+      if (updateError) throw updateError;
+
+      setReminderSent(true);
+      // Update local state to reflect the new timestamp
+      setPendingReviewData({
+        ...pendingReviewData,
+        onboarding_reminder_sent_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to send reminder:', error);
+      alert('Failed to send reminder. Please try again later.');
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
 
   // Fetch client dashboard data when user changes
   const fetchClientDashboardData = async () => {
@@ -2686,6 +2735,10 @@ function App() {
             optedJobLinks={optedJobLinks}
             handleRefreshJobs={handleRefreshJobs}
             isNewRoleClient={isNewRoleClient}
+            isSendingReminder={isSendingReminder}
+            reminderSent={reminderSent}
+            getRemainingTimeForReminder={getRemainingTimeForReminder}
+            handleSendReminder={handleSendReminder}
           />
 
           {/* Onboarding Success Modal */}
@@ -2715,7 +2768,11 @@ function ConditionalOverlays({
   currentUser,
   optedJobLinks,
   handleRefreshJobs,
-  isNewRoleClient
+  isNewRoleClient,
+  isSendingReminder,
+  reminderSent,
+  getRemainingTimeForReminder,
+  handleSendReminder
 }: {
   activeView: string;
   isJobsLoading: boolean;
@@ -2727,15 +2784,19 @@ function ConditionalOverlays({
   optedJobLinks: boolean;
   handleRefreshJobs: () => void;
   isNewRoleClient: boolean;
+  isSendingReminder: boolean;
+  reminderSent: boolean;
+  getRemainingTimeForReminder: () => number;
+  handleSendReminder: () => Promise<void>;
 }) {
   const isDashboardView = activeView === 'dashboard';
 
   return (
     <>
       {/* 1. Pending Review Overlay (Phase 2 - Persistent) */}
-      {/* {isDashboardView && isPendingReview && currentUser && (
+      {isDashboardView && isPendingReview && currentUser && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          {/* We reuse the Success Modal style but as a persistent overlay * /}
+          {/* We reuse the Success Modal style but as a persistent overlay */}
           <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-32 pointer-events-none opacity-20">
               <DotLottieReact src="/SuccessIcon.lottie" loop autoplay />
@@ -2748,8 +2809,42 @@ function ConditionalOverlays({
               </p>
             </div>
 
-            {/* Note: Reminder button logic is primarily in ClientOnboarding modal, 
-                but we can add a simple version here if needed for persistent view. * /}
+            <div className="mb-6">
+              {getRemainingTimeForReminder() !== 0 ? (
+                <div className="flex flex-col items-center">
+                  <button
+                    disabled
+                    className="w-full py-4 bg-gray-100 text-gray-400 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 cursor-not-allowed border border-gray-200"
+                  >
+                    <Clock className="w-5 h-5" />
+                    Send Reminder Email
+                  </button>
+                  <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                    Available in {Math.floor(getRemainingTimeForReminder()! / (60 * 60 * 1000))} hours {Math.floor((getRemainingTimeForReminder()! % (60 * 60 * 1000)) / (60 * 1000))} minutes
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleSendReminder}
+                  disabled={isSendingReminder || reminderSent}
+                  className={`w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 ${reminderSent ? 'bg-green-500' : 'bg-blue-600 hover:bg-blue-700'
+                    } ${isSendingReminder ? 'opacity-70 cursor-wait' : ''}`}
+                >
+                  {reminderSent ? (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      Reminder Sent
+                    </>
+                  ) : (
+                    <>
+                      <Send className={`w-5 h-5 ${isSendingReminder ? 'animate-pulse' : ''}`} />
+                      {isSendingReminder ? 'Sending...' : 'Send Reminder Email'}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
             <p className="text-gray-500 text-sm mb-4">
               Our team has been notified. We'll update you soon!
             </p>
@@ -2759,7 +2854,7 @@ function ConditionalOverlays({
             </div>
           </div>
         </div>
-      )} */}
+      )}
 
       {/* 2. Karmafy Pending Overlay (Phase 3) */}
       {isDashboardView && isKarmafyPending && currentUser && optedJobLinks && (
