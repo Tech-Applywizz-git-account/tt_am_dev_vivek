@@ -3,11 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { supabase2 } from '../../lib/supabaseClient';
 import { supabaseAdmin } from '../../lib/supabaseAdminClient';
+import { User } from '../../types';
 
 type EmailStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 type PopupType = 'invalid' | 'registered' | null;
 
-const JobBoardSignUpForm: React.FC = () => {
+interface JobBoardSignUpFormProps {
+    onSignUpSuccess?: (user: User) => void;
+}
+
+const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -189,6 +194,7 @@ const JobBoardSignUpForm: React.FC = () => {
                         .single();
                     if (publicUser) {
                         localStorage.setItem('currentUser', JSON.stringify(publicUser));
+                        onSignUpSuccess?.(publicUser);
                     }
                     setSignUpLoading(false);
                     navigate('/dashboard');
@@ -236,6 +242,7 @@ const JobBoardSignUpForm: React.FC = () => {
                         .single();
                     if (publicUser) {
                         localStorage.setItem('currentUser', JSON.stringify(publicUser));
+                        onSignUpSuccess?.(publicUser);
                     }
                     setSignUpLoading(false);
                     navigate('/dashboard');

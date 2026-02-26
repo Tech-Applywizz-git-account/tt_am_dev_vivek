@@ -435,123 +435,123 @@ function App() {
   }, [currentUser?.email, currentUser?.role]);
 
   // Fetch client dashboard data when user changes
-  useEffect(() => {
-    const fetchClientDashboardData = async () => {
-      // Early return if not a client
-      if (!currentUser?.email || currentUser?.role !== 'client') {
-        setClientDashboardData([]);
-        setApplywizzId(undefined);
-        return;
+  const fetchClientDashboardData = async () => {
+    // Early return if not a client
+    if (!currentUser?.email || currentUser?.role !== 'client') {
+      setClientDashboardData([]);
+      setApplywizzId(undefined);
+      return;
+    }
+
+    setClientDashboardLoading(true);
+    setClientDashboardError("");
+
+    try {
+      // Get the applywizz_id from Supabase based on the user's email
+      // This is needed for ALL clients (both regular and opted_job_links)
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('applywizz_id,opted_job_links,status')
+        .eq('company_email', currentUser.email);
+
+      if (clientError) {
+        throw new Error(`Failed to fetch client data: ${clientError.message}`);
       }
 
-      setClientDashboardLoading(true);
-      setClientDashboardError("");
+      if (!clientData || clientData.length === 0) {
+        throw new Error("Applywizz ID not found for this user");
+      }
 
-      try {
-        // Get the applywizz_id from Supabase based on the user's email
-        // This is needed for ALL clients (both regular and opted_job_links)
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('applywizz_id,opted_job_links,status')
-          .eq('company_email', currentUser.email);
+      // Use the first client account found
+      const activeClient = clientData[0];
+      console.log("activeClient data:", activeClient);
 
-        if (clientError) {
-          throw new Error(`Failed to fetch client data: ${clientError.message}`);
+      // Check if this is a new role client
+      const isNewRole = activeClient.status === 'new_role';
+      setIsNewRoleClient(isNewRole);
+      console.log("isNewRoleClient:", isNewRole);
+
+      // Set applywizzId for BOTH client types (regular and opted_job_links)
+      const fetchedApplywizzId = activeClient.applywizz_id;
+      setApplywizzId(fetchedApplywizzId);
+      console.log("fetchedApplywizzId:", fetchedApplywizzId);
+
+      // Only fetch summary data for regular clients (not opted_job_links)
+      // Scored jobs clients (opted_job_links = true) fetch their own data in components
+      if (!activeClient.opted_job_links) {
+        // Fetch the actual data from the external API for regular clients
+        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+        if (!apiUrl) {
+          throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
         }
 
-        if (!clientData || clientData.length === 0) {
-          throw new Error("Applywizz ID not found for this user");
+        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
         }
 
-        // Use the first client account found
-        const activeClient = clientData[0];
-        console.log("activeClient data:", activeClient);
+        const apiData = await response.json();
 
-        // Check if this is a new role client
-        const isNewRole = activeClient.status === 'new_role';
-        setIsNewRoleClient(isNewRole);
-        console.log("isNewRoleClient:", isNewRole);
+        // Transform the new API data format
+        // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
+        const allDates = new Set([
+          ...Object.keys(apiData.completed_tasks || {}),
+          ...Object.keys(apiData.easy_apply_tasks || {})
+        ]);
 
-        // Set applywizzId for BOTH client types (regular and opted_job_links)
-        const fetchedApplywizzId = activeClient.applywizz_id;
-        setApplywizzId(fetchedApplywizzId);
-        console.log("fetchedApplywizzId:", fetchedApplywizzId);
+        const formattedData: TaskCount[] = Array.from(allDates).map(date => ({
+          date,
+          regularCount: Number(apiData.completed_tasks[date] || 0),
+          easyApplyCount: Number(apiData.easy_apply_tasks[date] || 0)
+        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        // Only fetch summary data for regular clients (not opted_job_links)
-        // Scored jobs clients (opted_job_links = true) fetch their own data in components
-        if (!activeClient.opted_job_links) {
-          // Fetch the actual data from the external API for regular clients
-          const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-          if (!apiUrl) {
-            throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
-          }
+        setClientDashboardData(formattedData);
+      } else {
+        // For opted_job_links clients, clear dashboard data but keep applywizzId
+        console.log("Scored jobs client detected - checking for today's jobs...");
+        setClientDashboardData([]);
 
-          const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+        if (apiUrl && fetchedApplywizzId) {
+          try {
+            const summaryResponse = await fetch(`${apiUrl}/api/job-links?lead_id=${fetchedApplywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
 
-          if (!response.ok) {
-            throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
-          }
+            if (summaryResponse.ok) {
+              const data = await summaryResponse.json();
+              const summaryData = data.easy_apply_jobs || {};
 
-          const apiData = await response.json();
+              // Determine if this is a brand new client (Phase 3)
+              const totalScoredJobs = Object.keys(summaryData).length;
+              if (totalScoredJobs === 0) {
+                setIsKarmafyPending(true);
+              } else {
+                setIsKarmafyPending(false);
 
-          // Transform the new API data format
-          // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
-          const allDates = new Set([
-            ...Object.keys(apiData.completed_tasks || {}),
-            ...Object.keys(apiData.easy_apply_tasks || {})
-          ]);
+                // Check if today's date exists in the summary (Format: YYYY-MM-DD)
+                const today = new Date().toISOString().split('T')[0];
+                const hasTodayJobs = summaryData.hasOwnProperty(today);
 
-          const formattedData: TaskCount[] = Array.from(allDates).map(date => ({
-            date,
-            regularCount: Number(apiData.completed_tasks[date] || 0),
-            easyApplyCount: Number(apiData.easy_apply_tasks[date] || 0)
-          })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          setClientDashboardData(formattedData);
-        } else {
-          // For opted_job_links clients, clear dashboard data but keep applywizzId
-          console.log("Scored jobs client detected - checking for today's jobs...");
-          setClientDashboardData([]);
-
-          const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
-          if (apiUrl && fetchedApplywizzId) {
-            try {
-              const summaryResponse = await fetch(`${apiUrl}/api/job-links?lead_id=${fetchedApplywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
-
-              if (summaryResponse.ok) {
-                const data = await summaryResponse.json();
-                const summaryData = data.easy_apply_jobs || {};
-
-                // Determine if this is a brand new client (Phase 3)
-                const totalScoredJobs = Object.keys(summaryData).length;
-                if (totalScoredJobs === 0) {
-                  setIsKarmafyPending(true);
-                } else {
-                  setIsKarmafyPending(false);
-
-                  // Check if today's date exists in the summary (Format: YYYY-MM-DD)
-                  const today = new Date().toISOString().split('T')[0];
-                  const hasTodayJobs = summaryData.hasOwnProperty(today);
-
-                  if (!hasTodayJobs) {
-                    await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${fetchedApplywizzId}`);
-                    setIsScoringTriggered(true);
-                  }
+                if (!hasTodayJobs) {
+                  await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${fetchedApplywizzId}`);
+                  setIsScoringTriggered(true);
                 }
               }
-            } catch (err) {
-              console.error("Error checking or triggering jobs for opted_job_links client:", err);
             }
+          } catch (err) {
+            console.error("Error checking or triggering jobs for opted_job_links client:", err);
           }
         }
-      } catch (err) {
-        console.error("Error fetching client dashboard data:", err);
-        setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
-      } finally {
-        setClientDashboardLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching client dashboard data:", err);
+      setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setClientDashboardLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchClientDashboardData();
   }, [currentUser?.email, currentUser?.role, optedJobLinks]);
 
@@ -2608,7 +2608,7 @@ function App() {
               path="/jobboard-signup"
               element={
                 !currentUser
-                  ? (<JobBoardSignUpForm />)
+                  ? (<JobBoardSignUpForm onSignUpSuccess={handleLogin} />)
                   : (<Navigate to="/" replace />)
               }
             />
@@ -2660,7 +2660,10 @@ function App() {
                         style={{ backdropFilter: 'blur(6px)', backgroundColor: 'rgba(0,0,0,0.55)' }}
                       >
                         <div className="min-h-full flex items-start justify-center py-8 px-4">
-                          <ClientOnboarding onComplete={() => setClientExists(true)} />
+                          <ClientOnboarding onComplete={() => {
+                            setClientExists(true);
+                            fetchClientDashboardData();
+                          }} />
                         </div>
                       </div>
                     )}

@@ -35,24 +35,10 @@ const JobScoringOverlay = ({ userName, onRefresh, isNewRole }: JobScoringOverlay
                     />
                 </div>
 
-                {/* Welcome Title */}
-                {/* Message Content */}
-                {/* <div className="bg-blue-50 rounded-lg p-6 mb-6 border border-blue-100">
-                    <p className="text-gray-700 text-base leading-relaxed mb-4">
-                        Thanks for submitting your details and resume. We're currently scoring your profile and matching it with the latest jobs that best fit your skills.
-                    </p>
-                    <p className="text-gray-700 text-base leading-relaxed mb-4">
-                        This process may take <span className="font-semibold text-blue-600">10–15 minutes</span>. Please refresh the page after a few minutes to view your personalized job matches.
-                    </p>
-                    <p className="text-gray-700 text-base leading-relaxed">
-                        Thank you for your patience - we're working to bring you the best opportunities!
-                    </p>
-                </div> */}
-
                 <div className="bg-blue-500 rounded-lg p-6 mb-6 border border-blue-100 text-center">
                     {isNewRole ? (
                         <p className="text-white text-base leading-relaxed">
-                            We are personalizing your resume-based jobs. Job links will be populated between 3:00 AM EST and 5:00 AM EST. Please wait until then.
+                            Since you have selected new job role, we are personalizing your resume-based jobs. Job links will be populated between 3:00 AM EST and 5:00 AM EST. Please wait until then.
                         </p>
                     ) : (
                         <>
