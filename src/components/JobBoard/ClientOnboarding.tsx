@@ -1158,7 +1158,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100"
+                            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100"
                         >
                             {/* X Close Button — only for non-Others flow */}
                             {!isOthersSelected && (
@@ -1173,25 +1173,16 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                     <X className="w-6 h-6" />
                                 </button>
                             )}
-                            <div className="h-48 flex items-center justify-center relative">
-                                {/* <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: 'spring', damping: 12, delay: 0.2 }}
-                                    className="bg-white/20 backdrop-blur-md rounded-full p-4"
-                                >
-                                </motion.div> */}
-                                <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center">
-                                    <DotLottieReact
-                                        src="/SuccessIcon.lottie"
-                                        loop
-                                        autoplay
-                                        style={{ width: '100%', height: '100%' }}
-                                    />
-                                </div>
+                            <div className="w-full pointer-events-none flex items-center justify-center pt-4">
+                                <DotLottieReact
+                                    src="/SuccessIcon.lottie"
+                                    loop
+                                    autoplay
+                                    style={{ width: '120px', height: '120px' }}
+                                />
                             </div>
 
-                            <div className="p-8 text-center">
+                            <div className="p-8 text-center pt-2">
                                 <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
                                     {isOthersSelected ? 'Application Under Review' : 'Successfully Submitted'}
                                 </h2>
@@ -1244,6 +1235,23 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                                     )}
                                                 </button>
                                             )}
+                                        </div>
+
+                                        <div className="pt-4 mt-2 border-t border-gray-100">
+                                            <button
+                                                onClick={() => {
+                                                    setShowSuccessModal(false);
+                                                    onComplete?.();
+                                                }}
+                                                className="w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                                                style={{ backgroundColor: "#67ef3e" }}
+                                            >
+                                                <LogIn className="w-5 h-5" />
+                                                Go to Dashboard
+                                            </button>
+                                            <p className="text-[10px] text-gray-400 mt-2">
+                                                You can access the dashboard while we review your role.
+                                            </p>
                                         </div>
                                     </div>
                                 )}
