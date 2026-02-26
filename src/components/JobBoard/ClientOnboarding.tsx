@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase, supabase2 } from '../../lib/supabaseClient';
 import { uploadResumeToS3Dev } from '../../services/s3ServiceDev';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, LogIn, Mail } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, LogIn, Mail, Send, X } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -209,6 +210,60 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
     const [manualJbId, setManualJbId] = useState<string>('');
     const [isFetchingDetails, setIsFetchingDetails] = useState<boolean>(false);
     const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+    const [pendingOnboardingInfo, setPendingOnboardingInfo] = useState<{
+        pending_client_id: string;
+        client_form_fill_date: string;
+        email: string;
+    } | null>(null);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [isSendingReminder, setIsSendingReminder] = useState(false);
+    const [reminderSent, setReminderSent] = useState(false);
+
+    const isOthersSelected = formData.job_role_preferences[0] === 'Others';
+
+    // Timer to update "currentTime" for the 24h reminder check
+    useEffect(() => {
+        let interval: any;
+        if (showSuccessModal && isOthersSelected) {
+            interval = setInterval(() => {
+                setCurrentTime(new Date());
+            }, 60000); // Update every minute
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [showSuccessModal, isOthersSelected]);
+
+    const getRemainingTimeForReminder = () => {
+        if (!pendingOnboardingInfo?.client_form_fill_date) return null;
+        const fillDate = new Date(pendingOnboardingInfo.client_form_fill_date);
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        const elapsed = currentTime.getTime() - fillDate.getTime();
+        const remaining = twentyFourHours - elapsed;
+        return remaining > 0 ? remaining : 0;
+    };
+
+    const handleSendReminder = async () => {
+        if (!pendingOnboardingInfo) return;
+        setIsSendingReminder(true);
+        try {
+            const res = await fetch('/api/send-reminder-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pending_client_id: pendingOnboardingInfo.pending_client_id,
+                    email: pendingOnboardingInfo.email,
+                }),
+            });
+            if (!res.ok) throw new Error('Failed to send reminder');
+            setReminderSent(true);
+        } catch (err) {
+            console.error('Error sending reminder:', err);
+            alert('Failed to send reminder email. Please try again later.');
+        } finally {
+            setIsSendingReminder(false);
+        }
+    };
 
     const [jobRolesData, setJobRolesData] = useState<JobRole[]>([]);
     const [isLoadingJobRoles, setIsLoadingJobRoles] = useState<boolean>(false);
@@ -232,7 +287,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
         formData.job_role_preferences[0] === role.name
     );
 
-    const isOthersSelected = formData.job_role_preferences[0] === 'Others';
 
     const filteredAlternateRoles = selectedJobRole?.alternateRoles?.filter(role =>
         role.toLowerCase().includes(alternateRoleSearchTerm.toLowerCase())
@@ -588,7 +642,16 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                 body: JSON.stringify(apiPayload),
             });
 
-            if (!response.ok) {
+            if (response.ok) {
+                const resData = await response.json();
+                if (isOthersSelected) {
+                    setPendingOnboardingInfo({
+                        pending_client_id: resData.pending_client_id,
+                        client_form_fill_date: resData.client_form_fill_date,
+                        email: resData.email,
+                    });
+                }
+            } else {
                 const errorText = await response.text();
                 console.log('⚠️ API Response status:', response.status, 'body:', errorText);
 
@@ -1097,25 +1160,39 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100"
                         >
-                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 h-32 flex items-center justify-center relative">
-                                <motion.div
+                            {/* X Close Button — only for non-Others flow */}
+                            {!isOthersSelected && (
+                                <button
+                                    onClick={() => {
+                                        setShowSuccessModal(false);
+                                        onComplete?.();
+                                    }}
+                                    className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all"
+                                    aria-label="Close"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            )}
+                            <div className="h-48 flex items-center justify-center relative">
+                                {/* <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
                                     transition={{ type: 'spring', damping: 12, delay: 0.2 }}
                                     className="bg-white/20 backdrop-blur-md rounded-full p-4"
                                 >
-                                    <CheckCircle className="w-12 h-12 text-white" />
-                                </motion.div>
-                                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                                    <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                        <circle cx="10" cy="10" r="30" fill="white" />
-                                        <circle cx="90" cy="80" r="20" fill="white" />
-                                    </svg>
+                                </motion.div> */}
+                                <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-center justify-center">
+                                    <DotLottieReact
+                                        src="/SuccessIcon.lottie"
+                                        loop
+                                        autoplay
+                                        style={{ width: '100%', height: '100%' }}
+                                    />
                                 </div>
                             </div>
 
                             <div className="p-8 text-center">
-                                <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
+                                <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
                                     {isOthersSelected ? 'Application Under Review' : 'Successfully Submitted'}
                                 </h2>
                                 <p className="text-gray-500 mb-6">
@@ -1124,14 +1201,49 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                         : 'Your profile registration is now complete and active.'}
                                 </p>
 
-                                {!isOthersSelected && (
-                                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-8 flex items-start gap-3 text-left">
-                                        <Mail className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-semibold text-blue-900">You're all set!</p>
-                                            <p className="text-xs text-blue-700 leading-relaxed">
-                                                Your profile is now complete. Click the button below to open your dashboard and start viewing your jobs.
+                                {isOthersSelected && (
+                                    <div className="space-y-4">
+                                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-2 flex items-start gap-3 text-left">
+                                            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                            <p className="text-xs text-amber-800 leading-relaxed">
+                                                Since you have selected a new target role, we will match jobs according to your selected role. This process may take up to 24 hours.
                                             </p>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            {getRemainingTimeForReminder() !== 0 ? (
+                                                <div className="flex flex-col items-center">
+                                                    <button
+                                                        disabled
+                                                        className="w-full py-4 bg-gray-100 text-gray-400 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 cursor-not-allowed border border-gray-200"
+                                                    >
+                                                        <Clock className="w-5 h-5" />
+                                                        Send Reminder Email
+                                                    </button>
+                                                    <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                                                        Available in {Math.floor(getRemainingTimeForReminder()! / (60 * 60 * 1000))} hours {Math.floor((getRemainingTimeForReminder()! % (60 * 60 * 1000)) / (60 * 1000))} minutes
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={handleSendReminder}
+                                                    disabled={isSendingReminder || reminderSent}
+                                                    className={`w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 ${reminderSent ? 'bg-green-500' : 'bg-blue-600 hover:bg-blue-700'
+                                                        } ${isSendingReminder ? 'opacity-70 cursor-wait' : ''}`}
+                                                >
+                                                    {reminderSent ? (
+                                                        <>
+                                                            <CheckCircle className="w-5 h-5" />
+                                                            Reminder Sent
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Send className={`w-5 h-5 ${isSendingReminder ? 'animate-pulse' : ''}`} />
+                                                            {isSendingReminder ? 'Sending...' : 'Send Reminder Email'}
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -1142,21 +1254,14 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                             setShowSuccessModal(false);
                                             onComplete?.();
                                         }}
-                                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                                        className="w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                                        style={{ backgroundColor: "#67ef3e" }}
                                     >
                                         <LogIn className="w-5 h-5" />
                                         Go to Dashboard
                                     </button>
                                 )}
-
-                                <button
-                                    onClick={() => setShowSuccessModal(false)}
-                                    className="mt-6 text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors"
-                                >
-                                    Close this window
-                                </button>
                             </div>
-                            <div className="h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-green-500" />
                         </motion.div>
                     </div>
                 )}

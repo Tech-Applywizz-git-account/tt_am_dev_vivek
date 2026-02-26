@@ -239,6 +239,7 @@ async function handlePending(
     }
 
     const pendingClientId = crypto.randomUUID();
+    const fillDate = d.client_form_fill_date || new Date().toISOString();
     const { error: insertErr } = await supabaseAdmin.from('pending_clients').insert({
         id: pendingClientId,
         full_name: d.full_name,
@@ -301,7 +302,7 @@ async function handlePending(
         add_ons_info: defaults.addOnsInfo,
         github_url: d.github_url || null,
         linked_in_url: d.linked_in_url || null,
-        client_form_fill_date: d.client_form_fill_date || null,
+        client_form_fill_date: fillDate,
         cover_letter_path: d.cover_letter_path || null,
         full_address: d.full_address || null,
         date_of_birth: d.date_of_birth || null,
@@ -325,6 +326,7 @@ async function handlePending(
         message: 'Pending client submitted successfully',
         applywizz_id: d.applywizz_id,
         pending_client_id: pendingClientId,
+        client_form_fill_date: fillDate,
         email: normalizedEmail,
         status: 'pending_review',
     });

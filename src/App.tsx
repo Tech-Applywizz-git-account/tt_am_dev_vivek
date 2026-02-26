@@ -20,7 +20,7 @@ import { ClientsListView } from './components/Clients/ClientsListView';
 import { ClientApplicationsView } from './components/Clients/ClientApplicationsView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
-import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard } from 'lucide-react';
+import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard, AlertCircle } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
@@ -66,6 +66,8 @@ import LoadingOverlay from './components/ClientDashboard/LoadingOverlay';
 import SuccessPage from './components/Payment/SuccessPage';
 import JobBoardSignUpForm from './components/JobBoard/JobBoardSignUpForm';
 import ClientOnboarding from './components/JobBoard/ClientOnboarding';
+import KarmafyPendingOverlay from './components/ClientDashboard/KarmafyPendingOverlay';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 
 function App() {
@@ -222,8 +224,10 @@ function App() {
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
-  // null = still checking | true = has a clients row | false = no clients row yet (needs onboarding)
   const [clientExists, setClientExists] = useState<boolean | null>(null);
+  const [isPendingReview, setIsPendingReview] = useState(false);
+  const [pendingReviewData, setPendingReviewData] = useState<any>(null);
+  const [isKarmafyPending, setIsKarmafyPending] = useState(false);
 
   // Client dashboard data
   const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
@@ -384,36 +388,49 @@ function App() {
     fetchData(); // Keep existing fetchData call
   }, []); // Empty dependency array = runs only once on mount
 
-  // Fetch opted_job_links status AND whether the client row exists when user changes
   useEffect(() => {
-    const fetchClientJobLinksStatus = async () => {
+    const fetchClientStatus = async () => {
       if (!currentUser?.email || currentUser?.role !== 'client') return;
 
       try {
-        const { data, error } = await supabase
+        // 1. Check if they exist in the regular 'clients' table
+        const { data: clientData, error: clientErr } = await supabase
           .from('clients')
-          .select('opted_job_links')
+          .select('id, opted_job_links, applywizz_id')
           .eq('company_email', currentUser.email);
 
-        if (error) {
-          console.error('Error fetching opted_job_links:', error);
+        if (clientErr) throw clientErr;
+
+        if (clientData && clientData.length > 0) {
+          setClientExists(true);
+          setIsPendingReview(false);
+          setOptedJobLinks(clientData.some(c => c.opted_job_links));
+          setApplywizzId(clientData[0].applywizz_id);
           return;
         }
 
-        // clientExists = whether any row was found in the clients table
-        setClientExists(data !== null && data.length > 0);
+        // 2. If not in 'clients', check 'pending_clients'
+        const { data: pendingData, error: pendingErr } = await supabase
+          .from('pending_clients')
+          .select('*')
+          .eq('company_email', currentUser.email);
 
-        if (data && data.length > 0) {
-          // Check if any of the client accounts have opted for job links
-          const hasOpted = data.some(client => client.opted_job_links);
-          setOptedJobLinks(hasOpted);
+        if (pendingErr) throw pendingErr;
+
+        if (pendingData && pendingData.length > 0) {
+          setClientExists(true); // Treat as exists so form doesn't show
+          setIsPendingReview(true);
+          setPendingReviewData(pendingData[0]);
+        } else {
+          setClientExists(false);
+          setIsPendingReview(false);
         }
       } catch (err) {
-        console.error('Failed to fetch client job links status:', err);
+        console.error('Failed to fetch client status:', err);
       }
     };
 
-    fetchClientJobLinksStatus();
+    fetchClientStatus();
   }, [currentUser?.email, currentUser?.role]);
 
   // Fetch client dashboard data when user changes
@@ -499,16 +516,21 @@ function App() {
                 const data = await summaryResponse.json();
                 const summaryData = data.easy_apply_jobs || {};
 
-                // Check if today's date exists in the summary (Format: YYYY-MM-DD)
-                const today = new Date().toISOString().split('T')[0];
-                const hasTodayJobs = summaryData.hasOwnProperty(today);
-
-                if (!hasTodayJobs) {
-                  // console.log("Today's jobs not found for job board client, triggering scoring...");
-                  await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${fetchedApplywizzId}`);
-                  setIsScoringTriggered(true); // Assuming this state should be updated to show progress if needed
+                // Determine if this is a brand new client (Phase 3)
+                const totalScoredJobs = Object.keys(summaryData).length;
+                if (totalScoredJobs === 0) {
+                  setIsKarmafyPending(true);
                 } else {
-                  // console.log("Today's jobs found, no scoring trigger needed.");
+                  setIsKarmafyPending(false);
+
+                  // Check if today's date exists in the summary (Format: YYYY-MM-DD)
+                  const today = new Date().toISOString().split('T')[0];
+                  const hasTodayJobs = summaryData.hasOwnProperty(today);
+
+                  if (!hasTodayJobs) {
+                    await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${fetchedApplywizzId}`);
+                    setIsScoringTriggered(true);
+                  }
                 }
               }
             } catch (err) {
@@ -2632,6 +2654,9 @@ function App() {
             activeView={activeView}
             isJobsLoading={isJobsLoading}
             showJobScoringOverlay={showJobScoringOverlay}
+            isPendingReview={isPendingReview}
+            pendingReviewData={pendingReviewData}
+            isKarmafyPending={isKarmafyPending}
             currentUser={currentUser}
             optedJobLinks={optedJobLinks}
             handleRefreshJobs={handleRefreshJobs}
@@ -2658,6 +2683,9 @@ function ConditionalOverlays({
   activeView,
   isJobsLoading,
   showJobScoringOverlay,
+  isPendingReview,
+  pendingReviewData,
+  isKarmafyPending,
   currentUser,
   optedJobLinks,
   handleRefreshJobs
@@ -2665,22 +2693,58 @@ function ConditionalOverlays({
   activeView: string;
   isJobsLoading: boolean;
   showJobScoringOverlay: boolean;
+  isPendingReview: boolean;
+  pendingReviewData: any;
+  isKarmafyPending: boolean;
   currentUser: User | null;
   optedJobLinks: boolean;
   handleRefreshJobs: () => void;
 }) {
-  // Only show LoadingOverlay on the dashboard view
   const isDashboardView = activeView === 'dashboard';
 
   return (
     <>
-      {/* Loading Overlay - Shows while fetching jobs on dashboard only */}
-      {isDashboardView && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
+      {/* 1. Pending Review Overlay (Phase 2 - Persistent) */}
+      {isDashboardView && isPendingReview && currentUser && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          {/* We reuse the Success Modal style but as a persistent overlay */}
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-32 pointer-events-none opacity-20">
+              <DotLottieReact src="/SuccessIcon.lottie" loop autoplay />
+            </div>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-4 mt-8">Application Under Review</h2>
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3 text-left">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Since you have selected a new target role, we will match jobs according to your selected role. This process may take up to 24 hours.
+              </p>
+            </div>
+
+            {/* Note: Reminder button logic is primarily in ClientOnboarding modal, 
+                but we can add a simple version here if needed for persistent view. */}
+            <p className="text-gray-500 text-sm mb-4">
+              Our team has been notified. We'll update you soon!
+            </p>
+
+            <div className="mt-8 pt-6 border-t border-gray-100 italic text-gray-400 text-xs">
+              ApplyWizz Support
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Karmafy Pending Overlay (Phase 3) */}
+      {isDashboardView && isKarmafyPending && currentUser && optedJobLinks && (
+        <KarmafyPendingOverlay userName={currentUser.name} />
+      )}
+
+      {/* 3. Loading Overlay - Shows while fetching jobs on dashboard only */}
+      {isDashboardView && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && !isKarmafyPending && (
         <LoadingOverlay userName={currentUser.name} />
       )}
 
-      {/* Job Scoring Overlay - Shows when client has no jobs yet on dashboard */}
-      {isDashboardView && showJobScoringOverlay && currentUser && (
+      {/* 4. Job Scoring Overlay - Shows when client has no jobs yet on dashboard */}
+      {isDashboardView && showJobScoringOverlay && currentUser && !isKarmafyPending && !isPendingReview && (
         <JobScoringOverlay
           userName={currentUser.name}
           onRefresh={handleRefreshJobs}
