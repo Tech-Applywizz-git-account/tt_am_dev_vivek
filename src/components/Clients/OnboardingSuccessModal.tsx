@@ -38,7 +38,12 @@ export const OnboardingSuccessModal: React.FC<OnboardingSuccessModalProps> = ({
 
     useEffect(() => {
         if (isOpen && clientData) {
-            triggerEmail();
+            const isJobBoardUser = clientData.jbId?.startsWith('JB-');
+            if (isJobBoardUser) {
+                setStatus('success');
+            } else {
+                triggerEmail();
+            }
         } else if (!isOpen) {
             // Reset state when modal closes
             setStatus('sending');
@@ -115,7 +120,12 @@ ApplyWizz ID: ${clientData.jbId}
                     <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
                         <div className="flex items-center justify-center gap-2 mb-2 text-sm font-medium">
                             {status === 'sending' && <span className="text-blue-600 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Sending Welcome Email...</span>}
-                            {status === 'success' && <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Welcome Email Sent Successfully!</span>}
+                            {status === 'success' && (
+                                <span className="text-green-600 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {isJobBoard ? 'Onboarding Complete!' : 'Welcome Email Sent Successfully!'}
+                                </span>
+                            )}
                             {status === 'failed' && <span className="text-red-600 flex items-center gap-1"><XCircle className="h-3 w-3" /> Email Failed to Send</span>}
                         </div>
 

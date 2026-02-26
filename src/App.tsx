@@ -228,6 +228,7 @@ function App() {
   const [isPendingReview, setIsPendingReview] = useState(false);
   const [pendingReviewData, setPendingReviewData] = useState<any>(null);
   const [isKarmafyPending, setIsKarmafyPending] = useState(false);
+  const [isNewRoleClient, setIsNewRoleClient] = useState(false);
 
   // Client dashboard data
   const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
@@ -451,7 +452,7 @@ function App() {
         // This is needed for ALL clients (both regular and opted_job_links)
         const { data: clientData, error: clientError } = await supabase
           .from('clients')
-          .select('applywizz_id,opted_job_links')
+          .select('applywizz_id,opted_job_links,status')
           .eq('company_email', currentUser.email);
 
         if (clientError) {
@@ -465,6 +466,11 @@ function App() {
         // Use the first client account found
         const activeClient = clientData[0];
         console.log("activeClient data:", activeClient);
+
+        // Check if this is a new role client
+        const isNewRole = activeClient.status === 'new_role';
+        setIsNewRoleClient(isNewRole);
+        console.log("isNewRoleClient:", isNewRole);
 
         // Set applywizzId for BOTH client types (regular and opted_job_links)
         const fetchedApplywizzId = activeClient.applywizz_id;
@@ -1402,6 +1408,7 @@ function App() {
         full_address: client.full_address,
         date_of_birth: client.date_of_birth,
         primary_phone: client.primary_phone,
+        is_new_domain: client.is_new_domain,
       };
 
       // Determine which API to call based on applywizz_id prefix
@@ -2675,6 +2682,7 @@ function App() {
             currentUser={currentUser}
             optedJobLinks={optedJobLinks}
             handleRefreshJobs={handleRefreshJobs}
+            isNewRoleClient={isNewRoleClient}
           />
 
           {/* Onboarding Success Modal */}
@@ -2703,7 +2711,8 @@ function ConditionalOverlays({
   isKarmafyPending,
   currentUser,
   optedJobLinks,
-  handleRefreshJobs
+  handleRefreshJobs,
+  isNewRoleClient
 }: {
   activeView: string;
   isJobsLoading: boolean;
@@ -2714,6 +2723,7 @@ function ConditionalOverlays({
   currentUser: User | null;
   optedJobLinks: boolean;
   handleRefreshJobs: () => void;
+  isNewRoleClient: boolean;
 }) {
   const isDashboardView = activeView === 'dashboard';
 
@@ -2763,6 +2773,7 @@ function ConditionalOverlays({
         <JobScoringOverlay
           userName={currentUser.name}
           onRefresh={handleRefreshJobs}
+          isNewRole={!!isNewRoleClient}
         />
       )}
     </>

@@ -2,13 +2,14 @@ import React from 'react';
 import { RefreshCw } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
-interface JobScoringOverlayProps {
+export interface JobScoringOverlayProps {
     userName: string;
     onRefresh: () => void;
+    isNewRole: boolean;
 }
 
 
-const JobScoringOverlay: React.FC<JobScoringOverlayProps> = ({ userName, onRefresh }) => {
+const JobScoringOverlay = ({ userName, onRefresh, isNewRole }: JobScoringOverlayProps) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
             <div
@@ -49,12 +50,20 @@ const JobScoringOverlay: React.FC<JobScoringOverlayProps> = ({ userName, onRefre
                 </div> */}
 
                 <div className="bg-blue-500 rounded-lg p-6 mb-6 border border-blue-100 text-center">
-                    <p className="text-white text-base leading-relaxed mb-4">
-                        Hang tight! We’re matching your profile with the latest suitable jobs.
-                    </p>
-                    <p className="text-white text-base leading-relaxed">
-                        Check back in 10–15 minutes to see your personalized matches.
-                    </p>
+                    {isNewRole ? (
+                        <p className="text-white text-base leading-relaxed">
+                            We are personalizing your resume-based jobs. Job links will be populated between 3:00 AM EST and 5:00 AM EST. Please wait until then.
+                        </p>
+                    ) : (
+                        <>
+                            <p className="text-white text-base leading-relaxed mb-4">
+                                Hang tight! We’re matching your profile with the latest suitable jobs.
+                            </p>
+                            <p className="text-white text-base leading-relaxed">
+                                Check back in 10–15 minutes to see your personalized matches.
+                            </p>
+                        </>
+                    )}
                 </div>
 
                 {/* Refresh Button */}

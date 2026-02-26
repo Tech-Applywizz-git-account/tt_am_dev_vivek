@@ -404,6 +404,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             created_at: new Date().toISOString(),
             update_at: new Date().toISOString(),
             opted_job_links: true,
+            status: data.is_new_domain ? 'new_role' : 'active',
         });
 
         if (clientErr) {
