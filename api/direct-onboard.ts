@@ -681,7 +681,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // Create Supabase auth user
+        // 3. Create Supabase auth user
+        console.log('Creating auth account for regular client:', clientData.applywizz_id);
         const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: clientData.email.trim().toLowerCase(),
             password: "Applywizz@2026",
@@ -707,9 +708,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // Insert into users table
+        const finalUserId = userData.user.id;
+
+        // 4. Insert into users table
         const { error: userInsertError } = await supabaseAdmin.from('users').insert({
-            id: userData.user.id,
+            id: finalUserId,
             name: clientData.full_name,
             email: clientData.email.trim().toLowerCase(),
             role: 'client',
@@ -720,7 +723,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (userInsertError) {
             console.error('Supabase users insert error:', userInsertError);
             // Rollback: Delete auth user, client, and additional info
-            await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
+            await supabaseAdmin.auth.admin.deleteUser(finalUserId);
             await supabaseAdmin.from('clients_additional_information').delete().eq('id', clientId);
             await supabaseAdmin.from('clients').delete().eq('id', clientId);
             return res.status(500).json({
@@ -810,8 +813,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (djangoError: any) {
             console.error('❌ Django sync error:', djangoError);
             // Rollback all changes
-            await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
-            await supabaseAdmin.from('users').delete().eq('id', userData.user.id);
+            if (finalUserId) {
+                await supabaseAdmin.auth.admin.deleteUser(finalUserId);
+                await supabaseAdmin.from('users').delete().eq('id', finalUserId);
+            }
             await supabaseAdmin.from('clients_additional_information').delete().eq('id', clientId);
             await supabaseAdmin.from('clients').delete().eq('id', clientId);
             return res.status(500).json({
@@ -825,7 +830,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: 'Client onboarded successfully',
             applywizz_id: clientData.applywizz_id,
             client_id: clientId,
-            user_id: userData.user.id,
+            user_id: finalUserId,
             ...(karmafyUserId && { karmafy_user_id: karmafyUserId }),
             ...(karmafyLeadId && { karmafy_lead_id: karmafyLeadId })
         });

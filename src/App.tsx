@@ -843,7 +843,11 @@ function App() {
   // Function to send onboarding welcome email
   const sendOnboardingWelcomeEmail = async (data: { fullName: string; email: string; jbId: string }) => {
     const { fullName, email: to, jbId } = data;
-    const subject = `🚀 Welcome to ApplyWizz - Your Login Credentials (${jbId || 'ApplyWizz'})`;
+    const isJobBoard = jbId?.startsWith('JB-');
+    const subject = isJobBoard
+      ? `🚀 Welcome to ApplyWizz - Your Profile is Ready (${jbId})`
+      : `🚀 Welcome to ApplyWizz - Your Login Credentials (${jbId || 'ApplyWizz'})`;
+
     const htmlBody = `
         <!DOCTYPE html>
         <html>
@@ -856,20 +860,25 @@ function App() {
                 </div>
                 <h2 style="color: #1e3a8a;">Welcome to ApplyWizz!</h2>
                 <p>Hi <strong>${fullName}</strong>,</p>
-                <p>Your profile registration is successful. Use the credentials below to access your dashboard:</p>
+                <p>${isJobBoard
+        ? 'Your profile setup is complete. You can now access your dashboard using your existing credentials:'
+        : 'Your profile registration is successful. Use the credentials below to access your dashboard:'}</p>
                 
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;">
                     <p style="margin: 5px 0;"><strong>Email:</strong> ${to}</p>
-                    <p style="margin: 5px 0;"><strong>Password: </strong>Applywizz@2026</p>
+                    ${isJobBoard
+        ? '<p style="margin: 5px 0;"><strong>Password:</strong> (Use the password you chose during signup)</p>'
+        : '<p style="margin: 5px 0;"><strong>Password:</strong> Applywizz@2026</p>'}
                 </div>
 
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="https://apply-wizz.me/login" style="background: #2563eb; color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to your Account</a>
                 </div>
 
+                ${!isJobBoard ? `
                 <p style="font-size: 12px; color: #777; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
                     For security, we recommend changing your password after your first login.
-                </p>
+                </p>` : ''}
             </div>
         </body>
         </html>`;
@@ -1395,8 +1404,14 @@ function App() {
         primary_phone: client.primary_phone,
       };
 
-      // Call the direct-onboard API
-      const response = await fetch('/api/direct-onboard', {
+      // Determine which API to call based on applywizz_id prefix
+      const isJobBoard = client.applywizz_id?.startsWith('JB-');
+      const apiEndpoint = isJobBoard ? '/api/jobboard-onboard' : '/api/direct-onboard';
+
+      console.log(`🚀 Dispatching onboarding request to: ${apiEndpoint} for ${client.applywizz_id}`);
+
+      // Call the appropriate onboard API
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

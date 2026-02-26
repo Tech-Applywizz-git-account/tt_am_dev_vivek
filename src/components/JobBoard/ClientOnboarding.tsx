@@ -1173,13 +1173,15 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                     <X className="w-6 h-6" />
                                 </button>
                             )}
-                            <div className="w-full pointer-events-none flex items-center justify-center pt-4">
-                                <DotLottieReact
-                                    src="/SuccessIcon.lottie"
-                                    loop
-                                    autoplay
-                                    style={{ width: '120px', height: '120px' }}
-                                />
+                            <div className="h-48 flex items-center justify-center relative">
+                                <div className="w-full pointer-events-none flex items-center justify-center pt-4">
+                                    <DotLottieReact
+                                        src="/SuccessIcon.lottie"
+                                        loop
+                                        autoplay
+                                        style={{ width: '120px', height: '120px' }}
+                                    />
+                                </div>
                             </div>
 
                             <div className="p-8 text-center pt-2">
@@ -1235,23 +1237,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                                     )}
                                                 </button>
                                             )}
-                                        </div>
-
-                                        <div className="pt-4 mt-2 border-t border-gray-100">
-                                            <button
-                                                onClick={() => {
-                                                    setShowSuccessModal(false);
-                                                    onComplete?.();
-                                                }}
-                                                className="w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                                                style={{ backgroundColor: "#67ef3e" }}
-                                            >
-                                                <LogIn className="w-5 h-5" />
-                                                Go to Dashboard
-                                            </button>
-                                            <p className="text-[10px] text-gray-400 mt-2">
-                                                You can access the dashboard while we review your role.
-                                            </p>
                                         </div>
                                     </div>
                                 )}
