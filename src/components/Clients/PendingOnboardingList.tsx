@@ -331,7 +331,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
     setIsCreatingRole(true);
 
     try {
-      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL_DEV;
       if (!baseUrl) {
         throw new Error('VITE_EXTERNAL_API_URL is not defined');
       }
