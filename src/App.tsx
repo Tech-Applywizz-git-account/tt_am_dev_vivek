@@ -2733,9 +2733,9 @@ function ConditionalOverlays({
   return (
     <>
       {/* 1. Pending Review Overlay (Phase 2 - Persistent) */}
-      {isDashboardView && isPendingReview && currentUser && (
+      {/* {isDashboardView && isPendingReview && currentUser && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          {/* We reuse the Success Modal style but as a persistent overlay */}
+          {/* We reuse the Success Modal style but as a persistent overlay * /}
           <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-32 pointer-events-none opacity-20">
               <DotLottieReact src="/SuccessIcon.lottie" loop autoplay />
@@ -2749,7 +2749,7 @@ function ConditionalOverlays({
             </div>
 
             {/* Note: Reminder button logic is primarily in ClientOnboarding modal, 
-                but we can add a simple version here if needed for persistent view. */}
+                but we can add a simple version here if needed for persistent view. * /}
             <p className="text-gray-500 text-sm mb-4">
               Our team has been notified. We'll update you soon!
             </p>
@@ -2759,7 +2759,7 @@ function ConditionalOverlays({
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* 2. Karmafy Pending Overlay (Phase 3) */}
       {isDashboardView && isKarmafyPending && currentUser && optedJobLinks && (
