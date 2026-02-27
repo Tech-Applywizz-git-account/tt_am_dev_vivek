@@ -38,12 +38,7 @@ export const OnboardingSuccessModal: React.FC<OnboardingSuccessModalProps> = ({
 
     useEffect(() => {
         if (isOpen && clientData) {
-            const isJobBoardUser = clientData.jbId?.startsWith('JB-');
-            if (isJobBoardUser) {
-                setStatus('success');
-            } else {
-                triggerEmail();
-            }
+            triggerEmail();
         } else if (!isOpen) {
             // Reset state when modal closes
             setStatus('sending');
@@ -53,13 +48,13 @@ export const OnboardingSuccessModal: React.FC<OnboardingSuccessModalProps> = ({
     }, [isOpen, clientData]);
 
     const handleCopy = () => {
-        const isJobBoard = clientData.jbId?.startsWith('JB-');
+        if (!clientData) return;
         const details = `
 ApplyWizz Login Credentials
 ---------------------------
 Full Name: ${clientData.fullName}
 Email: ${clientData.email}
-${isJobBoard ? 'Password: Use the password you chose during signup' : 'Password: Applywizz@2026'}
+Password: Applywizz@2026
 Login URL: https://apply-wizz.me/login
 ApplyWizz ID: ${clientData.jbId}
     `.trim();
@@ -72,14 +67,12 @@ ApplyWizz ID: ${clientData.jbId}
 
     if (!isOpen) return null;
 
-    const isJobBoard = clientData?.jbId?.startsWith('JB-');
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Animated Background Decoration */}
                 <div className={`absolute top-0 left-0 w-full h-1 ${status === 'sending' ? 'bg-blue-600 animate-pulse' :
-                    status === 'success' ? 'bg-green-600' : 'bg-red-600'
+                        status === 'success' ? 'bg-green-600' : 'bg-red-600'
                     }`} />
 
                 <button
@@ -120,19 +113,13 @@ ApplyWizz ID: ${clientData.jbId}
                     <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
                         <div className="flex items-center justify-center gap-2 mb-2 text-sm font-medium">
                             {status === 'sending' && <span className="text-blue-600 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Sending Welcome Email...</span>}
-                            {status === 'success' && (
-                                <span className="text-green-600 flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    {isJobBoard ? 'Onboarding Complete!' : 'Welcome Email Sent Successfully!'}
-                                </span>
-                            )}
+                            {status === 'success' && <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Welcome Email Sent Successfully!</span>}
                             {status === 'failed' && <span className="text-red-600 flex items-center gap-1"><XCircle className="h-3 w-3" /> Email Failed to Send</span>}
                         </div>
 
                         <div className="text-left text-sm space-y-1 text-gray-700">
                             <p><strong>Email:</strong> {clientData?.email}</p>
-                            {!isJobBoard && <p><strong>Temp Password:</strong> Applywizz@2026</p>}
-                            {isJobBoard && <p className="text-blue-600 italic">Account exists - use chosen password</p>}
+                            <p><strong>Temp Password:</strong> Applywizz@2026</p>
                         </div>
                     </div>
 
@@ -150,8 +137,8 @@ ApplyWizz ID: ${clientData.jbId}
                         <button
                             onClick={handleCopy}
                             className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all border-2 ${copySuccess
-                                ? 'bg-green-50 border-green-200 text-green-700'
-                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                                 }`}
                         >
                             {copySuccess ? (
