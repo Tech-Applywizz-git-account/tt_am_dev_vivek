@@ -391,6 +391,15 @@ function App() {
     fetchData(); // Keep existing fetchData call
   }, []); // Empty dependency array = runs only once on mount
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Update every second
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const fetchClientStatus = async () => {
       if (!currentUser?.email || currentUser?.role !== 'client') return;
@@ -437,9 +446,9 @@ function App() {
   }, [currentUser?.email, currentUser?.role]);
 
   const getRemainingTimeForReminder = () => {
-    if (!pendingReviewData?.onboarding_reminder_sent_at) return 0;
-    const lastSent = new Date(pendingReviewData.onboarding_reminder_sent_at).getTime();
-    const now = new Date().getTime();
+    if (!pendingReviewData?.client_form_fill_date) return 0;
+    const lastSent = new Date(pendingReviewData.client_form_fill_date).getTime();
+    const now = currentTime.getTime();
     const cooldown = 24 * 60 * 60 * 1000; // 24 hours
     const remaining = lastSent + cooldown - now;
     return remaining > 0 ? remaining : 0;
@@ -2798,9 +2807,9 @@ function ConditionalOverlays({
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           {/* We reuse the Success Modal style but as a persistent overlay */}
           <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-32 pointer-events-none opacity-20">
+            {/* <div className="absolute top-0 left-0 w-full h-32 pointer-events-none opacity-20">
               <DotLottieReact src="/SuccessIcon.lottie" loop autoplay />
-            </div>
+            </div> */}
             <h2 className="text-2xl font-extrabold text-gray-900 mb-4 mt-8">Application Under Review</h2>
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3 text-left">
               <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -2820,7 +2829,7 @@ function ConditionalOverlays({
                     Send Reminder Email
                   </button>
                   <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
-                    Available in {Math.floor(getRemainingTimeForReminder()! / (60 * 60 * 1000))} hours {Math.floor((getRemainingTimeForReminder()! % (60 * 60 * 1000)) / (60 * 1000))} minutes
+                    Available in {Math.floor(getRemainingTimeForReminder()! / (60 * 60 * 1000))}h {Math.floor((getRemainingTimeForReminder()! % (60 * 60 * 1000)) / (60 * 1000))}m {Math.floor((getRemainingTimeForReminder()! % (60 * 1000)) / 1000)}s
                   </p>
                 </div>
               ) : (
@@ -2848,10 +2857,6 @@ function ConditionalOverlays({
             <p className="text-gray-500 text-sm mb-4">
               Our team has been notified. We'll update you soon!
             </p>
-
-            <div className="mt-8 pt-6 border-t border-gray-100 italic text-gray-400 text-xs">
-              ApplyWizz Support
-            </div>
           </div>
         </div>
       )}
