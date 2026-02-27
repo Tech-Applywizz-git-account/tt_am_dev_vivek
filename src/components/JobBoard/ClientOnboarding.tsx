@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase, supabase2 } from '../../lib/supabaseClient';
 import { uploadResumeToS3Dev } from '../../services/s3ServiceDev';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle, Clock, LogIn, Mail, Send, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronDown, Clock, LogIn, Mail, Send, X } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -468,10 +468,9 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
     };
 
     const handleInputChange = (e: AnyChangeEvent) => {
-        const target = e.target as HTMLInputElement;
-        const { name, value, type } = target;
-        const checked = type === 'checkbox' ? target.checked : undefined;
+        const { name, value, type } = e.target;
         if (type === 'checkbox') {
+            const { checked } = e.target as HTMLInputElement;
             setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
@@ -1369,7 +1368,7 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, options, ...props }) =
         <div className="relative">
             <select
                 {...props}
-                className="w-full bg-white border border-gray-300 rounded-lg p-3 text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="w-full bg-white border border-gray-300 rounded-lg p-3 pr-10 text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-shadow shadow-sm hover:shadow-md"
             >
                 <option value="">Select Option</option>
                 {options.map(opt => (
@@ -1378,6 +1377,9 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, options, ...props }) =
                     </option>
                 ))}
             </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
         </div>
     </div>
 );
