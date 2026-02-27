@@ -59,7 +59,7 @@ function getS3Url(s3Path: string | null | undefined): string | null {
 
 // Validation Constants
 const ALLOWED_GENDERS = ["Male", "Female", "Other", "Prefer Not to Say"];
-const ALLOWED_WORK_AUTH = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
+const ALLOWED_WORK_AUTH = ["F1", "OPT", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
 const ALLOWED_WORK_PREF = ["Remote", "Hybrid", "On-site", "All"];
 
 // Define the structure of the incoming client data
@@ -543,6 +543,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
+        // Map OPT → F1 before validation and all downstream processing
+        if (clientData.visa_type === "OPT") {
+            console.log('ℹ️ OPT visa type received — mapping to F1 before processing');
+            clientData.visa_type = "F1";
+        }
+
         // Validate the client data
         const validation = validateClientData(clientData);
         if (!validation.isValid) {
@@ -745,15 +751,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             willing_to_relocate: Boolean(clientData.willing_to_relocate),
             work_auth: clientData.visa_type || "",
             work_preference: (() => {
-                if (Array.isArray(clientData.location_preferences)) {
-                    if (clientData.location_preferences.length > 1) {
-                        return "All";
-                    }
-                    if (clientData.location_preferences.length === 1) {
-                        return clientData.location_preferences[0];
-                    }
+                const pref = clientData.work_preferences;
+                if (pref === "All") {
+                    return "All";
                 }
-                return "All";
+                return "Remote";
             })(),
             sponsorship: clientData.sponsorship ? "yes" : "No",
             gender: clientData.gender || "",
@@ -798,7 +800,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     // Trigger Lambda endpoint (fire-and-forget)
                     try {
-                        await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
+                        await fetch('https://3kmoesctlmtd74fipiogiyc4f40ntetq.lambda-url.us-east-1.on.aws');
                         console.log('Lambda endpoint triggered');
                     } catch (lambdaError: any) {
                         console.error('Lambda endpoint error:', lambdaError);
