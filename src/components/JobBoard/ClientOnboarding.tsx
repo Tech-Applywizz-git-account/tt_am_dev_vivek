@@ -118,6 +118,12 @@ interface ClientOnboardingProps {
     onComplete?: () => void;
 }
 
+// Options Constants
+const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer Not to Say'];
+const WORK_AUTH_OPTIONS = ['F1', 'H1B', 'Green Card', 'Citizen', 'H4EAD', 'Other'];
+const WORK_PREF_OPTIONS = ['Remote', 'Hybrid', 'On-site', 'All'];
+const EDUCATION_OPTIONS = ['High School', 'Associate Degree', "Bachelor's Degree", "Master's Degree", 'PhD', 'Other'];
+
 const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
     const [searchParams] = useSearchParams();
     const jbIdRaw = searchParams.get('jb_id');
@@ -273,11 +279,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
     const [showCustomRoleModal, setShowCustomRoleModal] = useState<boolean>(false);
     const [alternateRolesInput, setAlternateRolesInput] = useState<string>('');
 
-    // Options
-    // const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer Not to Say'];
-    const WORK_AUTH_OPTIONS = ['F1', 'H1B', 'Green Card', 'Citizen', 'H4EAD', 'Other'];
-    const WORK_PREF_OPTIONS = ['Remote', 'Hybrid', 'On-site', 'All'];
-    const EDUCATION_OPTIONS = ['High School', 'Associate Degree', "Bachelor's Degree", "Master's Degree", 'PhD', 'Other'];
+    // Options already defined outside component
 
     const filteredJobRoles = jobRolesData.filter(role =>
         role.name.toLowerCase().includes(jobRoleSearchTerm.toLowerCase())
@@ -425,7 +427,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                     company_email: tx.email || '',
                     personal_email: tx.email || '',
                     applywizz_id: tx.jb_id || '',
-                    gender: tx.gender || '',
+                    gender: tx.gender || prev.gender,
                     state_of_residence: tx.location || '',
                     zip_or_country: tx.country || '',
                     start_date: tx.plan_started ? tx.plan_started.split('T')[0] : '',
@@ -868,9 +870,10 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 name="gender"
                                 value={formData.gender}
                                 onChange={handleInputChange}
-                                options={["Male", "Female", "Other", "Prefer Not to Say"]}
+                                options={GENDER_OPTIONS}
                                 required
                             />
+
                             <SelectField
                                 label="Salary Range *"
                                 name="salary_range"
@@ -891,7 +894,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 name="highest_education"
                                 value={formData.highest_education}
                                 onChange={handleInputChange}
-                                options={EDUCATION_OPTIONS}
+                                options={["High School", "Associate Degree", "Bachelor's Degree", "Master's Degree", "PhD", "Other"]}
                                 required
                             />
                             <InputField
@@ -906,7 +909,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 name="work_preferences"
                                 value={formData.work_preferences}
                                 onChange={handleInputChange}
-                                options={WORK_PREF_OPTIONS}
+                                options={["Remote", "Hybrid", "On-site", "All"]}
                                 required
                             />
                             <InputField
@@ -923,7 +926,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 name="visa_type"
                                 value={formData.visa_type}
                                 onChange={handleInputChange}
-                                options={WORK_AUTH_OPTIONS}
+                                options={["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"]}
                                 required
                             />
                             <div className="flex items-end pb-3">
