@@ -1,6 +1,6 @@
 /**
  * S3 Resume Upload Service — DEV
- * Uses /api/upload-resume-dev (reads _DEV env vars → dev S3 bucket).
+ * Uses /api/upload-resume-dev (reads env vars → dev S3 bucket).
  * Keep s3Service.ts (production) untouched.
  */
 
@@ -70,8 +70,8 @@ export const uploadResumeToS3Dev = async (file: File, applywizzId: string): Prom
  * Get the full DEV S3 URL from an S3 key
  */
 export const getS3UrlDev = (s3Key: string): string => {
-    const bucket = import.meta.env.VITE_AWS_S3_BUCKET_DEV || 'applywizz-dev';
-    const region = import.meta.env.VITE_AWS_REGION_DEV || 'us-east-2';
+    const bucket = import.meta.env.VITE_AWS_S3_BUCKET || 'applywizz-prod';
+    const region = import.meta.env.VITE_AWS_REGION || 'us-east-2';
 
     if (s3Key.startsWith('http://') || s3Key.startsWith('https://')) return s3Key;
     return `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;

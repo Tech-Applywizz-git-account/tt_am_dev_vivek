@@ -5,9 +5,9 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DEFAULT_ONBOARDED_BY_ID = process.env.VITE_DEFAULT_ONBOARDED_BY_ID;
 const DEFAULT_SUBMITTED_BY_ID = 'd92f960d-b244-45e8-a13d-d0ad08828c89';
-const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL_DEV;
-const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME_DEV;
-const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD_DEV;
+const EXTERNAL_API_URL = process.env.VITE_EXTERNAL_API_URL;
+const KARMAFY_USERNAME = process.env.VITE_KARMAFY_USERNAME;
+const KARMAFY_PASSWORD = process.env.VITE_KARMAFY_PASSWORD;
 
 // Email Configuration (Microsoft Graph API)
 const TENANT_ID = process.env.TENANT_ID;
@@ -37,7 +37,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 function getS3Url(s3Path: string | null | undefined): string | null {
     if (!s3Path) return null;
-    const S3_BASE_URL = 'https://applywizz-dev.s3.us-east-2.amazonaws.com/';
+    const S3_BASE_URL = 'https://applywizz-prod.s3.us-east-2.amazonaws.com/';
     return s3Path.includes(S3_BASE_URL) ? s3Path : `${S3_BASE_URL}${s3Path}`;
 }
 

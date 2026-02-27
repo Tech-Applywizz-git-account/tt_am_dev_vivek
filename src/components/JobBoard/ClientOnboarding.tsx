@@ -428,7 +428,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                     personal_email: tx.email || '',
                     applywizz_id: tx.jb_id || '',
                     gender: tx.gender || prev.gender,
-                    state_of_residence: tx.location || '',
+                    // state_of_residence: tx.location,
                     zip_or_country: tx.country || '',
                     start_date: tx.plan_started ? tx.plan_started.split('T')[0] : '',
                     end_date: tx.plan_ended ? tx.plan_ended.split('T')[0] : '',
@@ -635,7 +635,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
             console.log('🚀 Submitting Onboarding Payload:', JSON.stringify(apiPayload, null, 2));
 
             // C. Submit to jobboard-onboard route — relative URL hits this deployment's own function
-            //    jobboard-onboard.ts already uses _DEV env vars (VITE_EXTERNAL_API_URL_DEV etc.)
+            //    jobboard-onboard.ts already uses env vars (VITE_EXTERNAL_API_URL etc.)
             const apiUrl = '/api/jobboard-onboard';
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -767,7 +767,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             <InputField label="Full Name" value={formData.full_name} disabled readOnly />
                             <InputField label="Email" value={formData.company_email} disabled readOnly />
                             <InputField label="Mobile Number" value={formData.whatsapp_number} disabled readOnly />
-                            <InputField label="Location" value={formData.state_of_residence} disabled readOnly />
                             <InputField label="Country" value={formData.zip_or_country} disabled readOnly />
                             <InputField label="Started At" value={formData.start_date} disabled readOnly />
                             <div>
@@ -785,7 +784,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             Profile Details
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
                             {/* Target Job Role Dropdown */}
                             <div ref={jobRoleDropdownRef} className="relative">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -856,7 +854,46 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                     </div>
                                 )}
                             </div>
+                            <SelectField
+                                label="Highest Education *"
+                                name="highest_education"
+                                value={formData.highest_education}
+                                onChange={handleInputChange}
+                                options={["High School", "Associate Degree", "Bachelor's Degree", "Master's Degree", "PhD", "Other"]}
+                                required
+                            />
 
+                            <InputField
+                                label="University Name *"
+                                name="university_name"
+                                value={formData.university_name}
+                                onChange={handleInputChange}
+                                required
+                            />
+                            <InputField
+                                label="Preffered Location *"
+                                name="state_of_residence"
+                                value={formData.state_of_residence}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="e.g. California"
+                            />
+                            <SelectField
+                                label="Work Preference *"
+                                name="work_preferences"
+                                value={formData.work_preferences}
+                                onChange={handleInputChange}
+                                options={["Remote", "Hybrid", "On-site", "All"]}
+                                required
+                            />
+                            <SelectField
+                                label="Work Authorization *"
+                                name="visa_type"
+                                value={formData.visa_type}
+                                onChange={handleInputChange}
+                                options={["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"]}
+                                required
+                            />
                             <InputField
                                 label="Years of Experience *"
                                 name="experience"
@@ -889,29 +926,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 ]}
                                 required
                             />
-                            <SelectField
-                                label="Highest Education *"
-                                name="highest_education"
-                                value={formData.highest_education}
-                                onChange={handleInputChange}
-                                options={["High School", "Associate Degree", "Bachelor's Degree", "Master's Degree", "PhD", "Other"]}
-                                required
-                            />
-                            <InputField
-                                label="University Name *"
-                                name="university_name"
-                                value={formData.university_name}
-                                onChange={handleInputChange}
-                                required
-                            />
-                            <SelectField
-                                label="Work Preference *"
-                                name="work_preferences"
-                                value={formData.work_preferences}
-                                onChange={handleInputChange}
-                                options={["Remote", "Hybrid", "On-site", "All"]}
-                                required
-                            />
                             <InputField
                                 label="Personal Email *"
                                 name="personal_email"
@@ -921,22 +935,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 required
                                 placeholder="your.personal@email.com"
                             />
-                            <SelectField
-                                label="Work Authorization *"
-                                name="visa_type"
-                                value={formData.visa_type}
-                                onChange={handleInputChange}
-                                options={["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"]}
-                                required
-                            />
-                            <div className="flex items-end pb-3">
-                                <CheckboxField
-                                    label="Requires Sponsorship"
-                                    name="sponsorship"
-                                    checked={formData.sponsorship}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
+
 
                             {/* Alternate Job Roles */}
                             {isOthersSelected ? (
@@ -1058,6 +1057,12 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 className="bg-gray-100 cursor-not-allowed w-full border border-gray-300 rounded-lg p-3 text-gray-500"
                             />
                             <div className="space-y-3 pt-6">
+                                <CheckboxField
+                                    label="Requires Sponsorship"
+                                    name="sponsorship"
+                                    checked={formData.sponsorship}
+                                    onChange={handleInputChange}
+                                />
                                 <CheckboxField
                                     label="Willing to Relocate"
                                     name="willing_to_relocate"

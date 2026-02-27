@@ -27,15 +27,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!applywizz_id) return cors(req, res, 400, { error: "Missing applywizz_id" });
 
-        // ── DEV-only environment variables (_DEV suffix required) ──────────────
-        const region = process.env.VITE_AWS_REGION_DEV;
-        const accessKeyId = process.env.VITE_AWS_ACCESS_KEY_ID_DEV;
-        const secretAccessKey = process.env.VITE_AWS_SECRET_ACCESS_KEY_DEV;
-        const bucketName = process.env.VITE_AWS_S3_BUCKET_DEV;
+        // ── environment variables ( suffix required) ──────────────
+        const region = process.env.VITE_AWS_REGION;
+        const accessKeyId = process.env.VITE_AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.VITE_AWS_SECRET_ACCESS_KEY;
+        const bucketName = process.env.VITE_AWS_S3_BUCKET;
 
         if (!region || !accessKeyId || !secretAccessKey || !bucketName) {
-            console.error("[DEV] Missing AWS _DEV env vars");
-            return cors(req, res, 500, { error: "Dev server config error: missing _DEV AWS env vars" });
+            console.error("Missing AWS env vars");
+            return cors(req, res, 500, { error: "Dev server config error: missing AWS env vars" });
         }
 
         const s3Client = new S3Client({
