@@ -166,10 +166,7 @@ interface PendingClient {
   work_preference?: string;
   start_date?: string;
   end_date?: string;
-  add_ons_info?: string[]; // Add this field
-  experience?: string;
-  state_of_residence?: string;
-  resume_path?: string; // resume_s3_path column in pending_clients
+  add_ons_info?: string[];
   is_new_domain?: boolean;
 }
 
@@ -385,28 +382,6 @@ export const PendingOnboardingList: React.FC<Props> = ({
     return false;
   };
 
-  // Returns list of missing required fields for clients NOT opted for job-links
-  const getMissingFields = (client: PendingClient): string[] => {
-    const requiredChecks: { field: string; value: any }[] = [
-      { field: 'full_name', value: client.full_name },
-      { field: 'email', value: client.company_email },
-      { field: 'phone', value: client.whatsapp_number || client.callable_phone },
-      { field: 'experience', value: client.experience },
-      { field: 'applywizz_id', value: client.applywizz_id },
-      { field: 'gender', value: client.gender },
-      { field: 'state_of_residence', value: client.state_of_residence },
-      { field: 'zip_or_country', value: client.zip_or_country },
-      { field: 'resume_s3_path', value: client.resume_s3_path || client.resume_path },
-      { field: 'start_date', value: client.start_date },
-      { field: 'job_role_preferences', value: client.job_role_preferences?.length },
-      { field: 'visa_type', value: client.visa_type },
-      { field: 'location_preferences', value: client.location_preferences?.length },
-    ];
-    return requiredChecks
-      .filter(({ value }) => !value)
-      .map(({ field }) => field);
-  };
-
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-6">🟡 Pending Client Onboarding</h2>
@@ -438,12 +413,6 @@ export const PendingOnboardingList: React.FC<Props> = ({
                   <p className="text-sm text-gray-700">
                     Salary: {client.salary_range}
                   </p>
-                  {!hasJobLinks(client) && getMissingFields(client).length > 0 && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded text-xs text-red-700">
-                      <span className="font-semibold">⚠️ Some fields are missing for this client: </span>
-                      {getMissingFields(client).join(', ')}
-                    </div>
-                  )}
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   {hasJobLinks(client) && onDirectOnboard ? (
