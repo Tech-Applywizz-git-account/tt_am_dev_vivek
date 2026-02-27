@@ -855,13 +855,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 )}
                             </div>
 
-                            <SelectField
-                                label="Gender *"
-                                name="gender"
-                                value={formData.gender}
-                                onChange={handleInputChange}
-                                options={["Male", "Female", "Other", "Prefer Not to Say"]}
-                            />
                             <InputField
                                 label="Years of Experience *"
                                 name="experience"
@@ -869,6 +862,14 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 onChange={handleInputChange}
                                 required
                                 placeholder="e.g. 5 Years"
+                            />
+                            <SelectField
+                                label="Gender *"
+                                name="gender"
+                                value={formData.gender}
+                                onChange={handleInputChange}
+                                options={["Male", "Female", "Other", "Prefer Not to Say"]}
+                                required
                             />
                             <SelectField
                                 label="Salary Range *"
