@@ -274,7 +274,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
     const [alternateRolesInput, setAlternateRolesInput] = useState<string>('');
 
     // Options
-    const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer Not to Say'];
+    // const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer Not to Say'];
     const WORK_AUTH_OPTIONS = ['F1', 'H1B', 'Green Card', 'Citizen', 'H4EAD', 'Other'];
     const WORK_PREF_OPTIONS = ['Remote', 'Hybrid', 'On-site', 'All'];
     const EDUCATION_OPTIONS = ['High School', 'Associate Degree', "Bachelor's Degree", "Master's Degree", 'PhD', 'Other'];
@@ -860,8 +860,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 name="gender"
                                 value={formData.gender}
                                 onChange={handleInputChange}
-                                options={GENDER_OPTIONS}
-                                required
+                                options={["Male", "Female", "Other", "Prefer Not to Say"]}
                             />
                             <InputField
                                 label="Years of Experience *"
