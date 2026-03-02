@@ -1190,7 +1190,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             <div className="h-48 flex items-center justify-center relative">
                                 <div className="w-full pointer-events-none flex items-center justify-center pt-4">
                                     <DotLottieReact
-                                        src="/SuccessIcon1.lottie"
+                                        src="/SuccessIcon.lottie"
                                         loop
                                         autoplay
                                         style={{ width: '120px', height: '120px' }}
