@@ -266,7 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
                   className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
                 >
                   <Phone className="h-4 w-4" />
-                  <span>Call with team</span>
+                  <span>Call Support</span>
                 </button>
                 <button
                   onClick={() => onOpenSupport('cancel')}

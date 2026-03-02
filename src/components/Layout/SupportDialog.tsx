@@ -12,7 +12,7 @@ interface SupportDialogProps {
 }
 
 export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, type, currentUser, isJobBoardClient }) => {
-    const [reason, setReason] = useState('');
+
     const [description, setDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,19 +27,19 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
 
         // Send email if it's a job board client
         // if (isJobBoardClient) {
-            const emailSubject = type === 'cancel' ? "cancel subscription ticket raised" : "call support ticket raised";
-            const emailTo = "nikhil@applywizz.com"; // Hardcoded dummy email
-            const emailCc = ["vivek@applywizz.com", "bhanuteja@applywizz.com"];   // Multiple dummy emails
+        const emailSubject = type === 'cancel' ? "cancel subscription ticket raised" : "call support ticket raised";
+        const emailTo = "nikhil@applywizz.com"; // Hardcoded dummy email
+        const emailCc = ["vivek@applywizz.com", "bhanuteja@applywizz.com"];   // Multiple dummy emails
 
-            try {
-                await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        to: emailTo,
-                        cc: emailCc,
-                        subject: emailSubject,
-                        htmlBody: `
+        try {
+            await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    to: emailTo,
+                    cc: emailCc,
+                    subject: emailSubject,
+                    htmlBody: `
                              <html>
                               <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
                                 <div style="text-align:center; margin-bottom:20px;">
@@ -49,17 +49,16 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
                                 </div>
                                 <p><strong>Client Name:</strong> ${currentUser.name}</p>
                                 <p><strong>Client Email:</strong> ${currentUser.email}</p>
-                                <p><strong>Reason:</strong> ${reason}</p>
                                 <p><strong>Description:</strong> ${description}</p>
                                 <p>Best regards,<br/> <strong>ApplyWizz Support Team.</strong></p> 
                               </body>
                             </html>
                           `
-                    })
-                });
-            } catch (error) {
-                console.error("Failed to send support email:", error);
-            }
+                })
+            });
+        } catch (error) {
+            console.error("Failed to send support email:", error);
+        }
         // }
 
         if (type === 'cancel') {
@@ -77,12 +76,12 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
         }
 
         setIsSubmitting(false);
-        setReason('');
+
         setDescription('');
         onClose();
     };
 
-    const title = type === 'cancel' ? 'Cancel Subscription' : 'Call with Team';
+    const title = type === 'cancel' ? 'Cancel Subscription' : 'Call Support';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
@@ -95,23 +94,11 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Reason
-                        </label>
-                        <input
-                            type="text"
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
-                            placeholder="Enter reason"
-                            required
-                        />
-                    </div>
+
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Description
+                           Description
                         </label>
                         <textarea
                             value={description}
