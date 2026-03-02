@@ -466,13 +466,18 @@ async function handlePendingClientSubmission(
         }
 
         // Send notification email to Vivek (Awaited to ensure completion in Serverless)
-        try {
-            const targetRole = Array.isArray(clientData.job_role_preferences)
-                ? clientData.job_role_preferences[0] || 'Not specified'
-                : 'Not specified';
-            await sendNotificationToVivek(clientData.full_name, normalizedEmail, clientData.phone, targetRole);
-        } catch (emailErr: any) {
-            console.error('Email notification failed but continuing:', emailErr);
+        // Skip email notification for AWL-468 (internal/test account)
+        if (clientData.applywizz_id !== 'AWL-468') {
+            try {
+                const targetRole = Array.isArray(clientData.job_role_preferences)
+                    ? clientData.job_role_preferences[0] || 'Not specified'
+                    : 'Not specified';
+                await sendNotificationToVivek(clientData.full_name, normalizedEmail, clientData.phone, targetRole);
+            } catch (emailErr: any) {
+                console.error('Email notification failed but continuing:', emailErr);
+            }
+        } else {
+            console.log('ℹ️ Email notification skipped for AWL-468');
         }
 
         // Return success response
