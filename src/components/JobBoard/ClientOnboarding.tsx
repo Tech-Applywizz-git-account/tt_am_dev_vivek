@@ -1190,7 +1190,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             <div className="h-48 flex items-center justify-center relative">
                                 <div className="w-full pointer-events-none flex items-center justify-center pt-4">
                                     <DotLottieReact
-                                        src="/SuccessIcon.lottie"
+                                        src="/SuccessIcon1.lottie"
                                         loop
                                         autoplay
                                         style={{ width: '120px', height: '120px' }}
@@ -1356,7 +1356,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
     );
 };
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
 
 const InputField: React.FC<InputFieldProps> = ({ label, type = 'text', className = '', ...props }) => (
     <div className={props.disabled ? 'opacity-75' : ''}>

@@ -15,7 +15,7 @@ const JobScoringOverlay = ({ userName, onRefresh, isNewRole }: JobScoringOverlay
             <div
                 className="relative rounded-2xl shadow-2xl p-8 max-w-2xl w-full mx-4 border border-gray-200 overflow-hidden"
                 style={{
-                    backgroundImage: "url('/img_frame.svg')",
+                    backgroundImage: "url('/img_frame1.svg')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',
@@ -73,3 +73,4 @@ const JobScoringOverlay = ({ userName, onRefresh, isNewRole }: JobScoringOverlay
 };
 
 export default JobScoringOverlay;
+

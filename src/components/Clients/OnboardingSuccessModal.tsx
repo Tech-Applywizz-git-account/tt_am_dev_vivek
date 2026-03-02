@@ -179,3 +179,4 @@ ApplyWizz ID: ${clientData.jbId}
         </div>
     );
 };
+

@@ -45,7 +45,6 @@ const ALLOWED_GENDERS = ['Male', 'Female', 'Other', 'Prefer Not to Say'];
 const ALLOWED_WORK_AUTH = ['F1', 'H1B', 'Green Card', 'Citizen', 'H4EAD', 'Other'];
 const ALLOWED_WORK_PREF = ['Remote', 'Hybrid', 'On-site', 'All'];
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface JobBoardOnboardData {
     full_name: string;
