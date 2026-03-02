@@ -20,7 +20,7 @@ import { ClientsListView } from './components/Clients/ClientsListView';
 import { ClientApplicationsView } from './components/Clients/ClientApplicationsView';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
-import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard } from 'lucide-react';
+import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard, AlertCircle, Clock, Send, CheckCircle } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { supabase1 } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
@@ -64,6 +64,10 @@ import PricingSection from './components/Pricing/PricingSection';
 import JobScoringOverlay from './components/ClientDashboard/JobScoringOverlay';
 import LoadingOverlay from './components/ClientDashboard/LoadingOverlay';
 import SuccessPage from './components/Payment/SuccessPage';
+import JobBoardSignUpForm from './components/JobBoard/JobBoardSignUpForm';
+import ClientOnboarding from './components/JobBoard/ClientOnboarding';
+import KarmafyPendingOverlay from './components/ClientDashboard/KarmafyPendingOverlay';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 
 function App() {
@@ -220,6 +224,11 @@ function App() {
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
+  const [clientExists, setClientExists] = useState<boolean | null>(null);
+  const [isPendingReview, setIsPendingReview] = useState(false);
+  const [pendingReviewData, setPendingReviewData] = useState<any>(null);
+  const [isKarmafyPending, setIsKarmafyPending] = useState(false);
+  const [isNewRoleClient, setIsNewRoleClient] = useState(false);
 
   // Client dashboard data
   const [clientDashboardData, setClientDashboardData] = useState<TaskCount[]>([]);
@@ -233,6 +242,8 @@ function App() {
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const [reminderSent, setReminderSent] = useState(false);
 
   // Selected client for viewing applications
   const [selectedClientForApplications, setSelectedClientForApplications] = useState<Client | null>(null);
@@ -380,117 +391,225 @@ function App() {
     fetchData(); // Keep existing fetchData call
   }, []); // Empty dependency array = runs only once on mount
 
-  // Fetch opted_job_links status when user changes
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   useEffect(() => {
-    const fetchClientJobLinksStatus = async () => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Update every second
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchClientStatus = async () => {
       if (!currentUser?.email || currentUser?.role !== 'client') return;
 
       try {
-        const { data, error } = await supabase
+        // 1. Check if they exist in the regular 'clients' table
+        const { data: clientData, error: clientErr } = await supabase
           .from('clients')
-          .select('opted_job_links')
+          .select('id, opted_job_links, applywizz_id')
           .eq('company_email', currentUser.email);
 
-        if (error) {
-          console.error('Error fetching opted_job_links:', error);
+        if (clientErr) throw clientErr;
+
+        if (clientData && clientData.length > 0) {
+          setClientExists(true);
+          setIsPendingReview(false);
+          setOptedJobLinks(clientData.some(c => c.opted_job_links));
+          setApplywizzId(clientData[0].applywizz_id);
           return;
         }
 
-        if (data && data.length > 0) {
-          // Check if any of the client accounts have opted for job links
-          const hasOpted = data.some(client => client.opted_job_links);
-          setOptedJobLinks(hasOpted);
-        }
-      } catch (err) {
-        console.error('Failed to fetch client job links status:', err);
-      }
-    };
-
-    fetchClientJobLinksStatus();
-  }, [currentUser?.email, currentUser?.role]);
-
-  // Fetch client dashboard data when user changes
-  useEffect(() => {
-    const fetchClientDashboardData = async () => {
-      // Early return if not a client
-      if (!currentUser?.email || currentUser?.role !== 'client') {
-        setClientDashboardData([]);
-        setApplywizzId(undefined);
-        return;
-      }
-
-      setClientDashboardLoading(true);
-      setClientDashboardError("");
-
-      try {
-        // Get the applywizz_id from Supabase based on the user's email
-        // This is needed for ALL clients (both regular and opted_job_links)
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('applywizz_id,opted_job_links')
+        // 2. If not in 'clients', check 'pending_clients'
+        const { data: pendingData, error: pendingErr } = await supabase
+          .from('pending_clients')
+          .select('*')
           .eq('company_email', currentUser.email);
 
-        if (clientError) {
-          throw new Error(`Failed to fetch client data: ${clientError.message}`);
-        }
+        if (pendingErr) throw pendingErr;
 
-        if (!clientData || clientData.length === 0) {
-          throw new Error("Applywizz ID not found for this user");
-        }
-
-        // Use the first client account found
-        const activeClient = clientData[0];
-        console.log("activeClient data:", activeClient);
-
-        // Set applywizzId for BOTH client types (regular and opted_job_links)
-        const fetchedApplywizzId = activeClient.applywizz_id;
-        setApplywizzId(fetchedApplywizzId);
-        console.log("fetchedApplywizzId:", fetchedApplywizzId);
-
-        // Only fetch summary data for regular clients (not opted_job_links)
-        // Scored jobs clients (opted_job_links = true) fetch their own data in components
-        if (!activeClient.opted_job_links) {
-          // Fetch the actual data from the external API for regular clients
-          const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-          if (!apiUrl) {
-            throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
-          }
-
-          const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
-          }
-
-          const apiData = await response.json();
-
-          // Transform the new API data format
-          // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
-          const allDates = new Set([
-            ...Object.keys(apiData.completed_tasks || {}),
-            ...Object.keys(apiData.easy_apply_tasks || {})
-          ]);
-
-          const formattedData: TaskCount[] = Array.from(allDates).map(date => ({
-            date,
-            regularCount: Number(apiData.completed_tasks[date] || 0),
-            easyApplyCount: Number(apiData.easy_apply_tasks[date] || 0)
-          })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          setClientDashboardData(formattedData);
+        if (pendingData && pendingData.length > 0) {
+          setClientExists(true); // Treat as exists so form doesn't show
+          setIsPendingReview(true);
+          setPendingReviewData(pendingData[0]);
         } else {
-          // For opted_job_links clients, clear dashboard data but keep applywizzId
-          console.log("Scored jobs client detected - components will fetch their own data");
-          setClientDashboardData([]);
+          setClientExists(false);
+          setIsPendingReview(false);
         }
       } catch (err) {
-        console.error("Error fetching client dashboard data:", err);
-        setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
-      } finally {
-        setClientDashboardLoading(false);
+        console.error('Failed to fetch client status:', err);
       }
     };
 
+    fetchClientStatus();
+  }, [currentUser?.email, currentUser?.role]);
+
+  const getRemainingTimeForReminder = () => {
+    if (!pendingReviewData?.client_form_fill_date) return 0;
+    const lastSent = new Date(pendingReviewData.client_form_fill_date).getTime();
+    const now = currentTime.getTime();
+    const cooldown = 24 * 60 * 60 * 1000; // 24 hours
+    const remaining = lastSent + cooldown - now;
+    return remaining > 0 ? remaining : 0;
+  };
+
+  const handleSendReminder = async () => {
+    if (!pendingReviewData || isSendingReminder || reminderSent) return;
+
+    setIsSendingReminder(true);
+    try {
+      const { error: fnError } = await supabase.functions.invoke('send-onboarding-reminder', {
+        body: {
+          to: 'vivek@applywizz.com',
+          clientEmail: pendingReviewData.email,
+          clientName: pendingReviewData.full_name || 'Valued Customer',
+          jobRole: pendingReviewData.job_role_preferences?.[0] || 'Custom Role',
+        },
+      });
+
+      if (fnError) throw fnError;
+
+      // Update the timestamp in the database
+      const { error: updateError } = await supabase
+        .from('pending_clients')
+        .update({ onboarding_reminder_sent_at: new Date().toISOString() })
+        .eq('id', pendingReviewData.id);
+
+      if (updateError) throw updateError;
+
+      setReminderSent(true);
+      // Update local state to reflect the new timestamp
+      setPendingReviewData({
+        ...pendingReviewData,
+        onboarding_reminder_sent_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to send reminder:', error);
+      alert('Failed to send reminder. Please try again later.');
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
+  // Fetch client dashboard data when user changes
+  const fetchClientDashboardData = async () => {
+    // Early return if not a client
+    if (!currentUser?.email || currentUser?.role !== 'client') {
+      setClientDashboardData([]);
+      setApplywizzId(undefined);
+      return;
+    }
+
+    setClientDashboardLoading(true);
+    setClientDashboardError("");
+
+    try {
+      // Get the applywizz_id from Supabase based on the user's email
+      // This is needed for ALL clients (both regular and opted_job_links)
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('applywizz_id,opted_job_links,status')
+        .eq('company_email', currentUser.email);
+
+      if (clientError) {
+        throw new Error(`Failed to fetch client data: ${clientError.message}`);
+      }
+
+      if (!clientData || clientData.length === 0) {
+        throw new Error("Applywizz ID not found for this user");
+      }
+
+      // Use the first client account found
+      const activeClient = clientData[0];
+      console.log("activeClient data:", activeClient);
+
+      // Check if this is a new role client
+      const isNewRole = activeClient.status === 'new_role';
+      setIsNewRoleClient(isNewRole);
+      console.log("isNewRoleClient:", isNewRole);
+
+      // Set applywizzId for BOTH client types (regular and opted_job_links)
+      const fetchedApplywizzId = activeClient.applywizz_id;
+      setApplywizzId(fetchedApplywizzId);
+      console.log("fetchedApplywizzId:", fetchedApplywizzId);
+
+      // Only fetch summary data for regular clients (not opted_job_links)
+      // Scored jobs clients (opted_job_links = true) fetch their own data in components
+      if (!activeClient.opted_job_links) {
+        // Fetch the actual data from the external API for regular clients
+        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+        if (!apiUrl) {
+          throw new Error('VITE_EXTERNAL_API_URL is not defined in environment variables');
+        }
+
+        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${fetchedApplywizzId}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data from external API: ${response.status} ${response.statusText}`);
+        }
+
+        const apiData = await response.json();
+
+        // Transform the new API data format
+        // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
+        const allDates = new Set([
+          ...Object.keys(apiData.completed_tasks || {}),
+          ...Object.keys(apiData.easy_apply_tasks || {})
+        ]);
+
+        const formattedData: TaskCount[] = Array.from(allDates).map(date => ({
+          date,
+          regularCount: Number(apiData.completed_tasks[date] || 0),
+          easyApplyCount: Number(apiData.easy_apply_tasks[date] || 0)
+        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setClientDashboardData(formattedData);
+      } else {
+        // For opted_job_links clients, clear dashboard data but keep applywizzId
+        console.log("Scored jobs client detected - checking for today's jobs...");
+        setClientDashboardData([]);
+
+        // const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+        // if (apiUrl && fetchedApplywizzId) {
+        //   try {
+        //     const summaryResponse = await fetch(`${apiUrl}/api/job-links?lead_id=${fetchedApplywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
+
+        //     if (summaryResponse.ok) {
+        //       const data = await summaryResponse.json();
+        //       const summaryData = data.easy_apply_jobs || {};
+
+        //       // Determine if this is a brand new client (Phase 3)
+        //       const totalScoredJobs = Object.keys(summaryData).length;
+        //       if (totalScoredJobs === 0) {
+        //         setIsKarmafyPending(true);
+        //       } else {
+        //         setIsKarmafyPending(false);
+
+        //         // Check if today's date exists in the summary (Format: YYYY-MM-DD)
+        //         const today = new Date().toISOString().split('T')[0];
+        //         const hasTodayJobs = summaryData.hasOwnProperty(today);
+
+        //         if (!hasTodayJobs) {
+        //           await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${fetchedApplywizzId}`);
+        //           setIsScoringTriggered(true);
+        //         }
+        //       }
+        //     }
+        //   } catch (err) {
+        //     console.error("Error checking or triggering jobs for opted_job_links client:", err);
+        //   }
+        // }
+      }
+    } catch (err) {
+      console.error("Error fetching client dashboard data:", err);
+      setClientDashboardError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setClientDashboardLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchClientDashboardData();
   }, [currentUser?.email, currentUser?.role, optedJobLinks]);
 
@@ -788,7 +907,11 @@ function App() {
   // Function to send onboarding welcome email
   const sendOnboardingWelcomeEmail = async (data: { fullName: string; email: string; jbId: string }) => {
     const { fullName, email: to, jbId } = data;
-    const subject = `🚀 Welcome to ApplyWizz - Your Login Credentials (${jbId || 'ApplyWizz'})`;
+    const isJobBoard = jbId?.startsWith('JB-');
+    const subject = isJobBoard
+      ? `🚀 Welcome to ApplyWizz - Your Profile is Ready (${jbId})`
+      : `🚀 Welcome to ApplyWizz - Your Login Credentials (${jbId || 'ApplyWizz'})`;
+
     const htmlBody = `
         <!DOCTYPE html>
         <html>
@@ -801,20 +924,25 @@ function App() {
                 </div>
                 <h2 style="color: #1e3a8a;">Welcome to ApplyWizz!</h2>
                 <p>Hi <strong>${fullName}</strong>,</p>
-                <p>Your profile registration is successful. Use the credentials below to access your dashboard:</p>
+                <p>${isJobBoard
+        ? 'Your profile setup is complete. You can now access your dashboard using your existing credentials:'
+        : 'Your profile registration is successful. Use the credentials below to access your dashboard:'}</p>
                 
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;">
                     <p style="margin: 5px 0;"><strong>Email:</strong> ${to}</p>
-                    <p style="margin: 5px 0;"><strong>Password: </strong>Applywizz@2026</p>
+                    ${isJobBoard
+        ? '<p style="margin: 5px 0;"><strong>Password:</strong> (Use the password you chose during signup)</p>'
+        : '<p style="margin: 5px 0;"><strong>Password:</strong> Applywizz@2026</p>'}
                 </div>
 
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="https://apply-wizz.me/login" style="background: #2563eb; color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to your Account</a>
                 </div>
 
+                ${!isJobBoard ? `
                 <p style="font-size: 12px; color: #777; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
                     For security, we recommend changing your password after your first login.
-                </p>
+                </p>` : ''}
             </div>
         </body>
         </html>`;
@@ -1330,10 +1458,17 @@ function App() {
         full_address: client.full_address,
         date_of_birth: client.date_of_birth,
         primary_phone: client.primary_phone,
+        is_new_domain: client.is_new_domain,
       };
 
-      // Call the direct-onboard API
-      const response = await fetch('/api/direct-onboard', {
+      // Determine which API to call based on applywizz_id prefix
+      const isJobBoard = client.applywizz_id?.startsWith('JB-');
+      const apiEndpoint = isJobBoard ? '/api/jobboard-onboard' : '/api/direct-onboard';
+
+      console.log(`🚀 Dispatching onboarding request to: ${apiEndpoint} for ${client.applywizz_id}`);
+
+      // Call the appropriate onboard API
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2518,46 +2653,71 @@ function App() {
                   : (<Navigate to="/" replace />)
               }
             />
+            {/* Job Board Sign Up route */}
+            <Route
+              path="/jobboard-signup"
+              element={
+                !currentUser
+                  ? (<JobBoardSignUpForm onSignUpSuccess={handleLogin} />)
+                  : (<Navigate to="/" replace />)
+              }
+            />
             {/* Protected main app routes */}
             <Route
               path="/*"
               element={
                 <ProtectedRoute currentUser={currentUser}>
-                  <AppLayout
-                    currentUser={currentUser}
-                    activeView={activeView}
-                    setActiveView={setActiveView}
-                    renderMainContent={renderMainContent}
-                    renderTicketEditModal={renderTicketEditModal}
-                    isCreateTicketModalOpen={isCreateTicketModalOpen}
-                    setIsCreateTicketModalOpen={setIsCreateTicketModalOpen}
-                    isClientOnboardingModalOpen={isClientOnboardingModalOpen}
-                    setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
-                    isClientEditModalOpen={isClientEditModalOpen}
-                    setIsClientEditModalOpen={setIsClientEditModalOpen}
+                  <>
+                    <AppLayout
+                      currentUser={currentUser}
+                      activeView={activeView}
+                      setActiveView={setActiveView}
+                      renderMainContent={renderMainContent}
+                      renderTicketEditModal={renderTicketEditModal}
+                      isCreateTicketModalOpen={isCreateTicketModalOpen}
+                      setIsCreateTicketModalOpen={setIsCreateTicketModalOpen}
+                      isClientOnboardingModalOpen={isClientOnboardingModalOpen}
+                      setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
+                      isClientEditModalOpen={isClientEditModalOpen}
+                      setIsClientEditModalOpen={setIsClientEditModalOpen}
 
-                    isUserManagementModalOpen={isUserManagementModalOpen}
-                    setIsUserManagementModalOpen={setIsUserManagementModalOpen}
-                    selectedTicket={selectedTicket}
-                    selectedClient={selectedClient}
-                    setSelectedClient={setSelectedClient}
-                    handleLogout={handleLogout}
-                    handleCreateTicket={handleCreateTicket}
-                    handleUpdateClient={handleUpdateClient}
-                    handleUpdateUser={handleUpdateUser}
-                    handleDeleteUser={handleDeleteUser}
-                    fetchData={fetchData}
-                    pendingClientsCount={pendingClients.length}
-                    optedJobLinks={optedJobLinks}
-                    onViewLabResults={handleViewLabResults}
-                  />
-                  <LabResultsModal
-                    user={currentUser}
-                    labId={selectedLabId}
-                    isOpen={isLabResultsModalOpen}
-                    onClose={() => setIsLabResultsModalOpen(false)}
-                  />
+                      isUserManagementModalOpen={isUserManagementModalOpen}
+                      setIsUserManagementModalOpen={setIsUserManagementModalOpen}
+                      selectedTicket={selectedTicket}
+                      selectedClient={selectedClient}
+                      setSelectedClient={setSelectedClient}
+                      handleLogout={handleLogout}
+                      handleCreateTicket={handleCreateTicket}
+                      handleUpdateClient={handleUpdateClient}
+                      handleUpdateUser={handleUpdateUser}
+                      handleDeleteUser={handleDeleteUser}
+                      fetchData={fetchData}
+                      pendingClientsCount={pendingClients.length}
+                      optedJobLinks={optedJobLinks}
+                      onViewLabResults={handleViewLabResults}
+                    />
+                    <LabResultsModal
+                      user={currentUser}
+                      labId={selectedLabId}
+                      isOpen={isLabResultsModalOpen}
+                      onClose={() => setIsLabResultsModalOpen(false)}
+                    />
 
+                    {/* ── Onboarding overlay for new job board clients ── */}
+                    {currentUser?.role === 'client' && clientExists === false && (
+                      <div
+                        className="fixed inset-0 z-[200] overflow-y-auto"
+                        style={{ backdropFilter: 'blur(6px)', backgroundColor: 'rgba(0,0,0,0.55)' }}
+                      >
+                        <div className="min-h-full flex items-start justify-center py-8 px-4">
+                          <ClientOnboarding onComplete={() => {
+                            setClientExists(true);
+                            fetchClientDashboardData();
+                          }} />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 </ProtectedRoute>
               }
             />
@@ -2569,9 +2729,17 @@ function App() {
             activeView={activeView}
             isJobsLoading={isJobsLoading}
             showJobScoringOverlay={showJobScoringOverlay}
+            isPendingReview={isPendingReview}
+            pendingReviewData={pendingReviewData}
+            isKarmafyPending={isKarmafyPending}
             currentUser={currentUser}
             optedJobLinks={optedJobLinks}
             handleRefreshJobs={handleRefreshJobs}
+            isNewRoleClient={isNewRoleClient}
+            isSendingReminder={isSendingReminder}
+            reminderSent={reminderSent}
+            getRemainingTimeForReminder={getRemainingTimeForReminder}
+            handleSendReminder={handleSendReminder}
           />
 
           {/* Onboarding Success Modal */}
@@ -2595,32 +2763,112 @@ function ConditionalOverlays({
   activeView,
   isJobsLoading,
   showJobScoringOverlay,
+  isPendingReview,
+  pendingReviewData,
+  isKarmafyPending,
   currentUser,
   optedJobLinks,
-  handleRefreshJobs
+  handleRefreshJobs,
+  isNewRoleClient,
+  isSendingReminder,
+  reminderSent,
+  getRemainingTimeForReminder,
+  handleSendReminder
 }: {
   activeView: string;
   isJobsLoading: boolean;
   showJobScoringOverlay: boolean;
+  isPendingReview: boolean;
+  pendingReviewData: any;
+  isKarmafyPending: boolean;
   currentUser: User | null;
   optedJobLinks: boolean;
   handleRefreshJobs: () => void;
+  isNewRoleClient: boolean;
+  isSendingReminder: boolean;
+  reminderSent: boolean;
+  getRemainingTimeForReminder: () => number;
+  handleSendReminder: () => Promise<void>;
 }) {
-  // Only show LoadingOverlay on the dashboard view
   const isDashboardView = activeView === 'dashboard';
 
   return (
     <>
-      {/* Loading Overlay - Shows while fetching jobs on dashboard only */}
-      {isDashboardView && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && (
+      {/* 1. Pending Review Overlay (Phase 2 - Persistent) */}
+      {isDashboardView && isPendingReview && currentUser && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          {/* We reuse the Success Modal style but as a persistent overlay */}
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
+            {/* <div className="absolute top-0 left-0 w-full h-32 pointer-events-none opacity-20">
+              <DotLottieReact src="/SuccessIcon.lottie" loop autoplay />
+            </div> */}
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-4 mt-8">Application Under Review</h2>
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3 text-left">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Since you have selected a new target role, we will match jobs according to your selected role. This process may take up to 24 hours.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              {getRemainingTimeForReminder() !== 0 ? (
+                <div className="flex flex-col items-center">
+                  <button
+                    disabled
+                    className="w-full py-4 bg-gray-100 text-gray-400 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 cursor-not-allowed border border-gray-200"
+                  >
+                    <Clock className="w-5 h-5" />
+                    Send Reminder Email
+                  </button>
+                  <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                    Available in {Math.floor(getRemainingTimeForReminder()! / (60 * 60 * 1000))}h {Math.floor((getRemainingTimeForReminder()! % (60 * 60 * 1000)) / (60 * 1000))}m {Math.floor((getRemainingTimeForReminder()! % (60 * 1000)) / 1000)}s
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleSendReminder}
+                  disabled={isSendingReminder || reminderSent}
+                  className={`w-full py-4 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 ${reminderSent ? 'bg-green-500' : 'bg-blue-600 hover:bg-blue-700'
+                    } ${isSendingReminder ? 'opacity-70 cursor-wait' : ''}`}
+                >
+                  {reminderSent ? (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      Reminder Sent
+                    </>
+                  ) : (
+                    <>
+                      <Send className={`w-5 h-5 ${isSendingReminder ? 'animate-pulse' : ''}`} />
+                      {isSendingReminder ? 'Sending...' : 'Send Reminder Email'}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            <p className="text-gray-500 text-sm mb-4">
+              Our team has been notified. We'll update you soon!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Karmafy Pending Overlay (Phase 3) */}
+      {isDashboardView && isKarmafyPending && currentUser && optedJobLinks && (
+        <KarmafyPendingOverlay userName={currentUser.name} />
+      )}
+
+      {/* 3. Loading Overlay - Shows while fetching jobs on dashboard only */}
+      {isDashboardView && isJobsLoading && currentUser?.role === 'client' && optedJobLinks && currentUser && !isKarmafyPending && (
         <LoadingOverlay userName={currentUser.name} />
       )}
 
-      {/* Job Scoring Overlay - Shows when client has no jobs yet on dashboard */}
-      {isDashboardView && showJobScoringOverlay && currentUser && (
+      {/* 4. Job Scoring Overlay - Shows when client has no jobs yet on dashboard */}
+      {isDashboardView && showJobScoringOverlay && currentUser && !isKarmafyPending && !isPendingReview && (
         <JobScoringOverlay
           userName={currentUser.name}
           onRefresh={handleRefreshJobs}
+          isNewRole={!!isNewRoleClient}
         />
       )}
     </>
@@ -2628,4 +2876,3 @@ function ConditionalOverlays({
 }
 
 export default App;
-

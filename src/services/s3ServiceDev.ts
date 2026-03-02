@@ -1,6 +1,7 @@
 /**
  * S3 Resume Upload Service — DEV
  * Uses /api/upload-resume-dev (reads env vars → dev S3 bucket).
+ * Keep s3Service.ts (production) untouched.
  */
 
 interface UploadResumeResponse {
