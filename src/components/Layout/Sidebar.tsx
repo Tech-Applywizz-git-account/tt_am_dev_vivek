@@ -246,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
 
 
         {/* Support Module */}
-        {(user.role === 'scraping_team') && (
+        {((user.role === 'client') && (optedJobLinks)) && (
           <div className="mt-4 px-3">
             <button
               onClick={() => setIsSupportOpen(!isSupportOpen)}

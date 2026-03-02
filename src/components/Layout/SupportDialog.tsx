@@ -28,8 +28,8 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
         // Send email if it's a job board client
         // if (isJobBoardClient) {
         const emailSubject = type === 'cancel' ? "cancel subscription ticket raised" : "call support ticket raised";
-        const emailTo = "nikhil@applywizz.com"; // Hardcoded dummy email
-        const emailCc = ["vivek@applywizz.com", "bhanuteja@applywizz.com"];   // Multiple dummy emails
+        const emailTo = "shyam@applywizz.com";
+        const emailCc = ["ramakrishna@applywizz.com", "jagan@applywizz.com", "nagarajumuthu@applywizz.com"];   
 
         try {
             await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
