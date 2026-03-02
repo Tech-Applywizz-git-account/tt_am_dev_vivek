@@ -320,3 +320,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
     </div>
   );
 };
+

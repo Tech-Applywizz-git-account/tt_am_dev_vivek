@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
@@ -18,6 +19,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [resetLinkLoading, setResetLinkLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSignUp = () => {
+    setIsFadingOut(true);
+    setTimeout(() => navigate('/jobboard-signup'), 400);
+  };
 
   // Typewriter animation states
   const [displayedText, setDisplayedText] = useState('');
@@ -266,7 +274,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 </button>
               </form>
 
-              {/* Sign up link */}
+              {/* Forgot password link */}
               <div className="mt-6 text-center">
                 <p style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px' }}>
                   Don't remember your password?{' '} <br />
@@ -282,7 +290,37 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   </button>
                 </p>
               </div>
+
+              {/* Sign Up */}
+              <div className="mt-4 text-center">
+                <p style={{ color: '#000', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px' }}>
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={handleSignUp}
+                    className="font-medium"
+                    style={{ color: '#77E954', fontFamily: 'Poppins', fontWeight: 500, fontSize: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#68D045'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#77E954'}
+                  >
+                    Sign Up →
+                  </button>
+                </p>
+              </div>
             </div>
+
+            {/* Fade-out overlay for smooth page transition */}
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: '#F1FFF3',
+                opacity: isFadingOut ? 1 : 0,
+                pointerEvents: isFadingOut ? 'all' : 'none',
+                transition: 'opacity 0.4s ease',
+                zIndex: 9999,
+              }}
+            />
           </div>
         </div>
       </div>

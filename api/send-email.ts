@@ -14,7 +14,6 @@ interface TokenResponse {
   access_token: string;
 }
 
-
 // Get access token
 async function getAccessToken() {
   const url = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;

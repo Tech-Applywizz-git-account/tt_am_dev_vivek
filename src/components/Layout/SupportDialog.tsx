@@ -131,3 +131,4 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
         </div>
     );
 };
+
