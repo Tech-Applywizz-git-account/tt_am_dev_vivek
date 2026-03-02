@@ -101,11 +101,11 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     const filterOptions = [
         { value: 'all', label: 'All Applied Jobs', icon: CheckCircle },
         { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
-        { value: 'indeed', label: 'Indeed', icon: Briefcase },
+        // { value: 'indeed', label: 'Indeed', icon: Briefcase },
         { value: 'staffing', label: 'Staffing Agencies', icon: Building2 },
         { value: 'c2c', label: 'C2C', icon: DollarSign },
         { value: 'w2', label: 'W2', icon: Briefcase },
-        { value: 'c2c-w2', label: 'C2C,W2', icon: RefreshCw },
+        // { value: 'c2c-w2', label: 'C2C,W2', icon: RefreshCw },
     ];
 
     const loadingMessages = [
