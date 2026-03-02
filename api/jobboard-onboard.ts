@@ -520,7 +520,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 try {
                     await extractLeadData(karmafyLeadId);
                     try {
-                        await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
+                        await fetch('https://3kmoesctlmtd74fipiogiyc4f40ntetq.lambda-url.us-east-1.on.aws');
+                        console.log('Lambda endpoint triggered');
                     } catch { /* fire-and-forget */ }
                 } catch (e: any) {
                     console.warn('⚠️ Lead extraction failed (continuing):', e.message);
