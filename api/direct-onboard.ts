@@ -59,7 +59,7 @@ function getS3Url(s3Path: string | null | undefined): string | null {
 
 // Validation Constants
 const ALLOWED_GENDERS = ["Male", "Female", "Other", "Prefer Not to Say"];
-const ALLOWED_WORK_AUTH = ["F1", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
+const ALLOWED_WORK_AUTH = ["F1", "OPT", "H1B", "Green Card", "Citizen", "H4EAD", "Other"];
 const ALLOWED_WORK_PREF = ["Remote", "Hybrid", "On-site", "All"];
 
 // Define the structure of the incoming client data
@@ -466,13 +466,18 @@ async function handlePendingClientSubmission(
         }
 
         // Send notification email to Vivek (Awaited to ensure completion in Serverless)
-        try {
-            const targetRole = Array.isArray(clientData.job_role_preferences)
-                ? clientData.job_role_preferences[0] || 'Not specified'
-                : 'Not specified';
-            await sendNotificationToVivek(clientData.full_name, normalizedEmail, clientData.phone, targetRole);
-        } catch (emailErr: any) {
-            console.error('Email notification failed but continuing:', emailErr);
+        // Skip email notification for AWL-468 (internal/test account)
+        if (clientData.applywizz_id !== 'AWL-468') {
+            try {
+                const targetRole = Array.isArray(clientData.job_role_preferences)
+                    ? clientData.job_role_preferences[0] || 'Not specified'
+                    : 'Not specified';
+                await sendNotificationToVivek(clientData.full_name, normalizedEmail, clientData.phone, targetRole);
+            } catch (emailErr: any) {
+                console.error('Email notification failed but continuing:', emailErr);
+            }
+        } else {
+            console.log('ℹ️ Email notification skipped for AWL-468');
         }
 
         // Return success response
@@ -543,6 +548,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
+        // Map OPT → F1 before validation and all downstream processing
+        if (clientData.visa_type === "OPT") {
+            console.log('ℹ️ OPT visa type received — mapping to F1 before processing');
+            clientData.visa_type = "F1";
+        }
+
         // Validate the client data
         const validation = validateClientData(clientData);
         if (!validation.isValid) {
@@ -595,7 +606,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             created_at: new Date().toISOString(),
             update_at: new Date().toISOString(),
             opted_job_links: true,
-            status: clientData.is_new_domain ? 'new_role' : 'active',
         };
 
         // Insert into clients table
@@ -682,8 +692,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // 3. Create Supabase auth user
-        console.log('Creating auth account for regular client:', clientData.applywizz_id);
+        // Create Supabase auth user
         const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: clientData.email.trim().toLowerCase(),
             password: "Applywizz@2026",
@@ -709,11 +718,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        const finalUserId = userData.user.id;
-
-        // 4. Insert into users table
+        // Insert into users table
         const { error: userInsertError } = await supabaseAdmin.from('users').insert({
-            id: finalUserId,
+            id: userData.user.id,
             name: clientData.full_name,
             email: clientData.email.trim().toLowerCase(),
             role: 'client',
@@ -724,7 +731,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (userInsertError) {
             console.error('Supabase users insert error:', userInsertError);
             // Rollback: Delete auth user, client, and additional info
-            await supabaseAdmin.auth.admin.deleteUser(finalUserId);
+            await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
             await supabaseAdmin.from('clients_additional_information').delete().eq('id', clientId);
             await supabaseAdmin.from('clients').delete().eq('id', clientId);
             return res.status(500).json({
@@ -745,15 +752,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             willing_to_relocate: Boolean(clientData.willing_to_relocate),
             work_auth: clientData.visa_type || "",
             work_preference: (() => {
-                if (Array.isArray(clientData.location_preferences)) {
-                    if (clientData.location_preferences.length > 1) {
-                        return "All";
-                    }
-                    if (clientData.location_preferences.length === 1) {
-                        return clientData.location_preferences[0];
-                    }
+                const pref = clientData.work_preferences;
+                if (pref === "All") {
+                    return "All";
                 }
-                return "All";
+                return "Remote";
             })(),
             sponsorship: clientData.sponsorship ? "yes" : "No",
             gender: clientData.gender || "",
@@ -798,7 +801,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     // Trigger Lambda endpoint (fire-and-forget)
                     try {
-                        await fetch('https://l2pswfvyrw4xyta62lfbgypuuu0kxsqg.lambda-url.us-east-1.on.aws');
+                        await fetch('https://3kmoesctlmtd74fipiogiyc4f40ntetq.lambda-url.us-east-1.on.aws');
                         console.log('Lambda endpoint triggered');
                     } catch (lambdaError: any) {
                         console.error('Lambda endpoint error:', lambdaError);
@@ -814,10 +817,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (djangoError: any) {
             console.error('❌ Django sync error:', djangoError);
             // Rollback all changes
-            if (finalUserId) {
-                await supabaseAdmin.auth.admin.deleteUser(finalUserId);
-                await supabaseAdmin.from('users').delete().eq('id', finalUserId);
-            }
+            await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
+            await supabaseAdmin.from('users').delete().eq('id', userData.user.id);
             await supabaseAdmin.from('clients_additional_information').delete().eq('id', clientId);
             await supabaseAdmin.from('clients').delete().eq('id', clientId);
             return res.status(500).json({
@@ -831,7 +832,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: 'Client onboarded successfully',
             applywizz_id: clientData.applywizz_id,
             client_id: clientId,
-            user_id: finalUserId,
+            user_id: userData.user.id,
             ...(karmafyUserId && { karmafy_user_id: karmafyUserId }),
             ...(karmafyLeadId && { karmafy_lead_id: karmafyLeadId })
         });

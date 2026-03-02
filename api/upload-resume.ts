@@ -4,7 +4,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
-    'http://localhost:5173',
+    // 'http://localhost:5173',
     'https://ticketingtoolapplywizz.vercel.app',
     'https://apply-wizz.me',
     'https://ticketingtoolapplywi-git-ba5fa7-applywizz-tech-vercels-projects.vercel.app',

@@ -25,22 +25,28 @@ async function getAccessToken() {
   params.append('grant_type', 'client_credentials');
 
   const res = await fetch(url, { method: 'POST', body: params });
-//   const data = await res.json();
-const data: TokenResponse = await res.json() as TokenResponse;
+  //   const data = await res.json();
+  const data: TokenResponse = await res.json() as TokenResponse;
 
   if (!res.ok) throw new Error(`Failed to get access token: ${JSON.stringify(data)}`);
-//   return data.access_token;
-return data.access_token;
+  //   return data.access_token;
+  return data.access_token;
 }
 
 // Send email
-async function sendEmail(to , subject , htmlBody) {
+async function sendEmail(to: string, subject: string, htmlBody: string, cc?: string[]) {
   const token = await getAccessToken();
+
+  const ccRecipients = cc && cc.length > 0
+    ? cc.map((email) => ({ emailAddress: { address: email } }))
+    : [];
+
   const payload = {
     message: {
       subject,
       body: { contentType: 'HTML', content: htmlBody },
       toRecipients: [{ emailAddress: { address: to } }],
+      ...(ccRecipients.length > 0 && { ccRecipients }),
     },
   };
   const res = await fetch(`https://graph.microsoft.com/v1.0/users/${SENDER_EMAIL}/sendMail`, {
@@ -57,13 +63,24 @@ async function sendEmail(to , subject , htmlBody) {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).send('Method not allowed');
+  // CORS Headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
-  const { to, subject, htmlBody } = req.body;
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  const { to, cc, subject, htmlBody } = req.body;
 
   if (!to || !subject || !htmlBody) return res.status(400).send('Missing parameters');
 
   try {
-    await sendEmail(to, subject, htmlBody);
+    await sendEmail(to, subject, htmlBody, cc);
     return res.status(200).json({ message: 'Email sent successfully' });
   } catch (err) {
     console.error(err);
