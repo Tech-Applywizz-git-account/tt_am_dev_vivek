@@ -28,9 +28,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!applywizz_id) return cors(req, res, 400, { error: "Missing applywizz_id" });
 
         // ── environment variables ( suffix required) ──────────────
-        const region = process.env.VITE_AWS_REGION;
-        const accessKeyId = process.env.VITE_AWS_ACCESS_KEY_ID;
-        const secretAccessKey = process.env.VITE_AWS_SECRET_ACCESS_KEY;
+        const region = process.env.AWS_REGION;
+        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
         const bucketName = process.env.VITE_AWS_S3_BUCKET;
 
         if (!region || !accessKeyId || !secretAccessKey || !bucketName) {
