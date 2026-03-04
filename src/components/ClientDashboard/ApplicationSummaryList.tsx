@@ -21,6 +21,7 @@ interface JobItem {
   dueDate: string;
   score: number;
   jobUrl: string | null;
+  screenshotUrl: string | null;
   is_email_received?: boolean;
 }
 
@@ -290,12 +291,25 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
           <ExternalLink size={14} />
           View Job Posting
         </a>
-        {job.is_email_received && (
-          <div
-            className="bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1 text-sm"
-          >
+        {job.is_email_received ? (
+          <div className="bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1 text-sm shadow-sm">
             <Check size={16} />
             Email Verified
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-md text-sm border border-amber-100">
+            <span>Waiting for mail</span>
+            {job.screenshotUrl && (
+              <a
+                href={job.screenshotUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-900 transition-colors cursor-help"
+                title="view applied job screenshot"
+              >
+                <ExternalLink size={14} />
+              </a>
+            )}
           </div>
         )}
       </div>
