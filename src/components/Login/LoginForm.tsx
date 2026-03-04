@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
 import { toast as toastify } from 'react-toastify';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
@@ -13,6 +14,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false); // New state for password visibility
   const [showResetModal, setShowResetModal] = useState(false);
@@ -87,32 +89,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  // ── Google Sign-In via GIS ───────────────────────────────────────────
+  // Uses GoogleLogin component which provides credential (id_token JWT) directly.
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    setGoogleLoading(true);
+    setError('');
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const idToken = credentialResponse.credential;
+      if (!idToken) throw new Error('Could not retrieve ID token from Google account.');
+
+      // Sign in to Supabase using the Google ID token
+      const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          skipBrowserRedirect: true,
-        },
+        token: idToken,
       });
-      if (error) throw error;
 
-      if (data?.url) {
-        // Calculate centered position for the popup
-        const width = 500;
-        const height = 650;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Sign-in failed. Please try again.');
 
-        window.open(
-          data.url,
-          'google-login',
-          `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
-        );
+      // Fetch the user profile from public.users
+      const { data: publicUser, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (userError || !publicUser) {
+        throw new Error('No account found. Please sign up first.');
       }
+
+      onLogin(publicUser as User);
     } catch (err: any) {
-      setError(err.message || 'Google login failed');
+      setError(err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -314,14 +324,29 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               </div>
 
               {/* Google Login Button */}
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="w-full bg-white border border-gray-300 py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors font-medium text-gray-700"
-              >
-                <img src="/google.png" alt="Google" className="w-5 h-5 object-contain" />
-                Sign in with Google
-              </button>
+              {googleLoading ? (
+                <div className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500">
+                  <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Signing in with Google…
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      setError('Google sign-in was cancelled or failed.');
+                    }}
+                    width="400"
+                    theme="outline"
+                    size="large"
+                    text="signin_with"
+                    shape="rectangular"
+                  />
+                </div>
+              )}
 
               {/* Forgot password link */}
               <div className="mt-6 text-center">

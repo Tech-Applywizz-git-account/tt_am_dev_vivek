@@ -394,95 +394,9 @@ function App() {
 
     fetchData();
 
-    // 🔐 Auth state listener for Google/OAuth login
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        // If we already have a currentUser in state that matches this ID, skip
-        if (currentUser?.id === session.user.id) return;
-
-        try {
-          // 1. Check if user already has a profile in public.users (returning user)
-          const { data: publicUser, error: fetchErr } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-
-          if (fetchErr) throw fetchErr;
-
-          if (publicUser) {
-            // Existing user — log them straight in
-            handleLogin(publicUser);
-          } else {
-            // ── NEW Google user ──
-            // Validate BEFORE we persist anything to public.users
-            const userEmail = session.user.email?.toLowerCase();
-            if (!userEmail) throw new Error("Google account email not found.");
-
-            // Check 1: jobboard_transactions (paid?)
-            const { data: txData } = await supabase2
-              .from('jobboard_transactions')
-              .select('id, full_name')
-              .ilike('email', userEmail)
-              .not('transaction_id', 'is', null)
-              .neq('payment_status', 'failed')
-              .maybeSingle();
-
-            // Check 2: already an existing client (fallback)
-            const { data: existingClient } = await supabase
-              .from('clients')
-              .select('id, company_name')
-              .ilike('company_email', userEmail)
-              .maybeSingle();
-
-            if (txData || existingClient) {
-              // ✅ VALIDATION PASSED — create their public profile
-              const displayName = txData?.full_name || existingClient?.company_name || userEmail;
-              const { data: newUser, error: insertError } = await supabase
-                .from('users')
-                .insert({
-                  id: session.user.id,
-                  email: userEmail,
-                  name: displayName,
-                  role: 'client',
-                  is_active: true
-                })
-                .select()
-                .single();
-
-              if (insertError) throw insertError;
-
-              if (newUser) {
-                handleLogin(newUser);
-                if (!existingClient) {
-                  setClientExists(false);
-                  setActiveView('onboarding');
-                  toast.success('Welcome! Please complete your profile to continue.');
-                } else {
-                  toast.success(`Welcome back, ${displayName}!`);
-                }
-              }
-            } else {
-              // ❌ VALIDATION FAILED — hard-delete from Auth so no trace remains
-              await supabase.auth.signOut();
-              // Use admin client to permanently remove the Auth user
-              await supabaseAdmin.auth.admin.deleteUser(session.user.id);
-              localStorage.removeItem('currentUser');
-              setCurrentUser(null);
-              // Show payment popup
-              setBlockedGoogleEmail(userEmail);
-              setShowPaymentPopup(true);
-            }
-          }
-        } catch (err: any) {
-          console.error('Auth sync error:', err);
-        }
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    // 🔐 Auth state sync removed.
+    // Login and Signup components now handle session creation, validation,
+    // and DB synchronization explicitly via handleLogin/handleSignUp.
   }, []);
 
   const [currentTime, setCurrentTime] = useState(new Date());

@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { supabase2 } from '../../lib/supabaseClient';
 import { supabaseAdmin } from '../../lib/supabaseAdminClient';
 import { User } from '../../types';
+import { GoogleLogin } from '@react-oauth/google';
 
 type EmailStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 type PopupType = 'invalid' | 'registered' | null;
@@ -26,6 +27,8 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isLeaving, setIsLeaving] = useState(false);
     const navigate = useNavigate();
+
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     // Typewriter animation states
     const [displayedText, setDisplayedText] = useState('');
@@ -251,31 +254,100 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
         }
     };
 
-    const handleGoogleSignUp = async () => {
+    // ── Google Sign-up via GIS ──────────────────────────────────────────────
+    // Uses GoogleLogin component which provides credential (id_token JWT) directly.
+    // Validates email against jobboard_transactions BEFORE touching Auth.
+    const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+        setGoogleLoading(true);
         try {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: window.location.origin,
-                    skipBrowserRedirect: true,
-                },
-            });
-            if (error) throw error;
+            const idToken = credentialResponse.credential;
+            if (!idToken) throw new Error('Could not retrieve ID token from Google account.');
 
-            if (data?.url) {
-                const width = 500;
-                const height = 650;
-                const left = window.screenX + (window.outerWidth - width) / 2;
-                const top = window.screenY + (window.outerHeight - height) / 2;
+            // Decode the JWT payload to get user info (no extra API call needed)
+            const payload = JSON.parse(atob(idToken.split('.')[1]));
+            const userEmail: string = payload.email?.toLowerCase();
+            const userName: string = payload.name || userEmail;
 
-                window.open(
-                    data.url,
-                    'google-login',
-                    `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
-                );
+            if (!userEmail) throw new Error('Could not retrieve email from Google account.');
+
+            // Check 1: already an existing client with opted_job_links?
+            const { data: existingClientWithJob } = await supabase
+                .from('clients')
+                .select('id')
+                .ilike('company_email', userEmail)
+                .eq('opted_job_links', true)
+                .maybeSingle();
+
+            if (existingClientWithJob) {
+                setSignUpMessage({ type: 'error', text: 'You are already registered. Please log in.' });
+                return;
             }
-        } catch (error: any) {
-            setSignUpMessage({ type: 'error', text: error.message });
+
+            // Check 2: existing client (fallback - not yet opted in)
+            const { data: existingClient } = await supabase
+                .from('clients')
+                .select('id')
+                .ilike('company_email', userEmail)
+                .maybeSingle();
+
+            // Check 3: payment record in jobboard_transactions
+            const { data: txData } = await supabase2
+                .from('jobboard_transactions')
+                .select('id, full_name')
+                .ilike('email', userEmail)
+                .not('transaction_id', 'is', null)
+                .neq('payment_status', 'failed')
+                .maybeSingle();
+
+            if (!txData && !existingClient) {
+                // ❌ NOT PAID — show error message, do NOT touch Auth
+                setSignUpMessage({ type: 'error', text: 'You have not done payment yet. Please make the payment.' });
+                return;
+            }
+
+            // ✅ VALID — create Supabase session using the id_token (JWT credential)
+            const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: idToken,
+            });
+
+            if (authError) throw authError;
+            if (!authData.user) throw new Error('Sign-in failed.');
+
+            // Check if user already has a profile in public.users
+            const { data: existingUser } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', authData.user.id)
+                .maybeSingle();
+
+            if (existingUser) {
+                // Already has an account — log them in
+                if (onSignUpSuccess) onSignUpSuccess(existingUser as User);
+                return;
+            }
+
+            // New user — create public.users profile
+            const displayName = txData?.full_name || userName;
+            const { data: newUser, error: insertError } = await supabaseAdmin
+                .from('users')
+                .insert({
+                    id: authData.user.id,
+                    email: userEmail,
+                    name: displayName,
+                    role: 'client',
+                    is_active: true,
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+            if (newUser && onSignUpSuccess) onSignUpSuccess(newUser as User);
+
+        } catch (err: any) {
+            setSignUpMessage({ type: 'error', text: err.message || 'Google sign-up failed. Please try again.' });
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
@@ -575,14 +647,29 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
                             </div>
 
                             {/* Google Sign Up Button */}
-                            <button
-                                type="button"
-                                onClick={handleGoogleSignUp}
-                                className="w-full bg-white border border-gray-300 py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors font-medium text-gray-700"
-                            >
-                                <img src="/google.png" alt="Google" className="w-5 h-5 object-contain" />
-                                Sign up with Google
-                            </button>
+                            {googleLoading ? (
+                                <div className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500">
+                                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                    </svg>
+                                    Signing in with Google…
+                                </div>
+                            ) : (
+                                <div className="flex justify-center">
+                                    <GoogleLogin
+                                        onSuccess={handleGoogleSuccess}
+                                        onError={() => {
+                                            setSignUpMessage({ type: 'error', text: 'Google sign-in was cancelled or failed.' });
+                                        }}
+                                        width="400"
+                                        theme="outline"
+                                        size="large"
+                                        text="signup_with"
+                                        shape="rectangular"
+                                    />
+                                </div>
+                            )}
 
                             {/* Already have an account */}
                             <div className="mt-6 text-center">
