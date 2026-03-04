@@ -87,6 +87,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) throw error;
+
+      if (data?.url) {
+        // Calculate centered position for the popup
+        const width = 500;
+        const height = 650;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        window.open(
+          data.url,
+          'google-login',
+          `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+        );
+      }
+    } catch (err: any) {
+      setError(err.message || 'Google login failed');
+    }
+  };
+
   const handleForgotPasswordClick = () => {
     setError(""); // Clear any previous errors
     setShowResetModal(true);
@@ -273,6 +302,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   )}
                 </button>
               </form>
+
+              {/* OR Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+                </div>
+              </div>
+
+              {/* Google Login Button */}
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full bg-white border border-gray-300 py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors font-medium text-gray-700"
+              >
+                <img src="/google.png" alt="Google" className="w-5 h-5 object-contain" />
+                Sign in with Google
+              </button>
 
               {/* Forgot password link */}
               <div className="mt-6 text-center">

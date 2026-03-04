@@ -5,6 +5,7 @@ import { Navbar } from './components/Layout/Navbar';
 import { DashboardStats as DashboardStatsComponent } from './components/Dashboard/DashboardStats';
 import { ExecutiveDashboard } from './components/Dashboard/ExecutiveDashboard';
 import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 import { TicketList } from './components/Tickets/Shared/TicketList';
 import { CreateTicketModal } from './components/Tickets/Shared/CreateTicketModal';
 import { VLTicketEditModal } from './components/Tickets/VolumeShortfall/VLTicketEditModal';
@@ -21,8 +22,7 @@ import { ClientApplicationsView } from './components/Clients/ClientApplicationsV
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { LabResultsModal } from './components/LabResults/LabResultsModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Search, Edit, Settings, Mail, LayoutDashboard, AlertCircle, Clock, Send, CheckCircle } from 'lucide-react';
-import { supabase } from './lib/supabaseClient';
-import { supabase1 } from './lib/supabaseClient';
+import { supabase, supabase1, supabase2 } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
 import { supabaseAdmin } from './lib/supabaseAdminClient';
 import EmailConfirmed from './components/Auth/EmailConfirmed';
@@ -269,6 +269,10 @@ function App() {
     jbId: string;
   } | null>(null);
 
+  // Payment popup state (shown when a Google user tries to sign up without paying)
+  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
+  const [blockedGoogleEmail, setBlockedGoogleEmail] = useState<string | null>(null);
+
   // Get selectedAccountId and clearSelection from context for multi-account support
   const { selectedAccountId, clearSelection } = useAccount();
 
@@ -388,8 +392,98 @@ function App() {
       setActiveView(storedView);
     }
 
-    fetchData(); // Keep existing fetchData call
-  }, []); // Empty dependency array = runs only once on mount
+    fetchData();
+
+    // 🔐 Auth state listener for Google/OAuth login
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // If we already have a currentUser in state that matches this ID, skip
+        if (currentUser?.id === session.user.id) return;
+
+        try {
+          // 1. Check if user already has a profile in public.users (returning user)
+          const { data: publicUser, error: fetchErr } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (fetchErr) throw fetchErr;
+
+          if (publicUser) {
+            // Existing user — log them straight in
+            handleLogin(publicUser);
+          } else {
+            // ── NEW Google user ──
+            // Validate BEFORE we persist anything to public.users
+            const userEmail = session.user.email?.toLowerCase();
+            if (!userEmail) throw new Error("Google account email not found.");
+
+            // Check 1: jobboard_transactions (paid?)
+            const { data: txData } = await supabase2
+              .from('jobboard_transactions')
+              .select('id, full_name')
+              .ilike('email', userEmail)
+              .not('transaction_id', 'is', null)
+              .neq('payment_status', 'failed')
+              .maybeSingle();
+
+            // Check 2: already an existing client (fallback)
+            const { data: existingClient } = await supabase
+              .from('clients')
+              .select('id, company_name')
+              .ilike('company_email', userEmail)
+              .maybeSingle();
+
+            if (txData || existingClient) {
+              // ✅ VALIDATION PASSED — create their public profile
+              const displayName = txData?.full_name || existingClient?.company_name || userEmail;
+              const { data: newUser, error: insertError } = await supabase
+                .from('users')
+                .insert({
+                  id: session.user.id,
+                  email: userEmail,
+                  name: displayName,
+                  role: 'client',
+                  is_active: true
+                })
+                .select()
+                .single();
+
+              if (insertError) throw insertError;
+
+              if (newUser) {
+                handleLogin(newUser);
+                if (!existingClient) {
+                  setClientExists(false);
+                  setActiveView('onboarding');
+                  toast.success('Welcome! Please complete your profile to continue.');
+                } else {
+                  toast.success(`Welcome back, ${displayName}!`);
+                }
+              }
+            } else {
+              // ❌ VALIDATION FAILED — hard-delete from Auth so no trace remains
+              await supabase.auth.signOut();
+              // Use admin client to permanently remove the Auth user
+              await supabaseAdmin.auth.admin.deleteUser(session.user.id);
+              localStorage.removeItem('currentUser');
+              setCurrentUser(null);
+              // Show payment popup
+              setBlockedGoogleEmail(userEmail);
+              setShowPaymentPopup(true);
+            }
+          }
+        } catch (err: any) {
+          console.error('Auth sync error:', err);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -444,6 +538,17 @@ function App() {
 
     fetchClientStatus();
   }, [currentUser?.email, currentUser?.role]);
+
+  // 🚪 Auto-close popup windows after successful login
+  useEffect(() => {
+    if (window.opener && currentUser) {
+      // Add a tiny delay to ensure everything is synced before closing
+      const timer = setTimeout(() => {
+        window.close();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser]);
 
   const getRemainingTimeForReminder = () => {
     if (!pendingReviewData?.client_form_fill_date) return 0;
@@ -2754,6 +2859,79 @@ function App() {
           />
         </BrowserRouter>
       </DialogProvider>
+
+      {/* Google Sign-up: Payment Required Popup */}
+      {showPaymentPopup && (
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 99999,
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '20px',
+              padding: '40px 36px',
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
+              textAlign: 'center',
+              animation: 'fadeInUp 0.3s ease',
+            }}
+          >
+            <div style={{ fontSize: '52px', marginBottom: '16px' }}>🔒</div>
+            <h2 style={{ fontFamily: '"Darker Grotesque"', fontSize: '24px', fontWeight: 700, color: '#1a1a1a', marginBottom: '8px' }}>
+              Payment Required
+            </h2>
+            <p style={{ fontFamily: 'Poppins', fontSize: '14px', color: '#6b7280', marginBottom: '8px', lineHeight: 1.6 }}>
+              The Google account
+            </p>
+            <p style={{ fontFamily: 'Poppins', fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '16px', background: '#f3f4f6', padding: '6px 14px', borderRadius: '8px', display: 'inline-block' }}>
+              {blockedGoogleEmail}
+            </p>
+            <p style={{ fontFamily: 'Poppins', fontSize: '14px', color: '#6b7280', marginBottom: '28px', lineHeight: 1.6 }}>
+              is not linked to any active plan. Please complete a payment to create your ApplyWizz account.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <a
+                href="https://apply-wizz.com/#pricing"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowPaymentPopup(false)}
+                style={{
+                  display: 'block', background: '#77E954', color: '#fff',
+                  padding: '13px 24px', borderRadius: '10px', fontFamily: 'Poppins',
+                  fontWeight: 600, fontSize: '15px', textDecoration: 'none',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#68D045')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#77E954')}
+              >
+                View Plans &amp; Pay →
+              </a>
+              <button
+                onClick={() => { setShowPaymentPopup(false); setBlockedGoogleEmail(null); }}
+                style={{
+                  background: 'none', border: '1px solid #e5e7eb', borderRadius: '10px',
+                  padding: '11px 24px', fontFamily: 'Poppins', fontSize: '14px',
+                  color: '#6b7280', cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <style>{`
+            @keyframes fadeInUp {
+              from { opacity: 0; transform: translateY(20px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+        </div>
+      )}
     </>
   );
 }
