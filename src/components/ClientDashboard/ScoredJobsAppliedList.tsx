@@ -574,11 +574,11 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                                                 }}
                                             />
                                             {/* SVG fallback inline */}
-                                            <ChevronDown
+                                            {/* <ChevronDown
                                                 size={18}
                                                 className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                                                 style={{ color: '#615642' }}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
 
