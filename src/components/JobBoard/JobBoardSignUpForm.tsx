@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { supabase2 } from '../../lib/supabaseClient';
 import { supabaseAdmin } from '../../lib/supabaseAdminClient';
 import { User } from '../../types';
+import { GoogleLogin } from '@react-oauth/google';
 
 type EmailStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 type PopupType = 'invalid' | 'registered' | null;
@@ -26,6 +27,8 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [isLeaving, setIsLeaving] = useState(false);
     const navigate = useNavigate();
+
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     // Typewriter animation states
     const [displayedText, setDisplayedText] = useState('');
@@ -248,6 +251,103 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
                     navigate('/dashboard');
                 }
             }
+        }
+    };
+
+    // ── Google Sign-up via GIS ──────────────────────────────────────────────
+    // Uses GoogleLogin component which provides credential (id_token JWT) directly.
+    // Validates email against jobboard_transactions BEFORE touching Auth.
+    const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+        setGoogleLoading(true);
+        try {
+            const idToken = credentialResponse.credential;
+            if (!idToken) throw new Error('Could not retrieve ID token from Google account.');
+
+            // Decode the JWT payload to get user info (no extra API call needed)
+            const payload = JSON.parse(atob(idToken.split('.')[1]));
+            const userEmail: string = payload.email?.toLowerCase();
+            const userName: string = payload.name || userEmail;
+
+            if (!userEmail) throw new Error('Could not retrieve email from Google account.');
+
+            // Check 1: already an existing client with opted_job_links?
+            const { data: existingClientWithJob } = await supabase
+                .from('clients')
+                .select('id')
+                .ilike('company_email', userEmail)
+                .eq('opted_job_links', true)
+                .maybeSingle();
+
+            if (existingClientWithJob) {
+                setSignUpMessage({ type: 'error', text: 'You are already registered. Please log in.' });
+                return;
+            }
+
+            // Check 2: existing client (fallback - not yet opted in)
+            const { data: existingClient } = await supabase
+                .from('clients')
+                .select('id')
+                .ilike('company_email', userEmail)
+                .maybeSingle();
+
+            // Check 3: payment record in jobboard_transactions
+            const { data: txData } = await supabase2
+                .from('jobboard_transactions')
+                .select('id, full_name')
+                .ilike('email', userEmail)
+                .not('transaction_id', 'is', null)
+                .neq('payment_status', 'failed')
+                .maybeSingle();
+
+            if (!txData && !existingClient) {
+                // ❌ NOT PAID — show error message, do NOT touch Auth
+                setSignUpMessage({ type: 'error', text: 'You have not done payment yet. Please make the payment.' });
+                return;
+            }
+
+            // ✅ VALID — create Supabase session using the id_token (JWT credential)
+            const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: idToken,
+            });
+
+            if (authError) throw authError;
+            if (!authData.user) throw new Error('Sign-in failed.');
+
+            // Check if user already has a profile in public.users
+            const { data: existingUser } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', authData.user.id)
+                .maybeSingle();
+
+            if (existingUser) {
+                // Already has an account — log them in
+                if (onSignUpSuccess) onSignUpSuccess(existingUser as User);
+                return;
+            }
+
+            // New user — create public.users profile
+            const displayName = txData?.full_name || userName;
+            const { data: newUser, error: insertError } = await supabaseAdmin
+                .from('users')
+                .insert({
+                    id: authData.user.id,
+                    email: userEmail,
+                    name: displayName,
+                    role: 'client',
+                    is_active: true,
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+            if (newUser && onSignUpSuccess) onSignUpSuccess(newUser as User);
+
+        } catch (err: any) {
+            setSignUpMessage({ type: 'error', text: err.message || 'Google sign-up failed. Please try again.' });
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
@@ -535,6 +635,41 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
                                     </div>
                                 )}
                             </form>
+
+                            {/* OR Divider */}
+                            <div className="relative my-6">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-gray-200"></div>
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+                                </div>
+                            </div>
+
+                            {/* Google Sign Up Button */}
+                            {googleLoading ? (
+                                <div className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500">
+                                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                    </svg>
+                                    Signing in with Google…
+                                </div>
+                            ) : (
+                                <div className="flex justify-center">
+                                    <GoogleLogin
+                                        onSuccess={handleGoogleSuccess}
+                                        onError={() => {
+                                            setSignUpMessage({ type: 'error', text: 'Google sign-in was cancelled or failed.' });
+                                        }}
+                                        width="400"
+                                        theme="outline"
+                                        size="large"
+                                        text="signup_with"
+                                        shape="rectangular"
+                                    />
+                                </div>
+                            )}
 
                             {/* Already have an account */}
                             <div className="mt-6 text-center">
