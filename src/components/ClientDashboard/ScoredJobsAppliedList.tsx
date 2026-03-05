@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
-    CheckCircle, MapPin, ExternalLink, Loader2, ChevronLeft, ChevronRight,
-    Linkedin, Briefcase, Building2, DollarSign, RefreshCw, ChevronDown,
-    Building, Monitor, ArrowRight, ChevronUp, Calendar
+    CheckCircle, MapPin, Loader2, ChevronLeft, ChevronRight,
+    Linkedin, Briefcase, Building2, DollarSign, ChevronDown,
+    Monitor, ArrowRight, ChevronUp
 } from "lucide-react";
 
 // ✅ Types
@@ -45,48 +45,56 @@ interface ScoredJobsAppliedListProps {
     applywizzId?: string;
 }
 
-// ── Company Logo ──────────────────────────────────────────────────────────────
-const CompanyLogo = ({
-    company,
-    logoUrl,
-}: {
-    company: string;
-    logoUrl: string | null;
-}) => {
+// ── Company Logo (exact match to LinkedInEasyApplyRegularList) ────────────────
+const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
     const [error, setError] = React.useState(false);
-    const firstLetter = company ? company.trim().charAt(0).toUpperCase() : "C";
+    const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
 
-    const boxStyle: React.CSSProperties = {
-        height: "64px",
-        width: "64px",
-        borderRadius: "9px",
-        border: "1px solid #D3D3D3",
-        background: "#F1F1F1",
-        boxShadow: "0 2px 1.4px 0 rgba(0,0,0,0.25)",
-        flexShrink: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+            setError(true);
+        }
     };
 
     if (error || !logoUrl) {
         return (
-            <div style={boxStyle}>
-                <span style={{ color: "#000", fontSize: "24px", fontWeight: 700 }}>
-                    {firstLetter}
-                </span>
+            <div
+                className="shrink-0 inline-flex items-center justify-center text-white text-2xl font-bold"
+                style={{
+                    height: '80px',
+                    width: '80px',
+                    borderRadius: '9px',
+                    border: '1px solid #D3D3D3',
+                    background: '#F1F1F1',
+                    boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+                }}
+            >
+                <span style={{ color: '#000' }}>{firstLetter}</span>
             </div>
         );
     }
 
     return (
-        <div style={boxStyle}>
+        <div
+            className="shrink-0 inline-flex items-center justify-end"
+            style={{
+                height: '80px',
+                width: '80px',
+                padding: '17px 17px 17px 17px',
+                borderRadius: '9px',
+                border: '1px solid #D3D3D3',
+                background: '#F1F1F1',
+                boxShadow: '0 2px 1.4px 0 rgba(0, 0, 0, 0.25)'
+            }}
+        >
             <img
                 src={logoUrl}
                 alt={company}
                 className="object-contain"
-                style={{ width: "48px", height: "48px" }}
+                style={{ width: '80px', height: '80px' }}
                 onError={() => setError(true)}
+                onLoad={handleImageLoad}
             />
         </div>
     );
@@ -98,25 +106,38 @@ function groupJobsByDate(jobs: JobItem[]): { dateLabel: string; dateKey: string;
 
     jobs.forEach((job) => {
         const raw = job.generated_at || job.date_posted;
-        const d = raw ? new Date(raw) : new Date();
-        // Normalize to YYYY-MM-DD for grouping key
-        const key = d.toISOString().split("T")[0];
+        // Parse as local date using YYYY-MM-DD split to avoid timezone shift
+        let key: string;
+        if (raw) {
+            const d = new Date(raw);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            key = `${year}-${month}-${day}`;
+        } else {
+            const now = new Date();
+            key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
         if (!map[key]) map[key] = [];
         map[key].push(job);
     });
 
     // Sort descending (newest first)
     return Object.entries(map)
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([key, groupJobs]) => ({
-            dateKey: key,
-            dateLabel: new Date(key + "T12:00:00").toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-            }),
-            jobs: groupJobs,
-        }));
+        .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+        .map(([key, groupJobs]) => {
+            const [year, month, day] = key.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+            return {
+                dateKey: key,
+                dateLabel: dateObj.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                }),
+                jobs: groupJobs,
+            };
+        });
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -129,9 +150,10 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     const [totalJobs, setTotalJobs] = useState(0);
     const [selectedFilter, setSelectedFilter] = useState<string>("all");
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-    // Track which date groups are expanded (all open by default)
-    const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+    const [expandedDate, setExpandedDate] = useState<string | null>(null);
+    const [datePage, setDatePage] = useState(1);
 
+    const itemsPerPage = 10; // date groups per page
     const pageSize = 50;
 
     const filterOptions = [
@@ -181,11 +203,11 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
             setTotalPages(data.pagination?.total_pages || 1);
             setTotalJobs(data.pagination?.total || 0);
 
-            // Default: expand all date groups
+            // Auto-expand the first date group
             const grouped = groupJobsByDate(fetched);
-            const initExpanded: Record<string, boolean> = {};
-            grouped.forEach((g) => (initExpanded[g.dateKey] = true));
-            setExpandedDates(initExpanded);
+            if (grouped.length > 0) {
+                setExpandedDate(grouped[0].dateKey);
+            }
         } catch (err) {
             console.error("Error fetching applied jobs:", err);
             setError(err instanceof Error ? err.message : "Failed to load applied jobs");
@@ -196,6 +218,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
     useEffect(() => {
         setCurrentPage(1);
+        setExpandedDate(null);
         fetchAppliedJobs(1);
     }, [applywizzId, selectedFilter]);
 
@@ -211,7 +234,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         return () => { if (interval) clearInterval(interval); };
     }, [loading]);
 
-    // ── Pagination ──────────────────────────────────────────────────────────
+    // ── API pagination (for fetching more jobs) ─────────────────────────────
     const handlePreviousPage = () => {
         if (currentPage > 1) { const p = currentPage - 1; setCurrentPage(p); fetchAppliedJobs(p); }
     };
@@ -220,180 +243,201 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     };
     const handlePageClick = (page: number) => { setCurrentPage(page); fetchAppliedJobs(page); };
 
-    // ── Toggle date group ───────────────────────────────────────────────────
-    const toggleDateGroup = (key: string) => {
-        setExpandedDates((prev) => ({ ...prev, [key]: !prev[key] }));
+    // ── Toggle date group (accordion — only one open at a time) ─────────────
+    const toggleDateExpansion = (key: string) => {
+        setExpandedDate((prev) => (prev === key ? null : key));
     };
 
     // ── Helpers ─────────────────────────────────────────────────────────────
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
-        const bgGradient = "linear-gradient(to right, #171717, #353333, #6f6767ff)";
-        if (percentage >= 80) return { label: "Strong Match", bgGradient, textColor: "#00FE24" };
-        if (percentage >= 60) return { label: "Great Match", bgGradient, textColor: "#42FF5C" };
-        return { label: "Good Match", bgGradient, textColor: "#70FF84" };
+        const bgGradient = 'linear-gradient(to right, #171717, #353333, #6f6767ff)';
+        if (percentage >= 80) return { label: 'Strong Match', bgColor: '', bgGradient, textColor: '#00FE24' };
+        if (percentage >= 60) return { label: 'Great Match', bgColor: '', bgGradient, textColor: '#42FF5C' };
+        return { label: 'Good Match', bgColor: '', bgGradient, textColor: '#70FF84' };
     };
 
     const getCompanyDomain = (companyName: string, companyUrl?: string | null): string | null => {
         if (companyUrl) {
             try {
-                const u = new URL(companyUrl.startsWith("http") ? companyUrl : `https://${companyUrl}`);
-                const hostname = u.hostname.replace("www.", "");
-                const social = ["linkedin.com", "indeed.com", "glassdoor.com", "facebook.com", "twitter.com", "x.com", "instagram.com"];
-                if (!social.some((d) => hostname.includes(d))) return hostname;
+                const url = new URL(companyUrl.startsWith('http') ? companyUrl : `https://${companyUrl}`);
+                const hostname = url.hostname.replace('www.', '');
+                const socialDomains = ['linkedin.com', 'indeed.com', 'glassdoor.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com'];
+                if (!socialDomains.some(d => hostname.includes(d))) return hostname;
             } catch { /* fall through */ }
         }
         if (!companyName) return null;
-        const known: Record<string, string> = {
-            apple: "apple.com", google: "google.com", microsoft: "microsoft.com",
-            amazon: "amazon.com", meta: "meta.com", netflix: "netflix.com",
+        const companyDomains: Record<string, string> = {
+            'apple': 'apple.com', 'google': 'google.com', 'microsoft': 'microsoft.com',
+            'amazon': 'amazon.com', 'meta': 'meta.com', 'netflix': 'netflix.com',
+            'linkedin': 'linkedin.com', 'indeed': 'indeed.com', 'walmart': 'walmart.com'
         };
-        const n = companyName.toLowerCase().trim();
-        if (known[n]) return known[n];
-        for (const [k, v] of Object.entries(known)) { if (n.includes(k)) return v; }
-        const clean = n.replace(/\s+(inc|llc|ltd|corp|company|co|federal credit union|credit union|systems)\b/gi, "").replace(/[^a-z0-9]/g, "").trim();
-        return clean ? `${clean}.com` : null;
+        const normalized = companyName.toLowerCase().trim();
+        if (companyDomains[normalized]) return companyDomains[normalized];
+        for (const [key, domain] of Object.entries(companyDomains)) {
+            if (normalized.includes(key)) return domain;
+        }
+        const cleanName = normalized
+            .replace(/\s+(inc|llc|ltd|corp|company|co|federal credit union|credit union|systems)\b/gi, '')
+            .replace(/[^a-z0-9]/g, '')
+            .trim();
+        return cleanName ? `${cleanName}.com` : null;
     };
 
-    // ── Pagination render ───────────────────────────────────────────────────
-    const renderPagination = () => {
-        const maxVisible = 5;
-        let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-        let end = Math.min(totalPages, start + maxVisible - 1);
-        if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
-        const pages: number[] = [];
-        for (let i = start; i <= end; i++) pages.push(i);
-
-        return (
-            <div className="flex items-center justify-between mt-6 px-4">
-                <div className="text-sm text-gray-600">
-                    Showing {jobs.length} of {totalJobs} applied jobs
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={handlePreviousPage} disabled={currentPage === 1}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1">
-                        <ChevronLeft size={16} /> Previous
-                    </button>
-                    {start > 1 && (<>
-                        <button onClick={() => handlePageClick(1)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">1</button>
-                        {start > 2 && <span className="text-gray-400">...</span>}
-                    </>)}
-                    {pages.map((page) => (
-                        <button key={page} onClick={() => handlePageClick(page)}
-                            className={`px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${page === currentPage ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 hover:bg-gray-50"}`}>
-                            {page}
-                        </button>
-                    ))}
-                    {end < totalPages && (<>
-                        {end < totalPages - 1 && <span className="text-gray-400">...</span>}
-                        <button onClick={() => handlePageClick(totalPages)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">{totalPages}</button>
-                    </>)}
-                    <button onClick={handleNextPage} disabled={currentPage === totalPages}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1">
-                        Next <ChevronRight size={16} />
-                    </button>
-                </div>
-            </div>
-        );
-    };
-
-    // ── Job Card ────────────────────────────────────────────────────────────
-    const renderJobCard = (job: JobItem, index: number) => {
+    // ── Job Card — exact same as LinkedInEasyApplyRegularList ───────────────
+    const renderJobCard = (job: JobItem) => {
         const matchData = getMatchQuality(job.score || 0);
         const percentage = Math.round(job.score || 0);
         const companyDomain = getCompanyDomain(job.company, job.company_url);
-        const faviconUrl = job.company_logo_url ||
-            (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
+        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null);
 
         return (
-            <div
-                key={job.id}
-                className="bg-white rounded-xl overflow-hidden transition-all duration-300 hover:shadow-md"
-                style={{ border: "1px solid #E5E7EB", marginBottom: "0" }}
-            >
-                <div className="flex items-center gap-6 p-5">
-                    {/* Serial number */}
-                    <div
-                        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-gray-500"
-                        style={{ background: "#F3F4F6", minWidth: "2rem" }}
-                    >
-                        {index + 1}
-                    </div>
+            <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
+                <div className="flex items-center gap-12 p-6">
+                    {/* Left: Company Avatar & Job Info */}
+                    <div className="flex-1">
+                        {/* Header: Logo, Title, and Company */}
+                        <div className="flex gap-3 items-start mb-1">
+                            <CompanyLogo company={job.company} logoUrl={faviconUrl} fallbackColor="bg-blue-600" />
+                            <div className="flex-1 min-w-0 mt-3">
+                                <h3
+                                    className="text-xl font-bold mb-1"
+                                    style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
+                                    {job.title || "Untitled Role"}
+                                </h3>
+                                <p
+                                    className="text-base text-gray-600"
+                                    style={{ color: "#282828", fontFamily: "Noto Sans", fontSize: "12px" }}
+                                >
+                                    {job.company || "Unknown Company"}
+                                </p>
+                            </div>
+                        </div>
 
-                    {/* Logo */}
-                    <CompanyLogo company={job.company} logoUrl={faviconUrl} />
+                        {/* Horizontal Line */}
+                        <hr className="my-3 border-gray-100" style={{ maxWidth: "80%" }} />
 
-                    {/* Job Info */}
-                    <div className="flex-1 min-w-0">
-                        <h3
-                            className="font-bold truncate"
-                            style={{ color: "#282828", fontFamily: "Darker Grotesque, sans-serif", fontSize: "18px", lineHeight: "1.3" }}
-                        >
-                            {job.title || "Untitled Role"}
-                        </h3>
-                        <p className="text-sm text-gray-600 truncate" style={{ fontFamily: "Noto Sans, sans-serif" }}>
-                            {job.company || "Unknown Company"}
-                        </p>
+                        <div className="flex gap-12 mt-3">
+                            {(() => {
+                                const details = [];
+                                if (job.location) {
+                                    details.push(
+                                        <div key="loc" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <MapPin size={16} style={{ color: "#282828" }} />
+                                            <span>{job.location}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.salary) {
+                                    details.push(
+                                        <div key="sal" className="flex items-center gap-1.5" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <DollarSign size={16} style={{ color: "#282828" }} />
+                                            <span>Salary: {job.salary}</span>
+                                        </div>
+                                    );
+                                }
+                                if (job.experience_level) {
+                                    details.push(
+                                        <span key="exp" className="px-2 py-0.5 flex items-center gap-1" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <Briefcase size={16} />
+                                            {job.experience_level}
+                                        </span>
+                                    );
+                                }
+                                if (job.work_type) {
+                                    details.push(
+                                        <span key="work" className="px-2 py-0.5 flex items-center gap-1" style={{ fontFamily: "Noto Sans", fontSize: "12px", color: "#282828" }}>
+                                            <Monitor size={16} />
+                                            {job.work_type}
+                                        </span>
+                                    );
+                                }
 
-                        {/* Meta chips */}
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                            {job.location && (
-                                <span className="flex items-center gap-1 text-xs text-gray-500">
-                                    <MapPin size={13} /> {job.location}
-                                </span>
-                            )}
-                            {job.experience_level && (
-                                <span className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Briefcase size={13} /> {job.experience_level}
-                                </span>
-                            )}
-                            {job.work_type && (
-                                <span className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Monitor size={13} /> {job.work_type}
-                                </span>
-                            )}
-                            {job.salary && (
-                                <span className="flex items-center gap-1 text-xs text-gray-500">
-                                    <DollarSign size={13} /> {job.salary}
-                                </span>
-                            )}
+                                const columns = [];
+                                for (let i = 0; i < details.length; i += 2) {
+                                    columns.push(
+                                        <div key={`col-${i}`} className="flex flex-col gap-3">
+                                            {details.slice(i, i + 2)}
+                                        </div>
+                                    );
+                                }
+                                return columns;
+                            })()}
                         </div>
                     </div>
 
-                    {/* Match score pill */}
-                    <div
-                        className="flex-shrink-0 flex flex-col items-center justify-center rounded-xl px-4 py-3 shadow-md"
-                        style={{ background: matchData.bgGradient, minWidth: "90px" }}
-                    >
-                        <span className="text-2xl font-bold text-white">{percentage}%</span>
-                        <span className="text-xs font-semibold text-white mt-0.5 text-center" style={{ color: matchData.textColor }}>
-                            {matchData.label}
-                        </span>
+                    {/* Middle: VIEW JOB Button */}
+                    <div className="flex-shrink-0 flex items-center">
+                        <a
+                            href={job.url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF", textDecoration: "none" }}
+                        >
+                            <span>VIEW JOB</span>
+                            <ArrowRight className="h-5 w-5 text-white" />
+                        </a>
                     </div>
 
-                    {/* View Job button */}
-                    <a
-                        href={job.url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm shadow hover:shadow-md transition-all duration-200"
-                        style={{ color: "#FFFFFF", backgroundColor: "#2C76FF", textDecoration: "none" }}
-                    >
-                        VIEW JOB <ArrowRight size={16} />
-                    </a>
+                    {/* Right: Match Score Card (same circular SVG as LinkedIn) */}
+                    {percentage >= 20 && (
+                        <div
+                            className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                            style={{ background: matchData.bgGradient }}
+                        >
+                            <div className="relative w-20 h-20 mb-3">
+                                <svg className="w-20 h-20 transform -rotate-90">
+                                    <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
+                                    <circle
+                                        cx="40" cy="40" r="32" strokeWidth="6" fill="none"
+                                        strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
+                                        stroke={matchData.textColor}
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-white">{percentage}%</span>
+                                </div>
+                            </div>
+                            <span className="text-xs font-bold text-white tracking-wide text-center">
+                                {matchData.label}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Bottom spacer (keeps consistent padding with LinkedIn card) */}
+                <div className="px-6 pb-4 flex items-center gap-3">
+                    <div className="flex-1"></div>
                 </div>
             </div>
         );
     };
 
     // ── Skeleton ────────────────────────────────────────────────────────────
-    const SkeletonDateGroup = () => (
-        <div className="mb-4 animate-pulse">
-            <div className="h-14 rounded-xl bg-gray-200 mb-2" />
-            <div className="space-y-2 pl-4">
-                {[1, 2].map((i) => (
-                    <div key={i} className="h-20 rounded-xl bg-gray-100 border border-gray-200" />
-                ))}
+    const SkeletonJobCard = () => (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
+            <div className="flex items-start gap-6 p-6">
+                <div className="flex-1 flex gap-4">
+                    <div className="flex-shrink-0">
+                        <div className="w-16 h-16 rounded-xl bg-gray-200"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                            <div className="h-4 w-16 bg-gray-200 rounded-full"></div>
+                        </div>
+                        <div className="h-6 w-3/4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-5 w-1/2 bg-gray-200 rounded mb-3"></div>
+                        <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+                <div className="flex-shrink-0 bg-gray-200 rounded-2xl p-6 w-32 h-40"></div>
+            </div>
+            <div className="px-6 pb-6 flex items-center gap-3">
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+                <div className="flex-1"></div>
+                <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
             </div>
         </div>
     );
@@ -419,9 +463,9 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                     </div>
                 </div>
                 <div className="space-y-4">
-                    <SkeletonDateGroup />
-                    <SkeletonDateGroup />
-                    <SkeletonDateGroup />
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
+                    <SkeletonJobCard />
                 </div>
             </div>
         );
@@ -438,6 +482,15 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
     // ── Main render ─────────────────────────────────────────────────────────
     const dateGroups = groupJobsByDate(jobs);
+
+    // Paginate over date groups (client-side, same as LinkedIn component)
+    const totalDatePages = Math.ceil(dateGroups.length / itemsPerPage);
+    const dateStartIndex = (datePage - 1) * itemsPerPage;
+    const currentDateGroups = dateGroups.slice(dateStartIndex, dateStartIndex + itemsPerPage);
+
+    const handleDatePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalDatePages) setDatePage(newPage);
+    };
 
     return (
         <div>
@@ -489,74 +542,64 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                 </div>
             ) : (
                 <>
-                    {/* ── Date Groups ──────────────────────────────────────── */}
-                    <div className="space-y-3">
-                        {dateGroups.map((group, groupIdx) => {
-                            const isOpen = expandedDates[group.dateKey] !== false; // default open
+                    {/* ── Date Groups — exact LinkedIn style ───────────────── */}
+                    <div className="space-y-2">
+                        {currentDateGroups.map((group, index) => {
+                            const isExpanded = expandedDate === group.dateKey;
+
                             return (
                                 <div key={group.dateKey}>
-                                    {/* Date header row — matches reference image style */}
-                                    <button
-                                        onClick={() => toggleDateGroup(group.dateKey)}
-                                        className="w-full flex items-center justify-between px-5 py-4 rounded-xl transition-all duration-200 focus:outline-none"
-                                        style={{
-                                            background: "linear-gradient(135deg, #e8f5e9 0%, #d4edda 100%)",
-                                            border: "1px solid #b2dfdb",
-                                            cursor: "pointer",
-                                        }}
+                                    {/* Date row — exact LinkedIn #E3FFE7 style, no serial number */}
+                                    <div
+                                        onClick={() => toggleDateExpansion(group.dateKey)}
+                                        className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
+                                        style={{ backgroundColor: '#E3FFE7' }}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            {/* Group number badge */}
+                                        <div className="flex items-center gap-32">
                                             <span
-                                                className="flex items-center justify-center rounded-full text-sm font-bold"
-                                                style={{
-                                                    width: "32px",
-                                                    height: "32px",
-                                                    background: "#2d6a4f",
-                                                    color: "#fff",
-                                                    flexShrink: 0,
-                                                }}
+                                                className="font-medium"
+                                                style={{ color: '#615642' }}
                                             >
-                                                {groupIdx + 1}
-                                            </span>
-
-                                            {/* Date label */}
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={16} style={{ color: "#2d6a4f" }} />
-                                                <span
-                                                    className="font-semibold"
-                                                    style={{ color: "#2d6a4f", fontSize: "15px", fontFamily: "Noto Sans, sans-serif" }}
-                                                >
-                                                    {group.dateLabel}
-                                                </span>
-                                            </div>
-
-                                            {/* Job count badge */}
-                                            <span
-                                                className="text-xs font-bold px-2.5 py-0.5 rounded-full"
-                                                style={{ background: "#2d6a4f", color: "#fff" }}
-                                            >
-                                                {group.jobs.length} {group.jobs.length === 1 ? "job" : "jobs"}
+                                                {group.dateLabel}
                                             </span>
                                         </div>
-
-                                        {/* Chevron toggle */}
-                                        <span style={{ color: "#2d6a4f" }}>
-                                            {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                        </span>
-                                    </button>
+                                        <div className="flex items-center gap-3">
+                                            <img
+                                                src="/chevron-icon.svg"
+                                                alt="chevron"
+                                                className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                onError={(e) => {
+                                                    // Fallback if chevron SVG not available
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
+                                            {/* SVG fallback inline */}
+                                            <ChevronDown
+                                                size={18}
+                                                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                style={{ color: '#615642' }}
+                                            />
+                                        </div>
+                                    </div>
 
                                     {/* Collapsible job cards */}
-                                    {isOpen && (
-                                        <div
-                                            className="mt-2 space-y-2 pl-2"
-                                            style={{
-                                                borderLeft: "3px solid #b2dfdb",
-                                                marginLeft: "16px",
-                                                paddingLeft: "12px",
-                                            }}
-                                        >
-                                            {group.jobs.map((job, idx) => renderJobCard(job, idx))}
+                                    {isExpanded && (
+                                        <div className="mt-3 space-y-4">
+                                            {group.jobs
+                                                .sort((a, b) => {
+                                                    const scoreDiff = (b.score || 0) - (a.score || 0);
+                                                    if (scoreDiff !== 0) return scoreDiff;
+                                                    const countFields = (job: JobItem) => {
+                                                        let count = 0;
+                                                        if (job.company) count++;
+                                                        if (job.salary) count++;
+                                                        if (job.experience_level) count++;
+                                                        if (job.work_type) count++;
+                                                        return count;
+                                                    };
+                                                    return countFields(b) - countFields(a);
+                                                })
+                                                .map((job) => renderJobCard(job))}
                                         </div>
                                     )}
                                 </div>
@@ -564,8 +607,55 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                         })}
                     </div>
 
-                    {/* ── Pagination ───────────────────────────────────────── */}
-                    {totalPages > 1 && renderPagination()}
+                    {/* ── Date-group pagination — exact LinkedIn style ──────── */}
+                    {totalDatePages > 1 && (
+                        <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                            <button
+                                onClick={() => handleDatePageChange(datePage - 1)}
+                                disabled={datePage === 1}
+                                className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${datePage === 1
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-[#171717] text-white hover:bg-black'
+                                    }`}
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+
+                            <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                                {String(datePage).padStart(2, '0')}
+                            </span>
+
+                            <button
+                                onClick={() => handleDatePageChange(datePage + 1)}
+                                disabled={datePage === totalDatePages}
+                                className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${datePage === totalDatePages
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-[#171717] text-white hover:bg-black'
+                                    }`}
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── API-level pagination (when totalPages > 1) ────────── */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-4 px-4">
+                            <div className="text-sm text-gray-600">
+                                Showing page {currentPage} of {totalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handlePreviousPage} disabled={currentPage === 1}
+                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1">
+                                    <ChevronLeft size={16} /> Previous
+                                </button>
+                                <button onClick={handleNextPage} disabled={currentPage === totalPages}
+                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1">
+                                    Next <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>
