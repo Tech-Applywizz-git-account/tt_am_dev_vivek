@@ -43,6 +43,7 @@ interface PaginatedResponse {
 
 interface ScoredJobsAppliedListProps {
     applywizzId?: string;
+    applyType?: string; // Optional filter e.g. "REGULAR", "EASY_APPLY"
 }
 
 // ── Company Logo (exact match to LinkedInEasyApplyRegularList) ────────────────
@@ -141,7 +142,7 @@ function groupJobsByDate(jobs: JobItem[]): { dateLabel: string; dateKey: string;
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizzId }) => {
+const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizzId, applyType }) => {
     const [jobs, setJobs] = useState<JobItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -186,6 +187,9 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
             let url = `${apiUrl}/api/job-links?lead_id=${applywizzId}&page=${page}&page_size=${pageSize}&status=Completed`;
 
+            // Filter by apply_type if specified (e.g. "REGULAR" for career portal jobs)
+            if (applyType) url += `&apply_type=${applyType}`;
+
             if (selectedFilter === "linkedin") url += `&source=LINKEDIN`;
             else if (selectedFilter === "indeed") url += `&source=INDEED`;
             else if (selectedFilter === "staffing") url += `&industry_type=true`;
@@ -220,7 +224,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         setCurrentPage(1);
         setExpandedDate(null);
         fetchAppliedJobs(1);
-    }, [applywizzId, selectedFilter]);
+    }, [applywizzId, selectedFilter, applyType]);
 
     // Cycle loading messages
     useEffect(() => {

@@ -2413,8 +2413,10 @@ function App() {
                   setExpandedDate={setExpandedDate}
                 />
               ) : (
-                <ApplicationSummaryList
+                // Regular clients: show career portal APPLIED jobs (status=Completed, apply_type=REGULAR)
+                <ScoredJobsAppliedList
                   applywizzId={applywizzId}
+                  applyType="REGULAR"
                 />
               )
             ) : (
