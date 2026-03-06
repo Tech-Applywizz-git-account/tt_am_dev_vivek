@@ -2413,10 +2413,9 @@ function App() {
                   setExpandedDate={setExpandedDate}
                 />
               ) : (
-                // Regular clients: show career portal APPLIED jobs (status=Completed, apply_type=REGULAR)
-                <ScoredJobsAppliedList
+                // Regular clients: fetch summary from Karmafy database (client-tasks)
+                <ApplicationSummaryList
                   applywizzId={applywizzId}
-                  applyType="REGULAR"
                 />
               )
             ) : (
