@@ -1995,37 +1995,19 @@ function App() {
             </div>
             {currentUser?.role === 'client' ? (
               <>
-                {optedJobLinks ? (
-                  <>
-                    <ScoredJobsDashboard applywizzId={applywizzId} />
-                    <ScoredJobsRegularList
-                      ref={scoredJobsRef}
-                      applywizzId={applywizzId}
-                      showCalendar={showCalendar}
-                      setShowCalendar={setShowCalendar}
-                      filteredDate={filteredDate}
-                      setFilteredDate={setFilteredDate}
-                      expandedDate={expandedDate}
-                      setExpandedDate={setExpandedDate}
-                      onJobsEmpty={handleJobsEmpty}
-                      onLoadingChange={handleJobsLoading}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <ApplicationsOverTime
-                      data={clientDashboardData}
-                      loading={clientDashboardLoading}
-                      error={clientDashboardError}
-                    />
-                    <ApplicationSummaryList
-                      data={clientDashboardData}
-                      loading={clientDashboardLoading}
-                      error={clientDashboardError}
-                      applywizzId={applywizzId}
-                    />
-                  </>
-                )}
+                <ScoredJobsDashboard applywizzId={applywizzId} />
+                <ScoredJobsRegularList
+                  ref={scoredJobsRef}
+                  applywizzId={applywizzId}
+                  showCalendar={showCalendar}
+                  setShowCalendar={setShowCalendar}
+                  filteredDate={filteredDate}
+                  setFilteredDate={setFilteredDate}
+                  expandedDate={expandedDate}
+                  setExpandedDate={setExpandedDate}
+                  onJobsEmpty={handleJobsEmpty}
+                  onLoadingChange={handleJobsLoading}
+                />
               </>
             ) : (
               <>
@@ -2404,25 +2386,16 @@ function App() {
             </div>
 
             {currentUser?.role === 'client' ? (
-              optedJobLinks ? (
-                <ScoredJobsRegularList
-                  ref={scoredJobsRef}
-                  applywizzId={applywizzId}
-                  showCalendar={showCalendar}
-                  setShowCalendar={setShowCalendar}
-                  filteredDate={filteredDate}
-                  setFilteredDate={setFilteredDate}
-                  expandedDate={expandedDate}
-                  setExpandedDate={setExpandedDate}
-                />
-              ) : (
-                <ApplicationSummaryList
-                  data={clientDashboardData}
-                  loading={clientDashboardLoading}
-                  error={clientDashboardError}
-                  applywizzId={applywizzId}
-                />
-              )
+              <ScoredJobsRegularList
+                ref={scoredJobsRef}
+                applywizzId={applywizzId}
+                showCalendar={showCalendar}
+                setShowCalendar={setShowCalendar}
+                filteredDate={filteredDate}
+                setFilteredDate={setFilteredDate}
+                expandedDate={expandedDate}
+                setExpandedDate={setExpandedDate}
+              />
             ) : (
               <div className="bg-white p-4 rounded-lg shadow">
                 <p className="text-gray-500">Not available for your role.</p>
