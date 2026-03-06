@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Check } from "lucide-react";
 
 
@@ -33,21 +33,76 @@ interface JobsResponse {
 type JobsData = Record<string, JobsResponse>;
 
 interface ApplicationSummaryListProps {
-  data: TaskCount[];
+  data?: TaskCount[];
   loading?: boolean;
   error?: string;
   applywizzId?: string;
 }
 
 const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
-  data,
-  loading = false,
-  error = "",
+  data: propData,
+  loading: propLoading = false,
+  error: propError = "",
   applywizzId
 }) => {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [jobsData, setJobsData] = useState<JobsData>({});
   const [jobsLoading, setJobsLoading] = useState<Record<string, boolean>>({});
+
+  // Self-fetched summary state
+  const [selfData, setSelfData] = useState<TaskCount[]>([]);
+  const [selfLoading, setSelfLoading] = useState(false);
+  const [selfError, setSelfError] = useState("");
+  const [hasFetched, setHasFetched] = useState(false);
+
+  // Fetch own summary data when applywizzId is available
+  useEffect(() => {
+    if (!applywizzId) return;
+
+    const fetchSummary = async () => {
+      setSelfLoading(true);
+      setSelfError("");
+      try {
+        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+        if (!apiUrl) throw new Error("VITE_EXTERNAL_API_URL is not defined");
+
+        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}`);
+        if (!response.ok) throw new Error(`Failed to fetch summary: ${response.status}`);
+
+        const apiData = await response.json();
+
+        // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
+        const allDates = new Set([
+          ...Object.keys(apiData.completed_tasks || {}),
+          ...Object.keys(apiData.easy_apply_tasks || {}),
+        ]);
+
+        const formatted: TaskCount[] = Array.from(allDates)
+          .map(date => ({
+            date,
+            regularCount: Number(apiData.completed_tasks?.[date] || 0),
+            easyApplyCount: Number(apiData.easy_apply_tasks?.[date] || 0),
+          }))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setSelfData(formatted);
+      } catch (err) {
+        setSelfError(err instanceof Error ? err.message : "Failed to load summary");
+      } finally {
+        setSelfLoading(false);
+        setHasFetched(true);
+      }
+    };
+
+    fetchSummary();
+  }, [applywizzId]);
+
+  // Determine which data, loading, and error to use:
+  // Prefer self-fetched data when propData is not provided or empty
+  const hasPropData = propData != null && propData.length > 0;
+  const data = hasPropData ? propData : selfData;
+  const loading = hasPropData ? propLoading : (propLoading || selfLoading);
+  const error = hasPropData ? propError : (propError || selfError);
 
   // Status options for the dropdown
   const statusOptions = [
