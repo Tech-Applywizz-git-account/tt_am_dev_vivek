@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle, MapPin, ExternalLink, Loader2, ChevronLeft, ChevronRight, Linkedin, Briefcase, Building2, DollarSign, RefreshCw, ChevronDown, Building, Monitor, ArrowRight } from "lucide-react";
+import {
+    CheckCircle, MapPin, Loader2, ChevronLeft, ChevronRight,
+    Linkedin, Briefcase, Building2, DollarSign, ChevronDown,
+    Monitor, ArrowRight, ChevronUp
+} from "lucide-react";
 
 // ✅ Types
 interface JobItem {
@@ -41,17 +45,25 @@ interface ScoredJobsAppliedListProps {
     applywizzId?: string;
 }
 
+// ── Company Logo (exact match to LinkedInEasyApplyRegularList) ────────────────
 const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { company: string, logoUrl: string | null, fallbackColor?: string }) => {
     const [error, setError] = React.useState(false);
     const firstLetter = company ? company.trim().charAt(0).toUpperCase() : 'C';
 
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth < 16 || img.naturalHeight < 16) {
+            setError(true);
+        }
+    };
+
     if (error || !logoUrl) {
         return (
             <div
-                className="shrink-0 inline-flex items-center justify-end text-white text-2xl font-bold"
+                className="shrink-0 inline-flex items-center justify-center text-white text-2xl font-bold"
                 style={{
-                    height: '160px',
-                    padding: '17px 13px 18px 22px',
+                    height: '80px',
+                    width: '80px',
                     borderRadius: '9px',
                     border: '1px solid #D3D3D3',
                     background: '#F1F1F1',
@@ -82,11 +94,53 @@ const CompanyLogo = ({ company, logoUrl, fallbackColor = 'bg-blue-600' }: { comp
                 className="object-contain"
                 style={{ width: '80px', height: '80px' }}
                 onError={() => setError(true)}
+                onLoad={handleImageLoad}
             />
         </div>
     );
 };
 
+// ── Helper: group jobs by date ────────────────────────────────────────────────
+function groupJobsByDate(jobs: JobItem[]): { dateLabel: string; dateKey: string; jobs: JobItem[] }[] {
+    const map: Record<string, JobItem[]> = {};
+
+    jobs.forEach((job) => {
+        const raw = job.generated_at || job.date_posted;
+        // Parse as local date using YYYY-MM-DD split to avoid timezone shift
+        let key: string;
+        if (raw) {
+            const d = new Date(raw);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            key = `${year}-${month}-${day}`;
+        } else {
+            const now = new Date();
+            key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+        if (!map[key]) map[key] = [];
+        map[key].push(job);
+    });
+
+    // Sort descending (newest first)
+    return Object.entries(map)
+        .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+        .map(([key, groupJobs]) => {
+            const [year, month, day] = key.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+            return {
+                dateKey: key,
+                dateLabel: dateObj.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                }),
+                jobs: groupJobs,
+            };
+        });
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizzId }) => {
     const [jobs, setJobs] = useState<JobItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -94,18 +148,20 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalJobs, setTotalJobs] = useState(0);
-    const [selectedFilter, setSelectedFilter] = useState<string>('all');
+    const [selectedFilter, setSelectedFilter] = useState<string>("all");
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+    const [expandedDate, setExpandedDate] = useState<string | null>(null);
+    const [datePage, setDatePage] = useState(1);
+
+    const itemsPerPage = 10; // date groups per page
     const pageSize = 50;
 
     const filterOptions = [
-        { value: 'all', label: 'All Applied Jobs', icon: CheckCircle },
-        { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
-        // { value: 'indeed', label: 'Indeed', icon: Briefcase },
-        { value: 'staffing', label: 'Staffing Agencies', icon: Building2 },
-        { value: 'c2c', label: 'C2C', icon: DollarSign },
-        { value: 'w2', label: 'W2', icon: Briefcase },
-        // { value: 'c2c-w2', label: 'C2C,W2', icon: RefreshCw },
+        { value: "all", label: "All Applied Jobs", icon: CheckCircle },
+        { value: "linkedin", label: "LinkedIn", icon: Linkedin },
+        { value: "staffing", label: "Staffing Agencies", icon: Building2 },
+        { value: "c2c", label: "C2C", icon: DollarSign },
+        { value: "w2", label: "W2", icon: Briefcase },
     ];
 
     const loadingMessages = [
@@ -115,53 +171,43 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         "Preparing your job list...",
     ];
 
-    const currentMessages = loadingMessages;
-
-    // Fetch applied jobs
+    // ── Fetch ───────────────────────────────────────────────────────────────
     const fetchAppliedJobs = async (page: number = 1) => {
         if (!applywizzId) {
             setError("Applywizz ID not available");
             return;
         }
-
         try {
             setLoading(true);
             setError("");
 
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
-            if (!apiUrl) {
-                throw new Error('VITE_EXTERNAL_API_URL is not defined');
-            }
+            if (!apiUrl) throw new Error("VITE_EXTERNAL_API_URL is not defined");
 
             let url = `${apiUrl}/api/job-links?lead_id=${applywizzId}&page=${page}&page_size=${pageSize}&status=Completed`;
 
-            // Add filter based on selection
-            if (selectedFilter === 'linkedin') {
-                url += `&source=LINKEDIN`;
-            } else if (selectedFilter === 'indeed') {
-                url += `&source=INDEED`;
-            } else if (selectedFilter === 'staffing') {
-                url += `&industry_type=true`;
-            } else if (selectedFilter === 'c2c') {
-                url += `&job_type=C2C`;
-            } else if (selectedFilter === 'w2') {
-                url += `&job_type=W2`;
-            } else if (selectedFilter === 'c2c-w2') {
-                url += `&job_type=C2C,W2`;
-            }
+            if (selectedFilter === "linkedin") url += `&source=LINKEDIN`;
+            else if (selectedFilter === "indeed") url += `&source=INDEED`;
+            else if (selectedFilter === "staffing") url += `&industry_type=true`;
+            else if (selectedFilter === "c2c") url += `&job_type=C2C`;
+            else if (selectedFilter === "w2") url += `&job_type=W2`;
+            else if (selectedFilter === "c2c-w2") url += `&job_type=C2C,W2`;
 
             const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch applied jobs: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Failed to fetch applied jobs: ${response.status}`);
 
             const data: PaginatedResponse = await response.json();
-
-            setJobs(data.jobs || []);
+            const fetched = data.jobs || [];
+            setJobs(fetched);
             setCurrentPage(data.pagination?.page || 1);
             setTotalPages(data.pagination?.total_pages || 1);
             setTotalJobs(data.pagination?.total || 0);
+
+            // Auto-expand the first date group
+            const grouped = groupJobsByDate(fetched);
+            if (grouped.length > 0) {
+                setExpandedDate(grouped[0].dateKey);
+            }
         } catch (err) {
             console.error("Error fetching applied jobs:", err);
             setError(err instanceof Error ? err.message : "Failed to load applied jobs");
@@ -172,6 +218,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
 
     useEffect(() => {
         setCurrentPage(1);
+        setExpandedDate(null);
         fetchAppliedJobs(1);
     }, [applywizzId, selectedFilter]);
 
@@ -181,52 +228,27 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         if (loading) {
             setLoadingMessageIndex(0);
             interval = setInterval(() => {
-                setLoadingMessageIndex((prev) => (prev + 1) % currentMessages.length);
+                setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
             }, 1500);
         }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [loading, currentMessages.length]);
+        return () => { if (interval) clearInterval(interval); };
+    }, [loading]);
 
-    // Pagination handlers
+    // ── API pagination (for fetching more jobs) ─────────────────────────────
     const handlePreviousPage = () => {
-        if (currentPage > 1) {
-            const newPage = currentPage - 1;
-            setCurrentPage(newPage);
-            fetchAppliedJobs(newPage);
-        }
+        if (currentPage > 1) { const p = currentPage - 1; setCurrentPage(p); fetchAppliedJobs(p); }
     };
-
     const handleNextPage = () => {
-        if (currentPage < totalPages) {
-            const newPage = currentPage + 1;
-            setCurrentPage(newPage);
-            fetchAppliedJobs(newPage);
-        }
+        if (currentPage < totalPages) { const p = currentPage + 1; setCurrentPage(p); fetchAppliedJobs(p); }
+    };
+    const handlePageClick = (page: number) => { setCurrentPage(page); fetchAppliedJobs(page); };
+
+    // ── Toggle date group (accordion — only one open at a time) ─────────────
+    const toggleDateExpansion = (key: string) => {
+        setExpandedDate((prev) => (prev === key ? null : key));
     };
 
-    const handlePageClick = (page: number) => {
-        setCurrentPage(page);
-        fetchAppliedJobs(page);
-    };
-
-    // Helper functions
-    const getTimeAgo = (dateString: string): string => {
-        const now = new Date();
-        const posted = new Date(dateString);
-        const diffMs = now.getTime() - posted.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-        if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-        return posted.toLocaleDateString();
-    };
-
+    // ── Helpers ─────────────────────────────────────────────────────────────
     const getMatchQuality = (score: number) => {
         const percentage = Math.round(score);
         const bgGradient = 'linear-gradient(to right, #171717, #353333, #6f6767ff)';
@@ -240,19 +262,15 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
             try {
                 const url = new URL(companyUrl.startsWith('http') ? companyUrl : `https://${companyUrl}`);
                 const hostname = url.hostname.replace('www.', '');
-                // Skip social media/job board domains
                 const socialDomains = ['linkedin.com', 'indeed.com', 'glassdoor.com', 'facebook.com', 'twitter.com', 'x.com', 'instagram.com'];
-                if (!socialDomains.some(d => hostname.includes(d))) {
-                    return hostname;
-                }
-            } catch (e) {
-                // fall through to name-based logic
-            }
+                if (!socialDomains.some(d => hostname.includes(d))) return hostname;
+            } catch { /* fall through */ }
         }
         if (!companyName) return null;
         const companyDomains: Record<string, string> = {
             'apple': 'apple.com', 'google': 'google.com', 'microsoft': 'microsoft.com',
             'amazon': 'amazon.com', 'meta': 'meta.com', 'netflix': 'netflix.com',
+            'linkedin': 'linkedin.com', 'indeed': 'indeed.com', 'walmart': 'walmart.com'
         };
         const normalized = companyName.toLowerCase().trim();
         if (companyDomains[normalized]) return companyDomains[normalized];
@@ -266,94 +284,12 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         return cleanName ? `${cleanName}.com` : null;
     };
 
-    // Render pagination
-    const renderPagination = () => {
-        const pages = [];
-        const maxVisiblePages = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-        if (endPage - startPage < maxVisiblePages - 1) {
-            startPage = Math.max(1, endPage - maxVisiblePages + 1);
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            pages.push(i);
-        }
-
-        return (
-            <div className="flex items-center justify-between mt-6 px-4">
-                <div className="text-sm text-gray-600">
-                    Showing {jobs.length} of {totalJobs} applied jobs
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handlePreviousPage}
-                        disabled={currentPage === 1}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1"
-                    >
-                        <ChevronLeft size={16} />
-                        Previous
-                    </button>
-
-                    {startPage > 1 && (
-                        <>
-                            <button
-                                onClick={() => handlePageClick(1)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
-                            >
-                                1
-                            </button>
-                            {startPage > 2 && <span className="text-gray-400">...</span>}
-                        </>
-                    )}
-
-                    {pages.map(page => (
-                        <button
-                            key={page}
-                            onClick={() => handlePageClick(page)}
-                            className={`px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${page === currentPage
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'border-gray-300 hover:bg-gray-50'
-                                }`}
-                        >
-                            {page}
-                        </button>
-                    ))}
-
-                    {endPage < totalPages && (
-                        <>
-                            {endPage < totalPages - 1 && <span className="text-gray-400">...</span>}
-                            <button
-                                onClick={() => handlePageClick(totalPages)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
-                            >
-                                {totalPages}
-                            </button>
-                        </>
-                    )}
-
-                    <button
-                        onClick={handleNextPage}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1"
-                    >
-                        Next
-                        <ChevronRight size={16} />
-                    </button>
-                </div>
-            </div>
-        );
-    };
-
-    // Render job card
+    // ── Job Card — exact same as LinkedInEasyApplyRegularList ───────────────
     const renderJobCard = (job: JobItem) => {
         const matchData = getMatchQuality(job.score || 0);
         const percentage = Math.round(job.score || 0);
-        const timeAgo = getTimeAgo(job.generated_at);
         const companyDomain = getCompanyDomain(job.company, job.company_url);
-        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128&default_icon=404` : null);
+        const faviconUrl = job.company_logo_url || (companyDomain ? `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128` : null);
 
         return (
             <div key={job.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100" style={{ border: "1px solid #000000", backgroundColor: "#FFFFFF" }}>
@@ -369,7 +305,6 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                                     style={{ color: "#282828", fontFamily: "Darker Grotesque", fontSize: "24px" }}>
                                     {job.title || "Untitled Role"}
                                 </h3>
-
                                 <p
                                     className="text-base text-gray-600"
                                     style={{ color: "#282828", fontFamily: "Noto Sans", fontSize: "12px" }}
@@ -379,8 +314,9 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                             </div>
                         </div>
 
-                        {/* Horizontal Line below logo and header info */}
+                        {/* Horizontal Line */}
                         <hr className="my-3 border-gray-100" style={{ maxWidth: "80%" }} />
+
                         <div className="flex gap-12 mt-3">
                             {(() => {
                                 const details = [];
@@ -437,78 +373,67 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                             target="_blank"
                             rel="noopener noreferrer"
                             className="px-6 py-2.5 font-bold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF" }}
+                            style={{ color: "#FFFFFF", backgroundColor: "#2C76FF", textDecoration: "none" }}
                         >
                             <span>VIEW JOB</span>
                             <ArrowRight className="h-5 w-5 text-white" />
                         </a>
                     </div>
 
-                    {/* Right: Match Score Card */}
-                    <div
-                        className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
-                        style={{ background: matchData.bgGradient }}
-                    >
-                        <div className="relative w-20 h-20 mb-3">
-                            <svg className="w-20 h-20 transform -rotate-90">
-                                <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
-                                <circle
-                                    cx="40" cy="40" r="32" strokeWidth="6" fill="none"
-                                    strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
-                                    stroke={matchData.textColor}
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-white">{percentage}%</span>
+                    {/* Right: Match Score Card (same circular SVG as LinkedIn) */}
+                    {percentage >= 20 && (
+                        <div
+                            className="flex-shrink-0 rounded-2xl p-6 w-38 flex flex-col items-center justify-center shadow-lg"
+                            style={{ background: matchData.bgGradient }}
+                        >
+                            <div className="relative w-20 h-20 mb-3">
+                                <svg className="w-20 h-20 transform -rotate-90">
+                                    <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
+                                    <circle
+                                        cx="40" cy="40" r="32" strokeWidth="6" fill="none"
+                                        strokeDasharray={`${(percentage / 100) * 201} 201`} strokeLinecap="round"
+                                        stroke={matchData.textColor}
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-white">{percentage}%</span>
+                                </div>
                             </div>
+                            <span className="text-xs font-bold text-white tracking-wide text-center">
+                                {matchData.label}
+                            </span>
                         </div>
-                        <span className="text-xs font-bold text-white tracking-wide text-center">
-                            {matchData.label}
-                        </span>
-                    </div>
+                    )}
                 </div>
 
-                <div className="px-6 pb-6 flex items-center gap-3">
+                {/* Bottom spacer (keeps consistent padding with LinkedIn card) */}
+                <div className="px-6 pb-4 flex items-center gap-3">
                     <div className="flex-1"></div>
                 </div>
             </div>
         );
     };
 
-    // Skeleton Loading Card
+    // ── Skeleton ────────────────────────────────────────────────────────────
     const SkeletonJobCard = () => (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 animate-pulse">
             <div className="flex items-start gap-6 p-6">
-                {/* Left: Company Avatar & Job Info */}
                 <div className="flex-1 flex gap-4">
-                    {/* Avatar Skeleton */}
                     <div className="flex-shrink-0">
                         <div className="w-16 h-16 rounded-xl bg-gray-200"></div>
                     </div>
-
                     <div className="flex-1 min-w-0">
-                        {/* Tags Skeleton */}
                         <div className="flex items-center gap-2 mb-2">
                             <div className="h-4 w-20 bg-gray-200 rounded"></div>
                             <div className="h-4 w-16 bg-gray-200 rounded-full"></div>
                         </div>
-
-                        {/* Title Skeleton */}
                         <div className="h-6 w-3/4 bg-gray-200 rounded mb-2"></div>
-
-                        {/* Company Skeleton */}
                         <div className="h-5 w-1/2 bg-gray-200 rounded mb-3"></div>
-
-                        {/* Location Skeleton */}
                         <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
                     </div>
                 </div>
-
-                {/* Right: Match Score Skeleton */}
                 <div className="flex-shrink-0 bg-gray-200 rounded-2xl p-6 w-32 h-40"></div>
             </div>
-
-            {/* Bottom: Actions Skeleton */}
             <div className="px-6 pb-6 flex items-center gap-3">
                 <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
                 <div className="flex-1"></div>
@@ -517,37 +442,26 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         </div>
     );
 
+    // ── Loading state ───────────────────────────────────────────────────────
     if (loading) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
-                {/* Header with filter info and dropdown */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    {/* Left: Loading text */}
                     <div className="flex items-center gap-2">
                         <Loader2 className="text-blue-600 animate-spin" size={20} />
-                        <p className="text-gray-700 font-medium">
-                            Loading applied jobs...
-                        </p>
+                        <p className="text-gray-700 font-medium">{loadingMessages[loadingMessageIndex]}</p>
                     </div>
-
-                    {/* Right: Filter Dropdown (still functional during loading) */}
                     <div className="relative">
                         <select
                             value={selectedFilter}
                             onChange={(e) => setSelectedFilter(e.target.value)}
-                            className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm min-w-[200px]"
+                            className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm min-w-[200px]"
                         >
-                            {filterOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
+                            {filterOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                     </div>
                 </div>
-
-                {/* Skeleton Loading Cards */}
                 <div className="space-y-4">
                     <SkeletonJobCard />
                     <SkeletonJobCard />
@@ -557,6 +471,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         );
     }
 
+    // ── Error state ─────────────────────────────────────────────────────────
     if (error) {
         return (
             <div className="bg-white p-4 rounded-lg shadow mt-6">
@@ -565,12 +480,22 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
         );
     }
 
+    // ── Main render ─────────────────────────────────────────────────────────
+    const dateGroups = groupJobsByDate(jobs);
+
+    // Paginate over date groups (client-side, same as LinkedIn component)
+    const totalDatePages = Math.ceil(dateGroups.length / itemsPerPage);
+    const dateStartIndex = (datePage - 1) * itemsPerPage;
+    const currentDateGroups = dateGroups.slice(dateStartIndex, dateStartIndex + itemsPerPage);
+
+    const handleDatePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalDatePages) setDatePage(newPage);
+    };
 
     return (
         <div>
-            {/* Header with filter info and dropdown */}
+            {/* ── Header bar ─────────────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                {/* Left: Filter description */}
                 <div className="flex items-center gap-2">
                     <CheckCircle className="text-green-600" size={20} />
                     <p className="text-gray-700 font-medium">
@@ -578,34 +503,35 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                             <>No applied jobs found</>
                         ) : (
                             <>
-                                You have applied to <span className="font-bold text-blue-600">{totalJobs}</span> {totalJobs === 1 ? 'job' : 'jobs'}
-                                {selectedFilter !== 'all' && (
-                                    <> in <span className="font-bold text-blue-600">
-                                        {filterOptions.find(opt => opt.value === selectedFilter)?.label}
-                                    </span></>
+                                You have applied to{" "}
+                                <span className="font-bold text-blue-600">{totalJobs}</span>{" "}
+                                {totalJobs === 1 ? "job" : "jobs"}
+                                {selectedFilter !== "all" && (
+                                    <> in{" "}
+                                        <span className="font-bold text-blue-600">
+                                            {filterOptions.find((o) => o.value === selectedFilter)?.label}
+                                        </span>
+                                    </>
                                 )}
                             </>
                         )}
                     </p>
                 </div>
 
-                {/* Right: Filter Dropdown */}
+                {/* Filter dropdown */}
                 <div className="relative">
                     <select
                         value={selectedFilter}
                         onChange={(e) => setSelectedFilter(e.target.value)}
-                        className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer shadow-sm min-w-[200px]"
+                        className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-gray-700 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm min-w-[200px]"
                     >
-                        {filterOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
+                        {filterOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
                 </div>
             </div>
 
+            {/* ── Empty state ─────────────────────────────────────────────── */}
             {jobs.length === 0 ? (
                 <div className="text-center py-12">
                     <CheckCircle className="mx-auto text-gray-300 mb-4" size={48} />
@@ -616,11 +542,120 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
                 </div>
             ) : (
                 <>
-                    <div className="space-y-4">
-                        {jobs.map((job) => renderJobCard(job))}
+                    {/* ── Date Groups — exact LinkedIn style ───────────────── */}
+                    <div className="space-y-2">
+                        {currentDateGroups.map((group, index) => {
+                            const isExpanded = expandedDate === group.dateKey;
+
+                            return (
+                                <div key={group.dateKey}>
+                                    {/* Date row — exact LinkedIn #E3FFE7 style, no serial number */}
+                                    <div
+                                        onClick={() => toggleDateExpansion(group.dateKey)}
+                                        className="flex justify-between items-center p-4 rounded-lg cursor-pointer transition"
+                                        style={{ backgroundColor: '#E3FFE7' }}
+                                    >
+                                        <div className="flex items-center gap-32">
+                                            <span
+                                                className="font-medium"
+                                                style={{ color: '#615642' }}
+                                            >
+                                                {group.dateLabel}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <img
+                                                src="/chevron-icon.svg"
+                                                alt="chevron"
+                                                className={`w-[18px] h-[18px] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                onError={(e) => {
+                                                    // Fallback if chevron SVG not available
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
+                                            {/* SVG fallback inline */}
+                                            {/* <ChevronDown
+                                                size={18}
+                                                className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                style={{ color: '#615642' }}
+                                            /> */}
+                                        </div>
+                                    </div>
+
+                                    {/* Collapsible job cards */}
+                                    {isExpanded && (
+                                        <div className="mt-3 space-y-4">
+                                            {group.jobs
+                                                .sort((a, b) => {
+                                                    const scoreDiff = (b.score || 0) - (a.score || 0);
+                                                    if (scoreDiff !== 0) return scoreDiff;
+                                                    const countFields = (job: JobItem) => {
+                                                        let count = 0;
+                                                        if (job.company) count++;
+                                                        if (job.salary) count++;
+                                                        if (job.experience_level) count++;
+                                                        if (job.work_type) count++;
+                                                        return count;
+                                                    };
+                                                    return countFields(b) - countFields(a);
+                                                })
+                                                .map((job) => renderJobCard(job))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
 
-                    {totalPages > 1 && renderPagination()}
+                    {/* ── Date-group pagination — exact LinkedIn style ──────── */}
+                    {totalDatePages > 1 && (
+                        <div className="flex justify-end items-center gap-4 mt-8 px-4 py-4">
+                            <button
+                                onClick={() => handleDatePageChange(datePage - 1)}
+                                disabled={datePage === 1}
+                                className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${datePage === 1
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-[#171717] text-white hover:bg-black'
+                                    }`}
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+
+                            <span className="text-xl font-medium" style={{ color: '#181717ff' }}>
+                                {String(datePage).padStart(2, '0')}
+                            </span>
+
+                            <button
+                                onClick={() => handleDatePageChange(datePage + 1)}
+                                disabled={datePage === totalDatePages}
+                                className={`w-10 h-10 rounded flex items-center justify-center transition-colors ${datePage === totalDatePages
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-[#171717] text-white hover:bg-black'
+                                    }`}
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── API-level pagination (when totalPages > 1) ────────── */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-4 px-4">
+                            <div className="text-sm text-gray-600">
+                                Showing page {currentPage} of {totalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handlePreviousPage} disabled={currentPage === 1}
+                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1">
+                                    <ChevronLeft size={16} /> Previous
+                                </button>
+                                <button onClick={handleNextPage} disabled={currentPage === totalPages}
+                                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center gap-1">
+                                    Next <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </div>

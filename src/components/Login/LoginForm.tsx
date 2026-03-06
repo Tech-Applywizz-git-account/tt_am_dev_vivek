@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { User } from '../../types';
 import { roleLabels } from '../../data/mockData';
 import { toast as toastify } from 'react-toastify';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
@@ -13,6 +14,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false); // New state for password visibility
   const [showResetModal, setShowResetModal] = useState(false);
@@ -84,6 +86,43 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       setError(err.message || 'Login failed. Check your credentials.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Google Sign-In via GIS ───────────────────────────────────────────
+  // Uses GoogleLogin component which provides credential (id_token JWT) directly.
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+    setGoogleLoading(true);
+    setError('');
+    try {
+      const idToken = credentialResponse.credential;
+      if (!idToken) throw new Error('Could not retrieve ID token from Google account.');
+
+      // Sign in to Supabase using the Google ID token
+      const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Sign-in failed. Please try again.');
+
+      // Fetch the user profile from public.users
+      const { data: publicUser, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (userError || !publicUser) {
+        throw new Error('No account found. Please sign up first.');
+      }
+
+      onLogin(publicUser as User);
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -273,6 +312,41 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                   )}
                 </button>
               </form>
+
+              {/* OR Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+                </div>
+              </div>
+
+              {/* Google Login Button */}
+              {googleLoading ? (
+                <div className="w-full flex items-center justify-center gap-2 py-3 text-sm text-gray-500">
+                  <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Signing in with Google…
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      setError('Google sign-in was cancelled or failed.');
+                    }}
+                    width="400"
+                    theme="outline"
+                    size="large"
+                    text="signin_with"
+                    shape="rectangular"
+                  />
+                </div>
+              )}
 
               {/* Forgot password link */}
               <div className="mt-6 text-center">
