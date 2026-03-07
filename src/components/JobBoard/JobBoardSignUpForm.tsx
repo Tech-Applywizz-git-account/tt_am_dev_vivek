@@ -275,7 +275,7 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
                 .from('clients')
                 .select('id')
                 .ilike('company_email', userEmail)
-                .eq('opted_job_links', true)
+                // .eq('opted_job_links', true)
                 .maybeSingle();
 
             if (existingClientWithJob) {
