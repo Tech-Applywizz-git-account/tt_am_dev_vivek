@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Calendar, Briefcase, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, Check } from "lucide-react";
 
 
@@ -21,6 +21,7 @@ interface JobItem {
   dueDate: string;
   score: number;
   jobUrl: string | null;
+  screenshotUrl: string | null;
   is_email_received?: boolean;
 }
 
@@ -32,76 +33,21 @@ interface JobsResponse {
 type JobsData = Record<string, JobsResponse>;
 
 interface ApplicationSummaryListProps {
-  data?: TaskCount[];
+  data: TaskCount[];
   loading?: boolean;
   error?: string;
   applywizzId?: string;
 }
 
 const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
-  data: propData,
-  loading: propLoading = false,
-  error: propError = "",
+  data,
+  loading = false,
+  error = "",
   applywizzId
 }) => {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [jobsData, setJobsData] = useState<JobsData>({});
   const [jobsLoading, setJobsLoading] = useState<Record<string, boolean>>({});
-
-  // Self-fetched summary state
-  const [selfData, setSelfData] = useState<TaskCount[]>([]);
-  const [selfLoading, setSelfLoading] = useState(false);
-  const [selfError, setSelfError] = useState("");
-  const [hasFetched, setHasFetched] = useState(false);
-
-  // Fetch own summary data when applywizzId is available
-  useEffect(() => {
-    if (!applywizzId) return;
-
-    const fetchSummary = async () => {
-      setSelfLoading(true);
-      setSelfError("");
-      try {
-        const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
-        if (!apiUrl) throw new Error("VITE_EXTERNAL_API_URL is not defined");
-
-        const response = await fetch(`${apiUrl}/api/client-tasks?lead_id=${applywizzId}`);
-        if (!response.ok) throw new Error(`Failed to fetch summary: ${response.status}`);
-
-        const apiData = await response.json();
-
-        // API returns: { completed_tasks: { "date": count }, easy_apply_tasks: { "date": count } }
-        const allDates = new Set([
-          ...Object.keys(apiData.completed_tasks || {}),
-          ...Object.keys(apiData.easy_apply_tasks || {}),
-        ]);
-
-        const formatted: TaskCount[] = Array.from(allDates)
-          .map(date => ({
-            date,
-            regularCount: Number(apiData.completed_tasks?.[date] || 0),
-            easyApplyCount: Number(apiData.easy_apply_tasks?.[date] || 0),
-          }))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        setSelfData(formatted);
-      } catch (err) {
-        setSelfError(err instanceof Error ? err.message : "Failed to load summary");
-      } finally {
-        setSelfLoading(false);
-        setHasFetched(true);
-      }
-    };
-
-    fetchSummary();
-  }, [applywizzId]);
-
-  // Determine which data, loading, and error to use:
-  // Prefer self-fetched data when propData is not provided or empty
-  const hasPropData = propData != null && propData.length > 0;
-  const data = hasPropData ? propData : selfData;
-  const loading = hasPropData ? propLoading : (propLoading || selfLoading);
-  const error = hasPropData ? propError : (propError || selfError);
 
   // Status options for the dropdown
   const statusOptions = [
@@ -308,9 +254,17 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
       className="bg-white rounded-lg p-4 flex justify-between items-start shadow-sm hover:shadow transition"
     >
       <div>
-        <h3 className="font-semibold text-gray-800">
-          {job.jobTitle || "Untitled Role"}
-        </h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-semibold text-gray-800">
+            {job.jobTitle || "Untitled Role"}
+          </h3>
+          {job.is_email_received && (
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 border border-green-500 rounded-sm text-green-700 text-xs font-bold tracking-widest uppercase bg-white">
+              Email Verified
+              <img src="/verified.png" alt="Verified" className="w-4 h-4 object-contain" />
+            </div>
+          )}
+        </div>
         <p className="text-sm text-gray-600">
           {job.company || "Unknown Company"}
         </p>
@@ -345,7 +299,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
           <ExternalLink size={14} />
           View Job Posting
         </a>
-        {/* {job.is_email_received && (
+        {!job.is_email_received && (
           <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-md text-sm border border-amber-100">
             <span>Waiting for mail</span>
             {job.screenshotUrl && (
@@ -360,7 +314,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
               </a>
             )}
           </div>
-        )} */}
+        )}
       </div>
     </div>
   );
