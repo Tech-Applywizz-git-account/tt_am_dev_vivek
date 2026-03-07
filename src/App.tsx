@@ -2019,6 +2019,9 @@ function App() {
                       error={clientDashboardError}
                     />
                     <ApplicationSummaryList
+                      data={clientDashboardData}
+                      loading={clientDashboardLoading}
+                      error={clientDashboardError}
                       applywizzId={applywizzId}
                     />
                   </>
@@ -2413,8 +2416,10 @@ function App() {
                   setExpandedDate={setExpandedDate}
                 />
               ) : (
-                // Regular clients: fetch summary from Karmafy database (client-tasks)
                 <ApplicationSummaryList
+                  data={clientDashboardData}
+                  loading={clientDashboardLoading}
+                  error={clientDashboardError}
                   applywizzId={applywizzId}
                 />
               )
