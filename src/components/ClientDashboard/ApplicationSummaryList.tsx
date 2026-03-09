@@ -299,20 +299,18 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
           <ExternalLink size={14} />
           View Job Posting
         </a>
-        {!job.is_email_received && (
+        {!job.is_email_received && job.screenshotUrl && (
           <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-md text-sm border border-amber-100">
             <span>Waiting for mail</span>
-            {job.screenshotUrl && (
-              <a
-                href={job.screenshotUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-amber-900 transition-colors cursor-help"
-                title="view applied job screenshot"
-              >
-                <ExternalLink size={14} />
-              </a>
-            )}
+            <a
+              href={job.screenshotUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-amber-900 transition-colors cursor-help"
+              title="view applied job screenshot"
+            >
+              <ExternalLink size={14} />
+            </a>
           </div>
         )}
       </div>
