@@ -116,6 +116,7 @@ export interface Ticket {
   comments: TicketComment[];
   createdbyclient: boolean;
   requiredManagerAttention: boolean;
+  clientName?: string; // resolved from clients table — avoids per-card fetch
 }
 
 export interface TicketComment {

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, User, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { Clock, User, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Ticket, TicketPriority } from '../../../types';
 import { format } from 'date-fns';
-import { supabase } from '@/lib/supabaseClient';
 
 
 interface TicketCardProps {
@@ -12,29 +11,12 @@ interface TicketCardProps {
 
 export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
 
-  const [clientName, setClientName] = useState<any>(null);
-
   const priorityColors: Record<TicketPriority, string> = {
     critical: 'bg-red-100 text-red-800 border-red-200',
     high: 'bg-orange-100 text-orange-800 border-orange-200',
     medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     low: 'bg-gray-100 text-gray-800 border-gray-200',
   };
-  useEffect(() => {
-    const fetchClientData = async () => {
-      try {
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('full_name')
-          .eq('id', ticket.clientId)
-          .single();
-        setClientName(clientData?.full_name || 'Unknown Client');
-      } catch (error) {
-        console.error('Error fetching client data:', error);
-      }
-    };
-    fetchClientData();
-  }, [ticket]);
 
 
   const statusColors = {
@@ -90,7 +72,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
             <User className="h-4 w-4" />
-            <span>{clientName}</span>
+            <span>{ticket.clientName ?? 'Unknown Client'}</span>
             <span>({ticket.type})</span>
           </div>
 

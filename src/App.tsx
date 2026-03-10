@@ -788,16 +788,28 @@ function App() {
   const getVisibleTickets = (): Ticket[] => {
     if (!currentUser) return [];
 
+    // Build a quick id → full_name lookup from the already-fetched clients state
+    const clientNameMap = new Map(clients.map(c => [c.id, c.full_name]));
+
+    // Attach clientName to every ticket (resolves once here instead of per-card)
+    const enrichTickets = (rawTickets: Ticket[]): Ticket[] =>
+      rawTickets.map(ticket => ({
+        ...ticket,
+        clientName: clientNameMap.get(ticket.clientId) ?? 'Unknown Client',
+      }));
+
     // Executive/Managerial roles see all tickets
     if (['ceo', 'coo', 'cro', 'account_manager'].includes(currentUser.role)) {
-      return tickets;
+      return enrichTickets(tickets);
     }
 
-    // For other roles, filter tickets based on assignments
-    return tickets.filter(ticket => {
+    // For other roles, filter tickets based on assignments first then enrich
+    const filtered = tickets.filter(ticket => {
       const assignedUsers = assignments[ticket.id] || [];
       return assignedUsers.some(assignedUser => assignedUser.id === currentUser.id);
     });
+
+    return enrichTickets(filtered);
   };
 
   const handleSendEmail = async (e: React.FormEvent) => {
