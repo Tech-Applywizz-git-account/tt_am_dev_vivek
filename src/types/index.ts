@@ -17,7 +17,10 @@ export type TicketType =
   | 'volume_shortfall'
   | 'data_mismatch'
   | 'call_support'
-  | 'resume_update';
+  | 'resume_update'
+  | 'cancel_subscription'
+  | 'jobBoard_call_support'
+  | 'jobBoard_subscription_cancellation';
 // | 'high_rejections'
 // | 'no_interviews'
 // | 'profile_data_issue'
@@ -94,6 +97,7 @@ export interface Client {
   test_results?: TestResult[] | null;
   coding_lab_url?: string;
   role_last_updated?: string;
+  opted_job_links?: boolean;
 }
 
 export interface Ticket {

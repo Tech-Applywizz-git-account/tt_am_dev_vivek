@@ -32,31 +32,23 @@ const TicketTimeline: React.FC<TicketTimelineProps> = ({ ticket }) => {
         description: 'Ticket assigned to relevant team',
       },
       {
-        id: 'replied',
-        title: 'Team Responded',
-        description: 'Initial response provided',
+        id: 'closed',
+        title: 'Team Resolved',
+        description: 'Support team marked the ticket as closed',
       },
       {
-        id: 'closed',
-        title: 'Client Closed',
-        description: 'Client marked as complete',
+        id: 'resolved',
+        title: 'Resolved',
+        description: 'Client confirmed the resolution',
       }
     ];
 
-    if (ticket.status === 'manager_attention') {
-      baseSequence.push({
+    if (ticket.status === 'manager_attention' || ticket.requiredManagerAttention) {
+      baseSequence.splice(2, 0, {
         id: 'manager_attention',
         title: 'Manager Review',
         description: 'Account Manager reviewing case',
         isAttentionNeeded: true
-      });
-    }
-
-    if (ticket.status === 'resolved') {
-      baseSequence.push({
-        id: 'resolved',
-        title: 'Resolved',
-        description: 'Ticket fully resolved',
       });
     }
 
@@ -65,8 +57,8 @@ const TicketTimeline: React.FC<TicketTimelineProps> = ({ ticket }) => {
 
   const statusSteps = getStatusSequence();
   const currentStatusIndex = statusSteps.findIndex(
-    step => step.id === (ticket.requiredManagerAttention 
-      ? 'manager_attention' 
+    step => step.id === (ticket.requiredManagerAttention
+      ? 'manager_attention'
       : ticket.status)
   );
   // console.log('Current Status Index:', currentStatusIndex);

@@ -12,6 +12,7 @@ import { VLTicketEditModal } from './components/Tickets/VolumeShortfall/VLTicket
 import { DMTicketEditModal } from '@/components/Tickets/DataMismatch/DMTicketEditModel';
 import { RUTicketEditModal } from './components/Tickets/ResumeUpdate/RUTicketEditModel';
 import { CSTicketEditModal } from './components/Tickets/CallSupport/CSTicketEditModel';
+import { JobBoardTicketEditModal } from './components/Tickets/CallSupport/JobBoardTicketEditModal';
 import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModal';
 import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { OnboardingSuccessModal } from './components/Clients/OnboardingSuccessModal';
@@ -1619,6 +1620,7 @@ function App() {
           // onTicketUpdated={handleTicketUpdated} // Add this line
           />
         )
+      case "cancel_subscription":
       case "call_support":
         return (
           <CSTicketEditModal
@@ -1640,7 +1642,30 @@ function App() {
               setIsTicketEditModalOpen(false);
               setSelectedTicket(null);
             }}
-          // onTicketUpdated={handleTicketUpdated} // Add this line
+          />
+        )
+      case "jobBoard_subscription_cancellation":
+      case "jobBoard_call_support":
+        return (
+          <JobBoardTicketEditModal
+            ticket={selectedTicket}
+            user={currentUser}
+            isOpen={isTicketEditModalOpen}
+            assignments={assignments}
+            onClose={() => {
+              setIsTicketEditModalOpen(false);
+              setSelectedTicket(null);
+            }}
+            onSubmit={(updateData) => {
+              if (selectedTicket) {
+                handleUpdateTicket(selectedTicket.id, updateData);
+              }
+            }}
+            onUpdate={() => {
+              fetchData(); // ⬅️ refresh data when modal updates a ticket
+              setIsTicketEditModalOpen(false);
+              setSelectedTicket(null);
+            }}
           />
         )
       default:
@@ -2128,7 +2153,45 @@ function App() {
               </>
             )
             }
-            <FeedbackButton user={currentUser} />
+            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} />
+          </div>
+        );
+
+      case 'jobboard-dashboard':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">JobBoard Dashboard</h1>
+                <p className="text-gray-600">Analytics overview for JobBoard clients</p>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-center">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">JobBoard Analytics metrics will appear here.</p>
+              <p className="text-gray-400 mt-2">Check back later for detailed insights.</p>
+            </div>
+          </div>
+        );
+
+      case 'jobboard-tickets':
+        const jobBoardClientIds = clients.filter(c => c.opted_job_links).map(c => c.id);
+        const jobBoardTickets = tickets.filter(t => jobBoardClientIds.includes(t.clientId) && (t.type === 'jobBoard_call_support' || t.type === 'jobBoard_subscription_cancellation'));
+
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">JobBoard Tickets</h1>
+            </div>
+            <TicketList
+              tickets={jobBoardTickets}
+              user={currentUser!}
+              assignments={assignments}
+              onTicketClick={handleTicketClick}
+              initialFilterStatus="all"
+              initialFilterType="all"
+              initialFilterPriority="all"
+            />
           </div>
         );
 
@@ -2162,7 +2225,7 @@ function App() {
               initialFilterType={filterType} // Pass the filter type
               initialFilterPriority={filterPriority} // Pass the filter priority
             />
-            <FeedbackButton user={currentUser} />
+            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} />
           </div>
         );
 
@@ -2613,7 +2676,7 @@ function App() {
                 </table>
               </div>
             </div>
-            <FeedbackButton user={currentUser} />
+            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} />
           </div>
         );
 
