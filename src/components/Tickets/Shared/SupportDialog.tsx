@@ -38,7 +38,6 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
                 const clientId = clientData?.id || null;
 
                 const newTicket = {
-                    id: uuidv4(),
                     title: type === 'call' ? 'Call Support Request' : 'Subscription Cancellation Request',
                     description: description,
                     base_type: type === 'call' ? 'jobBoard_call_support' : 'jobBoard_subscription_cancellation',
@@ -124,14 +123,14 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 pointer-events-none">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
                             Please describe your {type === 'call' ? 'issue' : 'reason for cancellation'}
                         </label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="w-full border px-3 py-2 rounded-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-[#816D46] resize-none"
-                            placeholder={`Enter details ${type === 'call' ? 'about the issue you are facing...' : 'why you want to cancel...'}`}
+                            placeholder={type === 'call' ? "Enter details about the issue you are facing..." : "Enter details why you want to cancel..."}
                             required
                         />
                     </div>
@@ -146,7 +145,7 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
                         </button>
                     </div>
                 </form>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 };

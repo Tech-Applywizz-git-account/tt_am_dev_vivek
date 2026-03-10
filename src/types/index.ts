@@ -18,7 +18,6 @@ export type TicketType =
   | 'data_mismatch'
   | 'call_support'
   | 'resume_update'
-  | 'cancel_subscription'
   | 'jobBoard_call_support'
   | 'jobBoard_subscription_cancellation';
 // | 'high_rejections'

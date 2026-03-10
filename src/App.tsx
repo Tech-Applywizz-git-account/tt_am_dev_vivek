@@ -1620,7 +1620,6 @@ function App() {
           // onTicketUpdated={handleTicketUpdated} // Add this line
           />
         )
-      case "cancel_subscription":
       case "call_support":
         return (
           <CSTicketEditModal
