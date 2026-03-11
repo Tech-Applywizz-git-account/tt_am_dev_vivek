@@ -113,13 +113,13 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                 // The database automatically assigns the client's Account Manager to any new ticket.
                 // For Job Board tickets, we don't want the Account Manager assigned by default.
                 // So we immediately delete any assignments made to other users (like the Account Manager).
-                if (resolvedClientId) {
-                    await supabase
-                        .from('ticket_assignments')
-                        .delete()
-                        .eq('ticket_id', newTicket.id)
-                        .neq('user_id', user.id); // keep the client if they were auto-assigned, but remove the AM
-                }
+                // if (resolvedClientId) {
+                //     await supabase
+                //         .from('ticket_assignments')
+                //         .delete()
+                //         .eq('ticket_id', newTicket.id)
+                //         .neq('user_id', user.id); // keep the client if they were auto-assigned, but remove the AM
+                // }
 
                 const emailSubject = feedbackType === 'jobBoard_call_support' ? "call support ticket raised" : "cancel subscription ticket raised";
                 const emailTo = "bhanuteja@applywizz.com";
