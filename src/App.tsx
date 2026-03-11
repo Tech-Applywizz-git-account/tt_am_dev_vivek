@@ -225,6 +225,7 @@ function App() {
   const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [optedJobLinks, setOptedJobLinks] = useState<boolean>(false);
+  const [currentClientId, setCurrentClientId] = useState<string | null>(null);
   const [clientExists, setClientExists] = useState<boolean | null>(null);
   const [isPendingReview, setIsPendingReview] = useState(false);
   const [pendingReviewData, setPendingReviewData] = useState<any>(null);
@@ -427,6 +428,7 @@ function App() {
           setIsPendingReview(false);
           setOptedJobLinks(clientData.some(c => c.opted_job_links));
           setApplywizzId(clientData[0].applywizz_id);
+          setCurrentClientId(clientData[0].id);
           return;
         }
 
@@ -2152,7 +2154,7 @@ function App() {
               </>
             )
             }
-            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} />
+            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} clientId={currentClientId ?? undefined} />
           </div>
         );
 
@@ -2224,7 +2226,7 @@ function App() {
               initialFilterType={filterType} // Pass the filter type
               initialFilterPriority={filterPriority} // Pass the filter priority
             />
-            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} />
+            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} clientId={currentClientId ?? undefined} />
           </div>
         );
 
@@ -2675,7 +2677,7 @@ function App() {
                 </table>
               </div>
             </div>
-            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} />
+            <FeedbackButton user={currentUser as User} optedJobLinks={optedJobLinks} clientId={currentClientId ?? undefined} />
           </div>
         );
 

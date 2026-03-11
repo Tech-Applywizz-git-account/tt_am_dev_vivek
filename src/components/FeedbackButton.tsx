@@ -12,9 +12,10 @@ type TicketType = 'jobBoard_call_support' | 'jobBoard_subscription_cancellation'
 interface FeedbackProps {
     user: User;
     optedJobLinks?: boolean;
+    clientId?: string;
 }
 
-const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks }) => {
+const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId }) => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [comment, setComment] = useState<string>('');
     const [feedbackType, setFeedbackType] = useState<FeedbackType | TicketType>(optedJobLinks ? 'jobBoard_call_support' : 'general');
@@ -35,20 +36,25 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks }) => {
     }, [optedJobLinks, user?.email]);
 
     const fetchClientTickets = async () => {
-        if (!user?.email) return;
-
         try {
-            const { data: clientData } = await supabase
-                .from('clients')
-                .select('id')
-                .eq('company_email', user.email)
-                .single();
+            // Use passed clientId prop directly; fall back to email-based lookup
+            let resolvedClientId = clientId;
 
-            if (clientData) {
+            if (!resolvedClientId) {
+                if (!user?.email) return;
+                const { data: clientData } = await supabase
+                    .from('clients')
+                    .select('id')
+                    .eq('company_email', user.email)
+                    .single();
+                resolvedClientId = clientData?.id;
+            }
+
+            if (resolvedClientId) {
                 const { data: tickets, error } = await supabase
                     .from('tickets')
                     .select('*')
-                    .eq('clientId', clientData.id)
+                    .eq('clientId', resolvedClientId)
                     .order('createdat', { ascending: false });
 
                 if (!error && tickets) {
@@ -72,20 +78,24 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks }) => {
 
         try {
             if (optedJobLinks) {
-                const { data: clientData } = await supabase
-                    .from('clients')
-                    .select('id')
-                    .eq('company_email', user.email)
-                    .single();
+                // Use passed clientId prop directly; fall back to email-based lookup
+                let resolvedClientId = clientId || null;
 
-                const clientId = clientData?.id || null;
+                if (!resolvedClientId) {
+                    const { data: clientData } = await supabase
+                        .from('clients')
+                        .select('id')
+                        .eq('company_email', user.email)
+                        .single();
+                    resolvedClientId = clientData?.id || null;
+                }
 
                 const newTicket = {
                     id: uuidv4(),
                     title: feedbackType === 'jobBoard_call_support' ? 'Call Support Request' : 'Subscription Cancellation Request',
                     description: comment,
                     type: feedbackType,
-                    clientId: clientId,
+                    clientId: resolvedClientId,
                     createdby: user.id,
                     priority: 'medium',
                     status: 'open',
@@ -103,7 +113,7 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks }) => {
                 // The database automatically assigns the client's Account Manager to any new ticket.
                 // For Job Board tickets, we don't want the Account Manager assigned by default.
                 // So we immediately delete any assignments made to other users (like the Account Manager).
-                if (clientId) {
+                if (resolvedClientId) {
                     await supabase
                         .from('ticket_assignments')
                         .delete()
