@@ -77,15 +77,15 @@ const ReportPage: React.FC = () => {
             const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
 
             // Calculate previous day's date for summary request
-            const selectedDate = new Date(date);
-            const previousDate = new Date(selectedDate);
-            previousDate.setDate(previousDate.getDate() - 1);
-            const previousDateStr = format(previousDate, 'yyyy-MM-dd');
+            // const selectedDate = new Date(date);
+            // const previousDate = new Date(selectedDate);
+            // previousDate.setDate(previousDate.getDate() - 1);
+            // const previousDateStr = format(previousDate, 'yyyy-MM-dd');
 
             // Route 1: Detailed Report
             const detailedUrl = `https://applywizz-ca-management.vercel.app/api/tasks/summary?date=${date}`;
-            // Route 2: Summary Report (using previous day's date)
-            const summaryUrl = `${apiUrl}/api/tasks/summary/?date=${previousDateStr}`;
+            // Route 2: Summary Report
+            const summaryUrl = `${apiUrl}/api/tasks/summary/?date=${date}`;
 
             const [detailedRes, summaryRes] = await Promise.all([
                 fetch(detailedUrl).then(res => res.ok ? res.json() : null),

@@ -45,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
   const permissions = rolePermissions[user.role];
   const [countdown, setCountdown] = useState('01:34:30');
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
 
   // Countdown timer for ATS Resume card
   useEffect(() => {
@@ -245,40 +246,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
         </div>
 
 
-        {/* Support Module */}
-        {((user.role === 'client') && (optedJobLinks)) && (
+        {/* JobBoard Analytics Module */}
+        {['cro', 'coo', 'ceo', 'system_admin'].includes(user.role) && (
           <div className="mt-4 px-3">
             <button
-              onClick={() => setIsSupportOpen(!isSupportOpen)}
+              onClick={() => setIsAnalyticsOpen(!isAnalyticsOpen)}
               className="w-full flex items-center justify-between py-2 text-gray-600 hover:text-black transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <Headphones className="h-5 w-5 text-gray-400" />
-                <span className="font-medium text-sm">Need support?</span>
+                <BarChart3 className="h-5 w-5 text-gray-400" />
+                <span className="font-medium text-sm">JobBoard Analytics</span>
               </div>
-              {isSupportOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {isAnalyticsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
 
-            {isSupportOpen && (
+            {isAnalyticsOpen && (
               <div className="mt-1 ml-8 space-y-1 animate-in slide-in-from-top-1 duration-200">
                 <button
-                  onClick={() => onOpenSupport('call')}
-                  className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
+                  onClick={() => onViewChange('jobboard-dashboard')}
+                  className={`w-full flex items-center space-x-3 py-2 text-sm transition-colors ${activeView === 'jobboard-dashboard' ? 'text-black font-medium' : 'text-gray-500 hover:text-black'}`}
                 >
-                  <Phone className="h-4 w-4" />
-                  <span>Call Support</span>
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Dashboard</span>
                 </button>
                 <button
-                  onClick={() => onOpenSupport('cancel')}
-                  className="w-full flex items-center space-x-3 py-2 text-sm text-gray-500 hover:text-black transition-colors"
+                  onClick={() => onViewChange('jobboard-tickets')}
+                  className={`w-full flex items-center space-x-3 py-2 text-sm transition-colors ${activeView === 'jobboard-tickets' ? 'text-black font-medium' : 'text-gray-500 hover:text-black'}`}
                 >
-                  <UserX className="h-4 w-4" />
-                  <span>Cancel subscription</span>
+                  <Ticket className="h-4 w-4" />
+                  <span>JobBoard tickets</span>
                 </button>
               </div>
             )}
           </div>
         )}
+
+        {/* Support Module removed and moved to FeedbackButton */}
 
         {/* ATS Resume Card */}
         {(user.role === 'client') && (optedJobLinks) && (

@@ -8,7 +8,7 @@ import { UserManagementModal } from '../Admin/UserManagementModal';
 import { VLTicketEditModal } from '../Tickets/VolumeShortfall/VLTicketEditModal';
 import { RUTicketEditModal } from '../Tickets/ResumeUpdate/RUTicketEditModel';
 import { Ticket, Client, AssignedUser, User } from '@/types';
-import { SupportDialog } from './SupportDialog';
+// import { SupportDialog } from '../Tickets/Shared/SupportDialog';
 import { useState } from 'react';
 
 interface Props {
@@ -131,13 +131,13 @@ const AppLayout: React.FC<Props> = ({
         onDeleteUser={handleDeleteUser}
       />
 
-      <SupportDialog
+      {/* <SupportDialog
         isOpen={isSupportDialogOpen}
         onClose={() => setIsSupportDialogOpen(false)}
         type={supportType}
         currentUser={currentUser}
         isJobBoardClient={optedJobLinks}
-      />
+      /> */}
     </div>
   );
 };
