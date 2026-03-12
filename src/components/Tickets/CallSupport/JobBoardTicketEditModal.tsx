@@ -401,7 +401,14 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                 assignedBy: user.id,
             });
 
-            await supabase.from('tickets').update({ status: 'forwarded' }).eq('id', ticket.id);
+            await supabase.from('tickets').update({
+                status: 'forwarded',
+                metadata: {
+                    ...(ticket.metadata || {}),
+                    client_phone: client?.callable_phone || null,
+                    client_email: client?.company_email || clientEmail || null,
+                }
+            }).eq('id', ticket.id);
 
             if (error) {
                 console.error("Assignment error:", error);
@@ -425,6 +432,10 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                 <p><strong>Ticket ID:</strong> ${ticket.short_code || ticket.id}</p>
                                 <p><strong>Title:</strong> ${ticket.title}</p>
                                 <p><strong>Description:</strong> ${ticket.description}</p>
+                                <hr style="border:none; border-top:1px solid #eee; margin:12px 0;" />
+                                <p><strong>Client Contact Details:</strong></p>
+                                <p><strong>Email:</strong> ${client?.company_email || clientEmail || 'N/A'}</p>
+                                <p><strong>Phone:</strong> ${client?.callable_phone || 'N/A'}</p>
                                 <p>Please log in to the dashboard to resolve it.</p>
                                 <p>Best regards,<br/> <strong>ApplyWizz Support Team</strong></p> 
                             </body>
