@@ -717,6 +717,30 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                 </div>
                             </div>
                         </div>
+
+                        {/* Client Contact Details — visible to non-client roles after assignment */}
+                        {(ticket.metadata?.client_phone || ticket.metadata?.client_email) && (
+                            <div className="bg-blue-50 rounded-lg p-5 border border-blue-200">
+                                <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                    <User className="h-4 w-4" /> Client Contact Details
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {ticket.metadata?.client_email && (
+                                        <div>
+                                            <label className="text-xs font-medium text-blue-700">Email</label>
+                                            <p className="text-gray-900 text-sm">{ticket.metadata.client_email}</p>
+                                        </div>
+                                    )}
+                                    {ticket.metadata?.client_phone && (
+                                        <div>
+                                            <label className="text-xs font-medium text-blue-700">Phone</label>
+                                            <p className="text-gray-900 text-sm">{ticket.metadata.client_phone}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* --- Comments --- */}
                         {ticketComments.length > 0 && (
                             <div className="bg-blue-50 rounded-lg p-6 border border-blue-200 mt-6">
