@@ -235,7 +235,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                             </body>
                             </html>
                         `;
-                        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL_DEV}/api/send-email`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
@@ -269,7 +269,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                     </body>
                     </html>
                 `;
-                await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL_DEV}/api/send-email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -358,7 +358,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                     </html>
                 `;
 
-                await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL_DEV}/api/send-email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -430,7 +430,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                             </body>
                             </html>
                         `;
-                        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                        await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL_DEV}/api/send-email`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({

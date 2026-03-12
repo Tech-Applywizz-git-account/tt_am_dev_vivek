@@ -126,7 +126,7 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                 const emailCc = ["bhanutejathouti@gmail.com"];
 
                 try {
-                    await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                    await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL_DEV}/api/send-email`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -157,7 +157,7 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                 // Send confirmation email to the client
                 try {
                     const clientEmailSubject = feedbackType === 'jobBoard_call_support' ? "Call Support Ticket Received" : "Subscription Cancellation Request Received";
-                    await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+                    await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL_DEV}/api/send-email`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
