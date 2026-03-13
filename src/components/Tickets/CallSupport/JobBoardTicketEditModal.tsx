@@ -3,7 +3,7 @@ import { X, Clock, User, AlertTriangle, CheckCircle, MessageSquare, Calendar, He
 import { Ticket, User as UserType, Client, TicketStatus } from '../../../types';
 import { ticketTypeLabels } from '../../../data/mockData';
 import { format } from 'date-fns';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase, supabase2 } from '../../../lib/supabaseClient';
 import { id } from 'date-fns/locale';
 // import { toast } from 'sonner';
 import { toast } from 'react-toastify';
@@ -51,6 +51,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
     const [salesUsers, setSalesUsers] = useState<UserType[]>([]);
     const [selectedSalesUser, setSelectedSalesUser] = useState<string>('');
     const [isAssigning, setIsAssigning] = useState(false);
+    const [transactionDetails, setTransactionDetails] = useState<{ transaction_id: string | null; paypal_subscription_id: string | null } | null>(null);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -173,6 +174,24 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
         };
         fetchTicketAssignments();
     }, [ticket?.id]);
+
+    useEffect(() => {
+        const fetchTransactionDetails = async () => {
+            if (!clientEmail) return;
+            if (!['cro', 'coo', 'ceo', 'system_admin'].includes(user.role)) return;
+            const { data, error } = await supabase2
+                .from('jobboard_transactions')
+                .select('transaction_id, paypal_subscription_id')
+                .eq('email', clientEmail)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            if (!error && data) {
+                setTransactionDetails(data);
+            }
+        };
+        fetchTransactionDetails();
+    }, [clientEmail, user.role]);
 
     const handleResolveTicket = async () => {
         if (!ticket || !ticket.id || !user?.id) return;
@@ -735,6 +754,18 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                         <div>
                                             <label className="text-xs font-medium text-blue-700">Phone</label>
                                             <p className="text-gray-900 text-sm">{ticket.metadata.client_phone}</p>
+                                        </div>
+                                    )}
+                                    {['cro', 'coo', 'ceo', 'system_admin'].includes(user.role) && transactionDetails?.transaction_id && (
+                                        <div>
+                                            <label className="text-xs font-medium text-blue-700">Transaction ID</label>
+                                            <p className="text-gray-900 text-sm font-mono">{transactionDetails.transaction_id}</p>
+                                        </div>
+                                    )}
+                                    {['cro', 'coo', 'ceo', 'system_admin'].includes(user.role) && transactionDetails?.paypal_subscription_id && (
+                                        <div>
+                                            <label className="text-xs font-medium text-blue-700">PayPal Subscription ID</label>
+                                            <p className="text-gray-900 text-sm font-mono">{transactionDetails.paypal_subscription_id}</p>
                                         </div>
                                     )}
                                 </div>
