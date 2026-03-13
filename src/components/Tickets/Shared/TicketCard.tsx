@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, User, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { Clock, User, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Ticket, TicketPriority } from '../../../types';
 import { format } from 'date-fns';
-import { supabase } from '@/lib/supabaseClient';
 
 
 interface TicketCardProps {
@@ -12,30 +11,12 @@ interface TicketCardProps {
 
 export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
 
-  const [clientName, setClientName] = useState<any>(null);
-
   const priorityColors: Record<TicketPriority, string> = {
     critical: 'bg-red-100 text-red-800 border-red-200',
     high: 'bg-orange-100 text-orange-800 border-orange-200',
     medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     low: 'bg-gray-100 text-gray-800 border-gray-200',
   };
-  useEffect(() => {
-    const fetchClientData = async () => {
-      try {
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('full_name')
-          .eq('id', ticket.clientId)
-          .single();
-        setClientName(clientData?.full_name || 'Unknown Client');
-      } catch (error) {
-        console.error('Error fetching client data:', error);
-      }
-      fetchClientData();
-    };
-    fetchClientData();
-  }, [ticket]);
 
 
   const statusColors = {
@@ -64,7 +45,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
     timeUntilDue !== null ? Math.abs(Math.floor(timeUntilDue / (1000 * 60 * 60))) : null;
   return (
     <div
-      className={`${ticket.status !== 'resolved' ?'bg-white' : 'bg-green-500'} rounded-lg border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group`}
+      className={`${ticket.status !== 'resolved' ? 'bg-white' : 'bg-green-500'} rounded-lg border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group`}
       onClick={() => onClick(ticket)}
     >
       <div className="flex items-start justify-between mb-4">
@@ -76,22 +57,22 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
             {ticket.status.replace('_', ' ').toUpperCase()}
           </span>
         </div>
-        <ArrowRight className={`h-4 w-4 ${ticket.status !== 'resolved' ?'text-gray-400 group-hover:text-gray-600 ' : 'text-gray-200 group-hover:text-gray-900 '}  transition-colors`} />
+        <ArrowRight className={`h-4 w-4 ${ticket.status !== 'resolved' ? 'text-gray-400 group-hover:text-gray-600 ' : 'text-gray-200 group-hover:text-gray-900 '}  transition-colors`} />
       </div>
 
-      <h3 className={`font-semibold ${ticket.status !== 'resolved' ?'text-blue-700' : 'text-gray-100'} mb-2 group-hover:text-blue-800 transition-colors`}>
+      <h3 className={`font-semibold ${ticket.status !== 'resolved' ? 'text-blue-700' : 'text-gray-100'} mb-2 group-hover:text-blue-800 transition-colors`}>
         {ticket.title}
       </h3>
 
-      <p className={`text-sm  ${ticket.status !== 'resolved' ?'text-gray-600' : 'text-gray-200'} mb-4 line-clamp-2`}>
+      <p className={`text-sm  ${ticket.status !== 'resolved' ? 'text-gray-600' : 'text-gray-200'} mb-4 line-clamp-2`}>
         {ticket.description}
       </p>
 
-      <div className={`flex items-center justify-between text-sm ${ticket.status !== 'resolved' ?'text-gray-500' : 'text-gray-200'}`}>
+      <div className={`flex items-center justify-between text-sm ${ticket.status !== 'resolved' ? 'text-gray-500' : 'text-gray-200'}`}>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
             <User className="h-4 w-4" />
-            <span>{clientName}</span>
+            <span>{ticket.clientName ?? 'Unknown Client'}</span>
             <span>({ticket.type})</span>
           </div>
 

@@ -121,9 +121,9 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                 //         .neq('user_id', user.id); // keep the client if they were auto-assigned, but remove the AM
                 // }
 
-                const emailSubject = feedbackType === 'jobBoard_call_support' ? "call support ticket raised" : "cancel subscription ticket raised";
-                const emailTo = "bhanuteja@applywizz.com";
-                const emailCc = ["bhanutejathouti@gmail.com"];
+                const emailSubject = feedbackType === 'jobBoard_call_support' ? "job board call support ticket raised" : "job board cancel subscription ticket raised";
+                const emailTo = "shyam@applywizz.com";
+                const emailCc = ["ramakrishna@applywizz.com", "jagan@applywizz.com", "nagarajumuthu@applywizz.com", "abhilash@applywizz.com"];
 
                 try {
                     await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {

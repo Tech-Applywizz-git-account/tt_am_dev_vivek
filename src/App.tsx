@@ -791,16 +791,28 @@ function App() {
   const getVisibleTickets = (): Ticket[] => {
     if (!currentUser) return [];
 
+    // Build a quick id → full_name lookup from the already-fetched clients state
+    const clientNameMap = new Map(clients.map(c => [c.id, c.full_name]));
+
+    // Attach clientName to every ticket (resolves once here instead of per-card)
+    const enrichTickets = (rawTickets: Ticket[]): Ticket[] =>
+      rawTickets.map(ticket => ({
+        ...ticket,
+        clientName: clientNameMap.get(ticket.clientId) ?? 'Unknown Client',
+      }));
+
     // Executive/Managerial roles see all tickets
     if (['ceo', 'coo', 'cro', 'account_manager'].includes(currentUser.role)) {
-      return tickets;
+      return enrichTickets(tickets);
     }
 
-    // For other roles, filter tickets based on assignments
-    return tickets.filter(ticket => {
+    // For other roles, filter tickets based on assignments first then enrich
+    const filtered = tickets.filter(ticket => {
       const assignedUsers = assignments[ticket.id] || [];
       return assignedUsers.some(assignedUser => assignedUser.id === currentUser.id);
     });
+
+    return enrichTickets(filtered);
   };
 
   const handleSendEmail = async (e: React.FormEvent) => {
@@ -1163,7 +1175,7 @@ function App() {
             try {
               return JSON.parse(clientData.exclude_companies);
             } catch {
-              return ["facebook"];
+              return ["NA"];
             }
           }
           // If it's already an array, use it
@@ -1171,10 +1183,10 @@ function App() {
             return clientData.exclude_companies;
           }
           // Default to facebook
-          return ["facebook"];
+          return ["NA"];
         })(),
-        "resume_s3_path": clientData.resume_url,
-        "resume_url": clientData.resume_url ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_url}` : "",
+        "resume_s3_path": clientData.resume_path,
+        "resume_url": clientData.resume_path ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_path}` : "",
 
         // Salary and applications
         "expected_salary": clientData.salary_range || "",
@@ -1213,10 +1225,44 @@ function App() {
 
         alert(`Failed to sync with external database: ${response.status}    Error: ${errorDetails}   Check console for full details.`);
         return;
-      } else {
-        // const successData = await response.json().catch(() => response.text());
-        // console.log('✅ Successfully added to external db:', successData);
-        // alert("Client Onboarded Successfully into karma database");
+      }
+
+      // Handle successful sync
+      const djangoResponse = await response.json().catch(() => ({}));
+      let karmafyUserId = null;
+      let karmafyLeadId = null;
+
+      if (djangoResponse && djangoResponse.user_id) {
+        karmafyUserId = djangoResponse.user_id;
+      }
+      if (djangoResponse && djangoResponse.lead_id) {
+        karmafyLeadId = djangoResponse.lead_id;
+      }
+
+      console.log('✅ Django sync successful for', clientData.applywizz_id, {
+        karmafy_user_id: karmafyUserId,
+        karmafy_lead_id: karmafyLeadId
+      });
+
+      // Extract lead data (optional - don't fail if this doesn't work)
+      if (karmafyLeadId) {
+        try {
+          const authString = `${import.meta.env.VITE_KARMAFY_USERNAME}:${import.meta.env.VITE_KARMAFY_PASSWORD}`;
+          const authHeader = `Basic ${btoa(authString)}`;
+          const extractApiUrl = `${import.meta.env.VITE_EXTERNAL_API_URL}/api/v1/leads/${karmafyLeadId}/extract-data/`;
+
+          await fetch(extractApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader
+            },
+            body: JSON.stringify({})
+          });
+          // console.log('✅ Lead data extraction successful for lead ID:', karmafyLeadId);
+        } catch (extractError) {
+          // console.error('⚠️ Lead data extraction failed:', extractError);
+        }
       }
     } catch (error) {
       console.error('Error making external API call:', error);

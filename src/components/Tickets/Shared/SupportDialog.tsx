@@ -59,9 +59,9 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
                 if (ticketError) console.error("Failed to create support ticket in DB:", ticketError);
             }
 
-            const emailSubject = type === 'cancel' ? "cancel subscription ticket raised" : "call support ticket raised";
-            const emailTo = "bhanuteja@applywizz.com";
-            const emailCc = ["bhanutejathouti@gmail.com"];
+            const emailSubject = type === 'cancel' ? "job board cancel subscription ticket raised" : "job board call support ticket raised";
+            const emailTo = "shyam@applywizz.com";
+            const emailCc = ["ramakrishna@applywizz.com", "jagan@applywizz.com", "nagarajumuthu@applywizz.com", "abhilash@applywizz.com"];
 
             try {
                 await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
@@ -81,7 +81,7 @@ export const SupportDialog: React.FC<SupportDialogProps> = ({ isOpen, onClose, t
                                 </div>
                                 <p><strong>Client Name:</strong> ${currentUser.name}</p>
                                 <p><strong>Client Email:</strong> ${currentUser.email}</p>
-                                <p><strong>Description:</strong> ${description}</p>
+                                <p><strong>Client Description:</strong> ${description}</p>
                                 <p>Best regards,<br/> <strong>ApplyWizz Support Team.</strong></p> 
                               </body>
                             </html>

@@ -253,8 +253,8 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
             // Send internal email to support team with resolution details
             try {
                 const internalEmailSubject = `Ticket Closed by Sales: ${ticket.title}`;
-                const internalEmailTo = "bhanuteja@applywizz.com";
-                const internalEmailCc = ["bhanutejathouti@gmail.com"];
+                const internalEmailTo = "shyam@applywizz.com";
+                const internalEmailCc = ["ramakrishna@applywizz.com", "jagan@applywizz.com", "nagarajumuthu@applywizz.com", "abhilash@applywizz.com"];
                 const internalEmailHtml = `
                     <html>
                     <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
@@ -341,8 +341,8 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
             // Send email to support team
             try {
                 const emailSubject = `Ticket Resolved by Client: ${ticket.title}`;
-                const emailTo = "bhanuteja@applywizz.com";
-                const emailCc = ["bhanutejathouti@gmail.com"];
+                const emailTo = "shyam@applywizz.com";
+                const emailCc = ["ramakrishna@applywizz.com", "jagan@applywizz.com", "nagarajumuthu@applywizz.com", "abhilash@applywizz.com"];
                 const emailHtml = `
                     <html>
                     <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">   
@@ -352,7 +352,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                             style="width:150px;"/>
                         </div>
                         <p>The client has confirmed resolution for ticket <strong>${ticket.short_code || ticket.id}</strong>.</p>
-                        <p><strong>Title:</strong> ${ticket.title}</p>
+                        <p><strong>Job Board:</strong> ${ticket.title}</p>
                         <p><strong>Description from Sales Person:</strong> ${lastSupportComment}</p>
                     </body>
                     </html>
@@ -401,7 +401,14 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                 assignedBy: user.id,
             });
 
-            await supabase.from('tickets').update({ status: 'forwarded' }).eq('id', ticket.id);
+            await supabase.from('tickets').update({
+                status: 'forwarded',
+                metadata: {
+                    ...(ticket.metadata || {}),
+                    client_phone: client?.callable_phone || null,
+                    client_email: client?.company_email || clientEmail || null,
+                }
+            }).eq('id', ticket.id);
 
             if (error) {
                 console.error("Assignment error:", error);
@@ -423,9 +430,13 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                 <p>Hi <strong>${assignedUserObj.name}</strong>,</p>
                                 <p>You have been assigned a new ticket by <strong>${user.name}</strong>.</p>
                                 <p><strong>Ticket ID:</strong> ${ticket.short_code || ticket.id}</p>
-                                <p><strong>Title:</strong> ${ticket.title}</p>
-                                <p><strong>Description:</strong> ${ticket.description}</p>
-                                <p>Please log in to the dashboard to resolve it.</p>
+                                <p><strong>Job Board:</strong> ${ticket.title}</p>
+                                <p><strong>Client Description:</strong> ${ticket.description}</p>
+                                <hr style="border:none; border-top:1px solid #eee; margin:12px 0;" />
+                                <p><strong>Client Contact Details:</strong></p>
+                                <p><strong>Email:</strong> ${client?.company_email || clientEmail || 'N/A'}</p>
+                                <p><strong>Phone:</strong> ${client?.callable_phone || 'N/A'}</p>
+                                <p>Please log in to the dashboard to resolve it and update the status.</p>
                                 <p>Best regards,<br/> <strong>ApplyWizz Support Team</strong></p> 
                             </body>
                             </html>
@@ -706,6 +717,30 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                 </div>
                             </div>
                         </div>
+
+                        {/* Client Contact Details — visible to non-client roles after assignment */}
+                        {(ticket.metadata?.client_phone || ticket.metadata?.client_email) && (
+                            <div className="bg-blue-50 rounded-lg p-5 border border-blue-200">
+                                <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                    <User className="h-4 w-4" /> Client Contact Details
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {ticket.metadata?.client_email && (
+                                        <div>
+                                            <label className="text-xs font-medium text-blue-700">Email</label>
+                                            <p className="text-gray-900 text-sm">{ticket.metadata.client_email}</p>
+                                        </div>
+                                    )}
+                                    {ticket.metadata?.client_phone && (
+                                        <div>
+                                            <label className="text-xs font-medium text-blue-700">Phone</label>
+                                            <p className="text-gray-900 text-sm">{ticket.metadata.client_phone}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* --- Comments --- */}
                         {ticketComments.length > 0 && (
                             <div className="bg-blue-50 rounded-lg p-6 border border-blue-200 mt-6">
