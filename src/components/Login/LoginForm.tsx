@@ -91,6 +91,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
   // ── Google Sign-In via GIS ───────────────────────────────────────────
   // Uses GoogleLogin component which provides credential (id_token JWT) directly.
+  // IMPORTANT: We decode the JWT first and validate against public.users BEFORE
+  // calling signInWithIdToken, so unregistered users never get an Auth entry created.
   const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     setGoogleLoading(true);
     setError('');
@@ -98,7 +100,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       const idToken = credentialResponse.credential;
       if (!idToken) throw new Error('Could not retrieve ID token from Google account.');
 
-      // Sign in to Supabase using the Google ID token
+      // Step 1: Decode JWT to get the email (no API call needed)
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      const userEmail: string = payload.email?.toLowerCase();
+      if (!userEmail) throw new Error('Could not retrieve email from Google account.');
+
+      // Step 2: Check public.users by email BEFORE touching Auth
+      const { data: publicUser, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', userEmail)
+        .maybeSingle();
+
+      if (userError || !publicUser) {
+        // ❌ No account found — show error, do NOT call signInWithIdToken
+        throw new Error('No account found for this Google email. Please sign up first.');
+      }
+
+      // Step 3: ✅ Valid user — now create the Supabase session
       const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
@@ -106,17 +125,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Sign-in failed. Please try again.');
-
-      // Fetch the user profile from public.users
-      const { data: publicUser, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (userError || !publicUser) {
-        throw new Error('No account found. Please sign up first.');
-      }
 
       onLogin(publicUser as User);
     } catch (err: any) {

@@ -270,12 +270,12 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
 
             if (!userEmail) throw new Error('Could not retrieve email from Google account.');
 
-            // Check 1: already an existing client with opted_job_links?
+            // Check 1: already registered as a job board client → block, do NOT touch Auth
             const { data: existingClientWithJob } = await supabase
                 .from('clients')
                 .select('id')
                 .ilike('company_email', userEmail)
-                // .eq('opted_job_links', true)
+                .eq('opted_job_links', true)
                 .maybeSingle();
 
             if (existingClientWithJob) {
@@ -283,14 +283,7 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
                 return;
             }
 
-            // Check 2: existing client (fallback - not yet opted in)
-            const { data: existingClient } = await supabase
-                .from('clients')
-                .select('id')
-                .ilike('company_email', userEmail)
-                .maybeSingle();
-
-            // Check 3: payment record in jobboard_transactions
+            // Check 2: payment record in jobboard_transactions
             const { data: txData } = await supabase2
                 .from('jobboard_transactions')
                 .select('id, full_name')
@@ -299,9 +292,9 @@ const JobBoardSignUpForm: React.FC<JobBoardSignUpFormProps> = ({ onSignUpSuccess
                 .neq('payment_status', 'failed')
                 .maybeSingle();
 
-            if (!txData && !existingClient) {
+            if (!txData) {
                 // ❌ NOT PAID — show error message, do NOT touch Auth
-                setSignUpMessage({ type: 'error', text: 'You have not done payment yet. Please make the payment.' });
+                setSignUpMessage({ type: 'error', text: 'You have not made a payment yet. Please complete the payment first.' });
                 return;
             }
 
