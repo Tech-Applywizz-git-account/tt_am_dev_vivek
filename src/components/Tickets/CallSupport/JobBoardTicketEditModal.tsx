@@ -183,6 +183,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                 .from('jobboard_transactions')
                 .select('transaction_id, paypal_subscription_id')
                 .eq('email', clientEmail)
+                .eq('payment_status', 'success')
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .single();

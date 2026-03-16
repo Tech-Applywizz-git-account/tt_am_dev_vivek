@@ -109,7 +109,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       const { data: publicUser, error: userError } = await supabase
         .from('users')
         .select('*')
-        .ilike('email', userEmail)
+        .eq('email', userEmail)
         .maybeSingle();
 
       if (userError || !publicUser) {
