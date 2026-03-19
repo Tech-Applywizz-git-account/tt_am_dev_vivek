@@ -502,11 +502,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
             resumeFile || formData.resume_url,
         ];
 
-        // Conditional requirement: Exclude Companies if experience > 0
-        const isExperienceGreaterThanZero = !isNaN(Number(formData.experience)) && Number(formData.experience) > 0;
-        if (isExperienceGreaterThanZero && (!formData.exclude_companies || formData.exclude_companies.trim() === '')) {
-            return false;
-        }
 
         if (isOthersSelected && !customJobRole.trim()) {
             return false;
@@ -1112,15 +1107,10 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                    Exclude Companies{' '}
-                                    {(!isNaN(Number(formData.experience)) && Number(formData.experience) > 0) && (
-                                        <span className="text-red-500">*</span>
-                                    )}
+                                    Exclude Companies
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
-                                    {(!isNaN(Number(formData.experience)) && Number(formData.experience) > 0) && (
-                                        <p className="text-gray-500">Please provide the names of the companies you have previously worked with!!</p>
-                                    )}
+                                <p className="text-xs text-gray-600 mb-2">
+                                    Please list any companies you prefer to exclude.
                                 </p>
                                 <textarea
                                     name="exclude_companies"
@@ -1128,7 +1118,6 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                     onChange={handleInputChange}
                                     className="w-full bg-white border border-gray-300 rounded-lg p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none"
                                     placeholder="e.g. Facebook, Google, Amazon"
-                                    required={!isNaN(Number(formData.experience)) && Number(formData.experience) > 0}
                                 />
                             </div>
                         </div>
