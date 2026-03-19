@@ -622,7 +622,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                 linked_in_url: formData.linked_in_url || '',
                 end_date: formData.end_date || '',
                 willing_to_relocate: Boolean(formData.willing_to_relocate),
-                exclude_companies: formData.exclude_companies || 'N/A',
+                exclude_companies: formData.exclude_companies || '',
                 alternate_job_roles: formData.alternate_job_roles
                     ? Array.isArray(formData.alternate_job_roles)
                         ? formData.alternate_job_roles.map(r =>
