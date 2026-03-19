@@ -1109,7 +1109,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                                     Exclude Companies
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
+                                <p className="text-xs text-gray-600 mb-2">
                                     Please list any companies you prefer to exclude.
                                 </p>
                                 <textarea
