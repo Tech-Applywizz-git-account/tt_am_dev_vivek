@@ -1175,7 +1175,7 @@ function App() {
             try {
               return JSON.parse(clientData.exclude_companies);
             } catch {
-              return ["NA"];
+              return [""];
             }
           }
           // If it's already an array, use it
@@ -1183,7 +1183,7 @@ function App() {
             return clientData.exclude_companies;
           }
           // Default to facebook
-          return ["NA"];
+          return [""];
         })(),
         "resume_s3_path": clientData.resume_path,
         "resume_url": clientData.resume_path ? `https://applywizz-prod.s3.us-east-2.amazonaws.com/${clientData.resume_path}` : "",
