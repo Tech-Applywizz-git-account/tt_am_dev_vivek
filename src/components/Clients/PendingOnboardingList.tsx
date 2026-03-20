@@ -205,6 +205,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
   const [isCreatingRole, setIsCreatingRole] = useState(false);   // loading state for all onboarding flows
   const [loadingMessage, setLoadingMessage] = useState('');       // contextual message for the loading overlay
   const [showCreateRoleConfirm, setShowCreateRoleConfirm] = useState<PendingClient | null>(null); // confirm before create-role-onboard
+  const [isManualFlow, setIsManualFlow] = useState(false); // track if we skip onboard and go to manual assign
 
   const [usersByRole, setUsersByRole] = useState<{
     [key: string]: { id: string; name: string }[];
@@ -291,6 +292,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
     setMapRoleClient(client);
     setMappedRole('');
     setShowMapRoleConfirm(false);
+    setIsManualFlow(!hasJobLinks(client));
   };
 
   const closeMapRoleModal = () => {
@@ -314,6 +316,45 @@ export const PendingOnboardingList: React.FC<Props> = ({
       await onDirectOnboard(modifiedClient);
     } catch (error) {
       console.error("Error during mapped role onboarding:", error);
+    } finally {
+      setIsCreatingRole(false);
+      setLoadingMessage('');
+    }
+  };
+
+  const handleMapRoleOnly = async () => {
+    if (!mapRoleClient || !mappedRole) return;
+
+    const modifiedClient: PendingClient = {
+      ...mapRoleClient,
+      job_role_preferences: [mappedRole],
+    };
+
+    setShowMapRoleConfirm(false);
+    const clientId = mapRoleClient.id;
+    setMapRoleClient(null);
+    setMappedRole('');
+
+    setLoadingMessage('Updating client role and preparing assignment. Please wait...');
+    setIsCreatingRole(true);
+
+    try {
+      const { error: dbError } = await supabase
+        .from('pending_clients')
+        .update({
+          job_role_preferences: [modifiedClient.job_role_preferences[0]],
+          is_new_domain: false
+        })
+        .eq('id', clientId);
+
+      if (dbError) throw dbError;
+
+      // Transition directly to the manual assignment modal
+      const updatedClient = { ...modifiedClient, is_new_domain: false };
+      setSelectedClient(updatedClient);
+    } catch (error: any) {
+      console.error("Error during role mapping only flow:", error);
+      alert(error.message || "Failed to update role preferences.");
     } finally {
       setIsCreatingRole(false);
       setLoadingMessage('');
@@ -355,6 +396,58 @@ export const PendingOnboardingList: React.FC<Props> = ({
 
       // Step 2: Trigger direct onboarding
       await onDirectOnboard(client);
+
+    } catch (error: any) {
+      console.error('Request failed:', error);
+      alert(error.message || "Something went wrong.");
+    } finally {
+      setIsCreatingRole(false);
+      setLoadingMessage('');
+    }
+  };
+
+  const handleCreateRoleOnly = async (client: PendingClient) => {
+    if (!client.job_role_preferences?.[0]) {
+      alert("No job role found to create.");
+      return;
+    }
+
+    const roleName = client.job_role_preferences[0];
+    setLoadingMessage(`Creating the new job role "${roleName}" and preparing assignment. This may take a few moments...`);
+    setIsCreatingRole(true);
+
+    try {
+      const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
+      if (!baseUrl) {
+        throw new Error('VITE_EXTERNAL_API_URL is not defined');
+      }
+
+      // Step 1: Create the new job role
+      const response = await fetch(`${baseUrl}/add-job-role/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: roleName })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create job role');
+      }
+
+      // Step 2: Update Supabase to mark as no longer a new domain
+      const { error: dbError } = await supabase
+        .from('pending_clients')
+        .update({ is_new_domain: false })
+        .eq('id', client.id);
+
+      if (dbError) throw dbError;
+
+      // Transition directly to the manual assignment modal
+      const updatedClient = { ...client, is_new_domain: false };
+      setSelectedClient(updatedClient);
 
     } catch (error: any) {
       console.error('Request failed:', error);
@@ -448,17 +541,19 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 <div className="flex flex-col gap-2 items-end">
                   {hasJobLinks(client) && onDirectOnboard ? (
                     <>
-                      {/* ── Onboard Directly ── */}
-                      <button
-                        onClick={() => handleDirectOnboardClick(client)}
-                        disabled={isCreatingRole}
-                        className={`px-4 py-2 rounded text-white ${isCreatingRole
-                          ? "bg-green-400 cursor-not-allowed"
-                          : "bg-green-600 hover:bg-green-700"
-                          }`}
-                      >
-                        {isCreatingRole ? "Onboarding..." : "Onboard Directly"}
-                      </button>
+                      {/* ── Onboard Directly ── Only if NOT a new domain ── */}
+                      {client.is_new_domain === false && (
+                        <button
+                          onClick={() => handleDirectOnboardClick(client)}
+                          disabled={isCreatingRole}
+                          className={`px-4 py-2 rounded text-white ${isCreatingRole
+                            ? "bg-green-400 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700"
+                            }`}
+                        >
+                          {isCreatingRole ? "Onboarding..." : "Onboard Directly"}
+                        </button>
+                      )}
 
                       {/* ── Map to Different Role & Create Role – only if is_new_domain ── */}
                       {client.is_new_domain && (
@@ -490,13 +585,48 @@ export const PendingOnboardingList: React.FC<Props> = ({
                       )}
                     </>
                   ) : (
-                    <button
-                      onClick={() => setSelectedClient(client)}
-                      disabled={isSubmitting}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      Assign Roles
-                    </button>
+                    /* ── When Job Links are NOT opted ── */
+                    <div className="flex flex-col gap-2 items-end">
+                      {client.is_new_domain === false ? (
+                        <button
+                          onClick={() => setSelectedClient(client)}
+                          disabled={isSubmitting}
+                          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Assign Roles
+                        </button>
+                      ) : (
+                        /* New Domain – Show setup buttons without "Onboard" in label */
+                        <>
+                          {/* ── Map to Different Role ── */}
+                          <button
+                            onClick={() => openMapRoleModal(client)}
+                            disabled={isCreatingRole}
+                            className={`px-4 py-2 rounded text-white ${isCreatingRole
+                              ? "bg-purple-300 cursor-not-allowed"
+                              : "bg-purple-600 hover:bg-purple-700"
+                              }`}
+                          >
+                            Map to Existing Role
+                          </button>
+
+                          {/* ── Create New Role ── */}
+                          <button
+                            onClick={() => {
+                              setIsManualFlow(true);
+                              setShowCreateRoleConfirm(client);
+                            }}
+                            disabled={isCreatingRole}
+                            className={`px-4 py-2 rounded text-white ${isCreatingRole
+                              ? "bg-indigo-300 cursor-not-allowed"
+                              : "bg-indigo-600 hover:bg-indigo-700"
+                              }`}
+                          >
+                            Create this new role
+                          </button>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -583,9 +713,10 @@ export const PendingOnboardingList: React.FC<Props> = ({
 
             {/* Summary */}
             <p className="text-sm text-gray-600">
-              You are about to onboard{" "}
+              {hasJobLinks(mapRoleClient) ? "You are about to onboard " : "You are about to update the role for "}
               <span className="font-semibold text-gray-800">{mapRoleClient.full_name}</span>{" "}
-              with a <span className="font-semibold text-purple-700">mapped role</span>:
+              {hasJobLinks(mapRoleClient) ? "with a " : "to a "}
+              <span className="font-semibold text-purple-700">mapped role</span>:
             </p>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 space-y-1 text-sm">
@@ -602,7 +733,9 @@ export const PendingOnboardingList: React.FC<Props> = ({
             </div>
 
             <p className="text-xs text-gray-400">
-              This will trigger the direct onboarding process with the new role. This action cannot be undone.
+              {hasJobLinks(mapRoleClient)
+                ? "This will trigger the direct onboarding process with the new role. This action cannot be undone."
+                : "This will update the client's preferences and proceed to the manual assignment step."}
             </p>
 
             {/* Action buttons */}
@@ -614,10 +747,10 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 Go Back
               </button>
               <button
-                onClick={handleMapRoleConfirm}
+                onClick={isManualFlow ? handleMapRoleOnly : handleMapRoleConfirm}
                 className="px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
               >
-                Yes, Onboard Now
+                {!isManualFlow ? "Yes, Onboard Now" : "Yes, Proceed"}
               </button>
             </div>
           </div>
@@ -699,7 +832,7 @@ export const PendingOnboardingList: React.FC<Props> = ({
               <span className="font-semibold text-indigo-700">
                 &quot;{showCreateRoleConfirm.job_role_preferences?.[0]}&quot;
               </span>{" "}
-              in the task management tool and onboard{" "}
+              in the task management tool and {hasJobLinks(showCreateRoleConfirm) ? "onboard " : "prepare to assign roles for "}
               <span className="font-semibold text-gray-800">
                 {showCreateRoleConfirm.full_name}
               </span>.
@@ -721,7 +854,11 @@ export const PendingOnboardingList: React.FC<Props> = ({
                 onClick={() => {
                   const client = showCreateRoleConfirm;
                   setShowCreateRoleConfirm(null);
-                  handleCreateRoleAndOnboard(client);
+                  if (isManualFlow) {
+                    handleCreateRoleOnly(client);
+                  } else {
+                    handleCreateRoleAndOnboard(client);
+                  }
                 }}
                 className="px-6 py-2 rounded text-white bg-indigo-600 hover:bg-indigo-700 font-medium"
               >
