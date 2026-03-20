@@ -429,7 +429,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                     applywizz_id: tx.jb_id || '',
                     gender: tx.gender || prev.gender,
                     // state_of_residence: tx.location,
-                    zip_or_country: tx.country || '',
+                    // zip_or_country: tx.country || '',
                     start_date: tx.plan_started ? tx.plan_started.split('T')[0] : '',
                     end_date: tx.plan_ended ? tx.plan_ended.split('T')[0] : '',
                     whatsapp_number: tx.mobile_number || '',
@@ -499,6 +499,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
             formData.visa_type,
             formData.work_preferences,
             formData.personal_email,
+            formData.zip_or_country,
             resumeFile || formData.resume_url,
         ];
 
@@ -769,7 +770,7 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                             <InputField label="Full Name" value={formData.full_name} disabled readOnly />
                             <InputField label="Email" value={formData.company_email} disabled readOnly />
                             <InputField label="Mobile Number" value={formData.whatsapp_number} disabled readOnly />
-                            <InputField label="Country" value={formData.zip_or_country} disabled readOnly />
+
                             <InputField label="Started At" value={formData.start_date} disabled readOnly />
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Service Opted</label>
@@ -879,6 +880,14 @@ const ClientOnboarding: React.FC<ClientOnboardingProps> = ({ onComplete }) => {
                                 onChange={handleInputChange}
                                 required
                                 placeholder="e.g. California"
+                            />
+                            <InputField
+                                label="Country *"
+                                name="zip_or_country"
+                                value={formData.zip_or_country}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="e.g. USA"
                             />
                             <SelectField
                                 label="Work Preference *"
