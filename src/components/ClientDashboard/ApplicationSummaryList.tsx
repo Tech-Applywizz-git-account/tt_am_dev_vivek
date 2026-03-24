@@ -307,7 +307,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
               href={job.screenshotUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-amber-900 transition-colors cursor-help"
+              className="flex items-center gap-1.5 hover:text-amber-900 transition-colors cursor-help"
               title="view applied job screenshot"
             >
               <ExternalLink size={14} />
