@@ -37,13 +37,15 @@ interface ApplicationSummaryListProps {
   loading?: boolean;
   error?: string;
   applywizzId?: string;
+  gmailScreenshots?: Record<string, string>;
 }
 
 const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
   data,
   loading = false,
   error = "",
-  applywizzId
+  applywizzId,
+  gmailScreenshots = {}
 }) => {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [jobsData, setJobsData] = useState<JobsData>({});
@@ -369,11 +371,26 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
                     </div>
                   ) : tasks.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Briefcase size={18} className="text-blue-600" />
-                        <h3 className="font-semibold text-gray-800">
-                          Career Portal Applications ({tasks.length})
-                        </h3>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={18} className="text-blue-600" />
+                          <h3 className="font-semibold text-gray-800">
+                            Career Portal Applications ({tasks.length})
+                          </h3>
+                        </div>
+                        {gmailScreenshots[item.date] && (
+                          <a
+                            href={gmailScreenshots[item.date]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-100 rounded-md hover:bg-red-100 transition-all text-xs font-semibold shadow-sm group"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <ExternalLink size={14} className="group-hover:scale-110 transition-transform" />
+                              <span>View Applied Screenshot</span>
+                            </div>
+                          </a>
+                        )}
                       </div>
                       <div className="space-y-3">
                         {tasks.map((job) => renderJobCard(job))}

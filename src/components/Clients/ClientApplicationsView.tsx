@@ -13,6 +13,7 @@ export const ClientApplicationsView: React.FC<ClientApplicationsViewProps> = ({ 
     const [applicationData, setApplicationData] = useState<ChartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [gmailScreenshots, setGmailScreenshots] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -52,6 +53,17 @@ export const ClientApplicationsView: React.FC<ClientApplicationsViewProps> = ({ 
                 })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
                 setApplicationData(formattedData);
+
+                // Fetch Gmail screenshots
+                try {
+                    const screenshotsResponse = await fetch(`${apiUrl}/api/client-gmail-screenshots?lead_id=${client.applywizz_id}`);
+                    if (screenshotsResponse.ok) {
+                        const screenshotsData = await screenshotsResponse.json();
+                        setGmailScreenshots(screenshotsData);
+                    }
+                } catch (err) {
+                    console.error("Error fetching gmail screenshots:", err);
+                }
             } catch (err) {
                 console.error('Error fetching data:', err);
                 setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -148,6 +160,7 @@ export const ClientApplicationsView: React.FC<ClientApplicationsViewProps> = ({ 
                         loading={loading}
                         error={error}
                         applywizzId={client.applywizz_id}
+                        gmailScreenshots={gmailScreenshots}
                     />
                 </>
             )}
