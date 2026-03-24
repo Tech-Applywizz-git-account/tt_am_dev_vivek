@@ -34,7 +34,7 @@ function JobRoleSelector({
       try {
         const baseUrl = import.meta.env.VITE_EXTERNAL_API_URL;
         if (!baseUrl) {
-          throw new Error('VITE_EXTERNAL_API_URL1 is not defined');
+          throw new Error('VITE_EXTERNAL_API_URL is not defined');
         }
         const response = await fetch(`${baseUrl}/api/all-job-roles/`, {
           method: 'GET',

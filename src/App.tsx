@@ -592,7 +592,7 @@ function App() {
         console.log("Scored jobs client detected - checking for today's jobs...");
         setClientDashboardData([]);
 
-        // const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+        // const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
         // if (apiUrl && fetchedApplywizzId) {
         //   try {
         //     const summaryResponse = await fetch(`${apiUrl}/api/job-links?lead_id=${fetchedApplywizzId}&source=LINKEDIN&apply_type=EASY_APPLY`);
