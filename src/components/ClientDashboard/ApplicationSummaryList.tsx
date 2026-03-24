@@ -303,7 +303,6 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
         </a>
         {!job.is_email_received && job.screenshotUrl && (
           <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-md text-sm border border-amber-100">
-            <span>Waiting for mail</span>
             <a
               href={job.screenshotUrl}
               target="_blank"
@@ -312,6 +311,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
               title="view applied job screenshot"
             >
               <ExternalLink size={14} />
+              <span>Waiting for mail</span>
             </a>
           </div>
         )}
@@ -383,7 +383,7 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
                             href={gmailScreenshots[item.date]}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-100 rounded-md hover:bg-red-100 transition-all text-xs font-semibold shadow-sm group"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-md hover:bg-blue-100 transition-all text-xs font-semibold shadow-sm group"
                           >
                             <div className="flex items-center gap-1.5">
                               <ExternalLink size={14} className="group-hover:scale-110 transition-transform" />
