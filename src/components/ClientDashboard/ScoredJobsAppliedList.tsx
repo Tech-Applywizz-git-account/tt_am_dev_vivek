@@ -182,7 +182,7 @@ const ScoredJobsAppliedList: React.FC<ScoredJobsAppliedListProps> = ({ applywizz
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             if (!apiUrl) throw new Error("VITE_EXTERNAL_API_URL is not defined");
 
             let url = `${apiUrl}/api/job-links?lead_id=${applywizzId}&page=${page}&page_size=${pageSize}&status=Completed`;

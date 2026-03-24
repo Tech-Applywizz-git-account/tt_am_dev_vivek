@@ -37,13 +37,15 @@ interface ApplicationSummaryListProps {
   loading?: boolean;
   error?: string;
   applywizzId?: string;
+  gmailScreenshots?: Record<string, string>;
 }
 
 const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
   data,
   loading = false,
   error = "",
-  applywizzId
+  applywizzId,
+  gmailScreenshots = {}
 }) => {
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [jobsData, setJobsData] = useState<JobsData>({});
@@ -301,15 +303,15 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
         </a>
         {!job.is_email_received && job.screenshotUrl && (
           <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-md text-sm border border-amber-100">
-            <span>Waiting for mail</span>
             <a
               href={job.screenshotUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-amber-900 transition-colors cursor-help"
+              className="flex items-center gap-1.5 hover:text-amber-900 transition-colors cursor-help"
               title="view applied job screenshot"
             >
               <ExternalLink size={14} />
+              <span>Waiting for mail</span>
             </a>
           </div>
         )}
@@ -369,11 +371,26 @@ const ApplicationSummaryList: React.FC<ApplicationSummaryListProps> = ({
                     </div>
                   ) : tasks.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Briefcase size={18} className="text-blue-600" />
-                        <h3 className="font-semibold text-gray-800">
-                          Career Portal Applications ({tasks.length})
-                        </h3>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={18} className="text-blue-600" />
+                          <h3 className="font-semibold text-gray-800">
+                            Career Portal Applications ({tasks.length})
+                          </h3>
+                        </div>
+                        {gmailScreenshots[item.date] && (
+                          <a
+                            href={gmailScreenshots[item.date]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-md hover:bg-blue-100 transition-all text-xs font-semibold shadow-sm group"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <ExternalLink size={14} className="group-hover:scale-110 transition-transform" />
+                              <span>View Applied Screenshot</span>
+                            </div>
+                          </a>
+                        )}
                       </div>
                       <div className="space-y-3">
                         {tasks.map((job) => renderJobCard(job))}

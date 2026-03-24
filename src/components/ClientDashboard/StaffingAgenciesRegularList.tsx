@@ -121,7 +121,7 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
@@ -147,7 +147,7 @@ const StaffingAgenciesRegularList: React.FC<StaffingAgenciesRegularListProps> = 
         if (!applywizzId) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&industry_type=true`);
 
             if (!response.ok) {

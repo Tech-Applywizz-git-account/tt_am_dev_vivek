@@ -163,7 +163,7 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
@@ -204,7 +204,7 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         setLoadingDates(prev => ({ ...prev, [date]: true }));
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             const response = await fetch(`${apiUrl}/api/job-links?lead_id=${applywizzId}&date=${date}&source=LINKEDIN&apply_type=EASY_APPLY`);
 
             if (!response.ok) {
@@ -245,7 +245,7 @@ const LinkedInEasyApplyRegularList = React.forwardRef<LinkedInEasyApplyRegularLi
         if (!applywizzId || isScoringTriggered) return;
 
         try {
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             await fetch(`${apiUrl}/api/trigger-easyapply-scoring/?apw_id=${applywizzId}`);
 
             // Mark as triggered and close modal

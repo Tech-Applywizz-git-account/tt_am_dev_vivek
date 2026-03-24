@@ -37,7 +37,7 @@ const StaffingAgenciesDashboard: React.FC<StaffingAgenciesDashboardProps> = ({ a
             setLoading(true);
             setError("");
 
-            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL1;
+            const apiUrl = import.meta.env.VITE_EXTERNAL_API_URL;
             if (!apiUrl) {
                 throw new Error('VITE_EXTERNAL_API_URL is not defined');
             }
