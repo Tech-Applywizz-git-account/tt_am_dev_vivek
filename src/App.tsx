@@ -237,6 +237,7 @@ function App() {
   const [clientDashboardLoading, setClientDashboardLoading] = useState(false);
   const [clientDashboardError, setClientDashboardError] = useState("");
   const [applywizzId, setApplywizzId] = useState<string | undefined>();
+  const [gmailScreenshots, setGmailScreenshots] = useState<Record<string, string>>({});
 
   // State for job scoring overlay
   const [showJobScoringOverlay, setShowJobScoringOverlay] = useState(false);
@@ -587,6 +588,17 @@ function App() {
         })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         setClientDashboardData(formattedData);
+
+        // Fetch Gmail screenshots
+        try {
+          const screenshotsResponse = await fetch(`${apiUrl}/api/client-gmail-screenshots?lead_id=${fetchedApplywizzId}`);
+          if (screenshotsResponse.ok) {
+            const screenshotsData = await screenshotsResponse.json();
+            setGmailScreenshots(screenshotsData);
+          }
+        } catch (err) {
+          console.error("Error fetching gmail screenshots:", err);
+        }
       } else {
         // For opted_job_links clients, clear dashboard data but keep applywizzId
         console.log("Scored jobs client detected - checking for today's jobs...");
@@ -694,6 +706,7 @@ function App() {
     try {
       // 1. Clear React state first
       setCurrentUser(null);
+      setGmailScreenshots({});
       setActiveView('dashboard');
       setHasShownOverlayThisSession(false);
       setIsJobsLoading(true); // Reset loading state for next login
@@ -2095,6 +2108,7 @@ function App() {
                       loading={clientDashboardLoading}
                       error={clientDashboardError}
                       applywizzId={applywizzId}
+                      gmailScreenshots={gmailScreenshots}
                     />
                   </>
                 )}
