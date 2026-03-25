@@ -2,8 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { User, Ticket } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { X, ExternalLink } from 'lucide-react';
+
+const paymentSupabase = createClient(
+    import.meta.env.VITE_SUPABASE_URL_PAYMENT || '',
+    import.meta.env.VITE_SUPABASE_ANON_KEY_PAYMENT || ''
+);
 import { ClientTicketsModal } from './Tickets/CallSupport/ClientTicketsModal';
 
 type FeedbackType = 'bug' | 'feature' | 'general';
@@ -74,23 +80,82 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
         }
     };
 
-    // Step 1: Fetch preview and open confirmation modal
+    // Step 1: Open confirmation modal, handling PayPal natively and Razorpay via API
     const handleCancelSubscriptionPreview = async () => {
         setIsFetchingPreview(true);
         try {
-            const res = await fetch('https://apply-wizz.com/api/cancel-subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: cancelEmail, preview: true })
+            // First, check the database natively
+            const { data, error } = await paymentSupabase
+                .from('jobboard_transactions')
+                .select('*')
+                .eq('email', cancelEmail)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (error && error.code !== 'PGRST116') throw error;
+
+            if (data) {
+                const method = data.payment_method?.toLowerCase() || '';
+
+                if (method === 'paypal') {
+                    // For PayPal, fetch details directly from the DB
+                    setCancelPreviewData({
+                        name: data.full_name || user?.name || 'Unknown',
+                        provider: 'PayPal',
+                        subscription_id: data.paypal_subscription_id || 'Not Found',
+                        transaction_id: data.transaction_id || 'Not Found'
+                    });
+                } else if (method === 'razorpay') {
+                    // For Razorpay, we must hit the backend API to query the Razorpay SDK securely
+                    const res = await fetch('https://apply-wizz.com/api/cancel-subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: cancelEmail, preview: true })
+                    });
+                    const apiData = await res.json();
+                    
+                    if (res.ok && apiData.success && apiData.data) {
+                        setCancelPreviewData(apiData.data);
+                    } else {
+                        toast.warn(apiData.error || 'Could not fetch Razorpay details. Proceeding with manual input.');
+                        setCancelPreviewData({
+                            name: data.full_name || user?.name || 'Unknown',
+                            provider: 'Razorpay',
+                            subscription_id: 'Not Found',
+                            transaction_id: data.transaction_id || 'Not Found'
+                        });
+                    }
+                } else {
+                    // Other/Unknown payment method
+                    setCancelPreviewData({
+                        name: data.full_name || user?.name || 'Unknown',
+                        provider: data.payment_method || 'Unknown',
+                        subscription_id: data.stripe_subscription_id || data.paypal_subscription_id || 'Not Found',
+                        transaction_id: data.transaction_id || 'Not Found'
+                    });
+                }
+            } else {
+                toast.warn('No active subscription found for this email. Proceeding manually.');
+                setCancelPreviewData({
+                    name: user?.name || 'Unknown',
+                    provider: 'Unknown',
+                    subscription_id: 'Not Found',
+                    transaction_id: 'Not Found'
+                });
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch preview details:', err);
+            toast.warn('Could not fetch exact subscription details. Proceeding manually.');
+            setCancelPreviewData({
+                name: user?.name || 'Unknown',
+                provider: 'Pending Verification',
+                subscription_id: 'Will be processed upon confirmation',
+                transaction_id: 'Will be processed upon confirmation'
             });
-            const data = await res.json();
-            if (!res.ok || !data.success) throw new Error(data.error || 'Could not fetch subscription details.');
-            setCancelPreviewData(data.data);
+        } finally {
             setIsOpen(false);
             setIsCancelConfirmOpen(true);
-        } catch (err: any) {
-            toast.error(err.message || 'Failed to fetch subscription details.');
-        } finally {
             setIsFetchingPreview(false);
         }
     };
@@ -142,7 +207,7 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
             // 2d. Fetch end_date from jobboard_transactions to include in email
             let formattedEndDate = 'the end of your current billing cycle';
             try {
-                const { data: jobboardTx } = await supabase
+                const { data: jobboardTx } = await paymentSupabase
                     .from('jobboard_transactions')
                     .select('end_date')
                     .eq('email', cancelEmail)
@@ -498,6 +563,10 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                                 <div className="flex justify-between px-4 py-3">
                                     <span className="text-sm text-gray-500 font-medium">Name</span>
                                     <span className="text-sm text-gray-800 font-semibold">{cancelPreviewData.name}</span>
+                                </div>
+                                <div className="flex justify-between px-4 py-3">
+                                    <span className="text-sm text-gray-500 font-medium">Email</span>
+                                    <span className="text-sm text-gray-800 font-semibold">{cancelEmail}</span>
                                 </div>
                                 <div className="flex justify-between px-4 py-3">
                                     <span className="text-sm text-gray-500 font-medium">Provider</span>
