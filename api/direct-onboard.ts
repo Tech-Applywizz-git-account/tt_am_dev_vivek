@@ -567,7 +567,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ? clientData.exclude_companies
             : clientData.exclude_companies
                 ? [clientData.exclude_companies]
-                : ["NA"];
+                : [""];
         const resumeUrl = getS3Url(clientData.resume_s3_path) || "";
 
         // Check submission type - handle pending clients separately
