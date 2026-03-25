@@ -8,6 +8,7 @@ import { UserManagementModal } from '../Admin/UserManagementModal';
 import { VLTicketEditModal } from '../Tickets/VolumeShortfall/VLTicketEditModal';
 import { RUTicketEditModal } from '../Tickets/ResumeUpdate/RUTicketEditModel';
 import { Ticket, Client, AssignedUser, User } from '@/types';
+import FeedbackButton from '../FeedbackButton';
 // import { SupportDialog } from '../Tickets/Shared/SupportDialog';
 import { useState } from 'react';
 
@@ -37,6 +38,7 @@ interface Props {
   pendingClientsCount: number;
   onViewLabResults?: (labId: string) => void;
   optedJobLinks?: boolean;
+  clientId?: string;
 }
 
 const AppLayout: React.FC<Props> = ({
@@ -65,6 +67,7 @@ const AppLayout: React.FC<Props> = ({
   pendingClientsCount,
   onViewLabResults,
   optedJobLinks = false,
+  clientId,
 }) => {
   const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
   const [supportType, setSupportType] = useState<'call' | 'cancel' | null>(null);
@@ -138,6 +141,7 @@ const AppLayout: React.FC<Props> = ({
         currentUser={currentUser}
         isJobBoardClient={optedJobLinks}
       /> */}
+      <FeedbackButton user={currentUser} optedJobLinks={optedJobLinks} clientId={clientId} />
     </div>
   );
 };
