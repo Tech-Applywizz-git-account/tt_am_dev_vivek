@@ -2824,6 +2824,7 @@ function App() {
                       pendingClientsCount={pendingClients.length}
                       optedJobLinks={optedJobLinks}
                       onViewLabResults={handleViewLabResults}
+                      clientId={currentClientId ?? undefined}
                     />
                     <LabResultsModal
                       user={currentUser}

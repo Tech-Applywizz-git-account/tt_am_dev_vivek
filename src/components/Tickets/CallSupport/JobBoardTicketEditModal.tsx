@@ -51,7 +51,9 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
     const [salesUsers, setSalesUsers] = useState<UserType[]>([]);
     const [selectedSalesUser, setSelectedSalesUser] = useState<string>('');
     const [isAssigning, setIsAssigning] = useState(false);
-    const [transactionDetails, setTransactionDetails] = useState<{ transaction_id: string | null; paypal_subscription_id: string | null } | null>(null);
+    const [transactionDetails, setTransactionDetails] = useState<{ transaction_id: string | null; paypal_subscription_id: string | null; payment_account: string | null } | null>(null);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -181,7 +183,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
             if (!['cro', 'coo', 'ceo', 'system_admin'].includes(user.role)) return;
             const { data, error } = await supabase2
                 .from('jobboard_transactions')
-                .select('transaction_id, paypal_subscription_id')
+                .select('transaction_id, paypal_subscription_id, payment_account')
                 .eq('email', clientEmail)
                 .eq('payment_status', 'success')
                 .order('created_at', { ascending: false })
@@ -325,6 +327,140 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
             setIsSubmittingComment(false);
         }
     };
+
+    // const handleCancelSubscription = async () => {
+    //     if (!ticket || !client?.applywizz_id) {
+    //         alert('Client APW ID not found. Cannot cancel subscription.');
+    //         return;
+    //     }
+    //     setIsCancellingSubscription(true);
+    //     try {
+    //         // 1. Call Karmafy API to pause the client
+    //         const karmafyRes = await fetch(`${import.meta.env.VITE_EXTERNAL_API_URL_DEV}/api/client-update`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ apw_id: client.applywizz_id, status: 'Paused' }),
+    //         });
+    //         const karmafyData = await karmafyRes.json();
+    //         if (!karmafyRes.ok || !karmafyData.success) {
+    //             throw new Error(karmafyData.message || 'Failed to pause client in Karmafy.');
+    //         }
+
+    //         // 2. Cancel the PayPal subscription (if we have a subscription ID)
+    //         // TODO: Uncomment when PayPal Secret keys are added to Vercel env vars
+    //         // if (transactionDetails?.paypal_subscription_id) {
+    //         //     try {
+    //         //         const paypalAccount = transactionDetails.payment_account || 'india';
+    //         //         const paypalRes = await fetch(
+    //         //             `${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/cancel-paypal-subscription`,
+    //         //             {
+    //         //                 method: 'POST',
+    //         //                 headers: { 'Content-Type': 'application/json' },
+    //         //                 body: JSON.stringify({
+    //         //                     subscription_id: transactionDetails.paypal_subscription_id,
+    //         //                     account: paypalAccount,
+    //         //                     reason: resolutionComment || 'Customer requested cancellation',
+    //         //                 }),
+    //         //             }
+    //         //         );
+    //         //         const paypalData = await paypalRes.json();
+    //         //         if (!paypalRes.ok || !paypalData.success) {
+    //         //             console.error('⚠️ PayPal cancel failed (non-blocking):', paypalData.error);
+    //         //             toast.warn(
+    //         //                 `Client paused in Karmafy, but PayPal cancellation failed: ${paypalData.error || 'Unknown error'}. Please cancel manually in PayPal.`,
+    //         //                 { position: 'top-center', autoClose: 8000, theme: 'dark' }
+    //         //             );
+    //         //         } else {
+    //         //             console.log('✅ PayPal subscription cancelled:', transactionDetails.paypal_subscription_id);
+    //         //         }
+    //         //     } catch (paypalErr: any) {
+    //         //         console.error('⚠️ PayPal cancel threw (non-blocking):', paypalErr.message);
+    //         //         toast.warn(
+    //         //             `Client paused in Karmafy, but PayPal API call failed: ${paypalErr.message}. Please cancel manually in PayPal.`,
+    //         //             { position: 'top-center', autoClose: 8000, theme: 'dark' }
+    //         //         );
+    //         //     }
+    //         // } else {
+    //         //     console.log('ℹ️ No PayPal subscription ID found — skipping PayPal cancel.');
+    //         // }
+
+    //         // 2. Update ticket status to 'closed' so the client can mark it as resolved
+    //         const { error: updateError } = await supabase
+    //             .from('tickets')
+    //             .update({ status: 'closed', updatedAt: new Date().toISOString() })
+    //             .eq('id', ticket.id);
+
+    //         if (updateError) {
+    //             throw new Error('Failed to update ticket status to closed.');
+    //         }
+
+    //         // 3. Send cancellation email to the client
+    //         if (ticket.createdby) {
+    //             try {
+    //                 const { data: userData } = await supabase
+    //                     .from('users')
+    //                     .select('email, name')
+    //                     .eq('id', ticket.createdby)
+    //                     .single();
+
+    //                 if (userData?.email) {
+    //                     const emailSubject = `Cancel Subscription Initiated – ${ticket.short_code || ticket.id}`;
+    //                     const emailHtml = `
+    //                         <html>
+    //                         <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+    //                             <div style="text-align:center; margin-bottom:20px;">
+    //                                 <img src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png"
+    //                                     alt="ApplyWizz Logo"
+    //                                     style="width:150px;"/>
+    //                             </div>
+    //                             <p>Hi <strong>${userData.name || 'Client'}</strong>,</p>
+    //                             <p>We have received your request to cancel your subscription for ticket <strong>${ticket.short_code || ticket.id}</strong>.</p>
+    //                             <p>Your <strong>cancel subscription process has been initiated</strong>. Your account has been paused and our team will reach out to you shortly to complete the process.</p>
+    //                             <p>Thank you for your patience and for being a valued client of ApplyWizz. We hope to have the opportunity to serve you again in the future.</p>
+    //                             <p>If you have any questions or concerns, please don't hesitate to reach out to our support team.</p>
+    //                             <p>Best regards,<br/> <strong>ApplyWizz Support Team</strong></p>
+    //                         </body>
+    //                         </html>
+    //                     `;
+    //                     await fetch(`${import.meta.env.VITE_TICKETING_TOOL_API_URL}/api/send-email`, {
+    //                         method: 'POST',
+    //                         headers: { 'Content-Type': 'application/json' },
+    //                         body: JSON.stringify({
+    //                             to: userData.email,
+    //                             subject: emailSubject,
+    //                             htmlBody: emailHtml,
+    //                         }),
+    //                     });
+    //                 }
+    //             } catch (emailErr) {
+    //                 console.error('Failed to send cancellation email to client:', emailErr);
+    //             }
+    //         }
+
+    //         toast('Subscription cancelled successfully! Client has been paused.', {
+    //             position: 'top-center',
+    //             autoClose: 5000,
+    //             hideProgressBar: false,
+    //             closeOnClick: false,
+    //             pauseOnHover: true,
+    //             draggable: true,
+    //             theme: 'dark',
+    //         });
+
+    //         setShowCancelConfirm(false);
+    //         onUpdate?.();
+    //         onClose();
+    //     } catch (err: any) {
+    //         console.error('Cancel subscription error:', err);
+    //         toast.error(err.message || 'Failed to cancel subscription. Please try again.', {
+    //             position: 'top-center',
+    //             autoClose: 5000,
+    //             theme: 'dark',
+    //         });
+    //     } finally {
+    //         setIsCancellingSubscription(false);
+    //     }
+    // };
 
     const handleClientResolveTicket = async () => {
         if (!ticket || !ticket.id || !user?.id) return;
@@ -813,17 +949,65 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                                     className="w-full border px-3 py-2 rounded-lg"
                                                     placeholder="Add a final note before resolving..."
                                                     required
-                                                />                                                <button
-                                                    onClick={handleResolveTicket}
-                                                    type="button"
-                                                    disabled={!resolutionComment.trim() || isSubmittingComment}
-                                                    className={`px-4 py-2 rounded-lg mt-4 ${(!resolutionComment.trim() || isSubmittingComment)
-                                                        ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                                        : 'bg-green-600 text-white hover:bg-green-700 rounded'
-                                                        }`}
-                                                >
-                                                    {isSubmittingComment ? 'Resolving Ticket...' : 'Resolve Ticket'}
-                                                </button>
+                                                />
+                                                <div className="flex flex-wrap gap-3 mt-4 items-center">
+                                                    <button
+                                                        onClick={handleResolveTicket}
+                                                        type="button"
+                                                        disabled={!resolutionComment.trim() || isSubmittingComment}
+                                                        className={`px-4 py-2 rounded-lg ${(!resolutionComment.trim() || isSubmittingComment)
+                                                                ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                                                : 'bg-green-600 text-white hover:bg-green-700'
+                                                            }`}
+                                                    >
+                                                        {isSubmittingComment ? 'Resolving Ticket...' : 'Resolve Ticket'}
+                                                    </button>
+
+                                                    {client?.applywizz_id && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowCancelConfirm(true)}
+                                                            disabled={!resolutionComment.trim() || isCancellingSubscription || showCancelConfirm}
+                                                            className={`px-4 py-2 rounded-lg ${(!resolutionComment.trim() || isCancellingSubscription || showCancelConfirm)
+                                                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                                                    : 'bg-red-600 text-white hover:bg-red-700'
+                                                                }`}
+                                                        >
+                                                            Cancel Subscription
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Cancel Subscription Confirmation */}
+                                                {showCancelConfirm && (
+                                                    <div className="mt-4 p-4 border border-red-300 bg-red-50 rounded-lg">
+                                                        <p className="text-red-800 font-semibold mb-1">⚠️ Confirm Cancel Subscription</p>
+                                                        <p className="text-red-700 text-sm mb-4">
+                                                            Are you sure you want to cancel subscription for this client? This will pause their account (<strong>{client?.applywizz_id}</strong>) in the task management and send them a cancellation email.
+                                                        </p>
+                                                        <div className="flex gap-3">
+                                                            {/* <button
+                                                                type="button"
+                                                                onClick={handleCancelSubscription}
+                                                                disabled={isCancellingSubscription}
+                                                                className={`px-4 py-2 rounded-lg text-sm font-medium ${isCancellingSubscription
+                                                                        ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                                                        : 'bg-red-600 text-white hover:bg-red-700'
+                                                                    }`}
+                                                            >
+                                                                {isCancellingSubscription ? 'Cancelling...' : 'Yes, Cancel Subscription'}
+                                                            </button> */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowCancelConfirm(false)}
+                                                                disabled={isCancellingSubscription}
+                                                                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                            >
+                                                                No, Go Back
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )
                                     }
