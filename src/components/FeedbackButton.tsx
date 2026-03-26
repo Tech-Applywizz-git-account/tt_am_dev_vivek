@@ -96,6 +96,13 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
             if (error && error.code !== 'PGRST116') throw error;
 
             if (data) {
+                if (data.subscription_status === 'CANCELLED') {
+                    toast.info('Your subscription is already cancelled.');
+                    setCancelPreviewData(null);
+                    setIsOpen(false);
+                    return;
+                }
+
                 const method = data.payment_method?.toLowerCase() || '';
 
                 if (method === 'paypal') {
@@ -196,7 +203,7 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                 clientId: resolvedClientId,
                 createdby: user.id,
                 priority: 'medium',
-                status: 'open',
+                status: 'Resolved',
                 createdat: new Date().toISOString(),
                 dueDate: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
                 short_code: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -273,7 +280,6 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                             <p>Hi <strong>${user.name}</strong>,</p>
                             <p>Your subscription has been successfully cancelled.</p>
                             <p>You can continue using the services until <strong>${formattedEndDate}</strong>, after which your access will be stopped.</p>
-                            <p>Ticket <strong>${newTicket.short_code}</strong> has been created for your records. You can track it under <strong>View Tickets</strong> in the Help & Support section.</p>
                             <p>Best regards,<br/> <strong>ApplyWizz Support Team</strong></p>
                           </body>
                          </html>
@@ -492,9 +498,9 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                                 <input
                                     type="email"
                                     value={cancelEmail}
-                                    onChange={(e) => setCancelEmail(e.target.value)}
                                     placeholder="Enter associated email"
-                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
+                                    readOnly
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-1">Verify this is the email used for subscription.</p>
@@ -572,7 +578,7 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                                     <span className="text-sm text-gray-500 font-medium">Provider</span>
                                     <span className="text-sm text-gray-800 font-semibold">{cancelPreviewData.provider}</span>
                                 </div>
-                                <div className="flex justify-between px-4 py-3">
+                                {/* <div className="flex justify-between px-4 py-3">
                                     <span className="text-sm text-gray-500 font-medium">Subscription ID</span>
                                     <span className="text-sm text-gray-800 font-mono break-all">{cancelPreviewData.subscription_id}</span>
                                 </div>
@@ -581,12 +587,12 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                                         <span className="text-sm text-gray-500 font-medium">Transaction ID</span>
                                         <span className="text-sm text-gray-800 font-mono break-all">{cancelPreviewData.transaction_id}</span>
                                     </div>
-                                )}
+                                )} */}
                             </div>
 
-                            {/* Optional Reason */}
+                            {/* Mandatory Reason */}
                             <div className="mt-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
                                 <textarea
                                     value={comment}
                                     onChange={(e) => setComment(e.target.value)}
@@ -610,8 +616,12 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                             </button>
                             <button
                                 onClick={handleConfirmCancel}
-                                disabled={isCancellingNow}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
+                                disabled={isCancellingNow || comment.trim().length < 5}
+                                className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors flex items-center gap-2 ${
+                                    isCancellingNow || comment.trim().length < 5
+                                        ? 'bg-red-400 cursor-not-allowed'
+                                        : 'bg-red-600 hover:bg-red-700'
+                                }`}
                             >
                                 {isCancellingNow ? (
                                     <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> Cancelling...</>
