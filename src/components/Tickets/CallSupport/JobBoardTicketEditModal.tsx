@@ -51,7 +51,9 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
     const [salesUsers, setSalesUsers] = useState<UserType[]>([]);
     const [selectedSalesUser, setSelectedSalesUser] = useState<string>('');
     const [isAssigning, setIsAssigning] = useState(false);
-    const [transactionDetails, setTransactionDetails] = useState<{ transaction_id: string | null; paypal_subscription_id: string | null } | null>(null);
+    const [transactionDetails, setTransactionDetails] = useState<{ transaction_id: string | null; paypal_subscription_id: string | null; payment_account: string | null } | null>(null);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -181,7 +183,7 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
             if (!['cro', 'coo', 'ceo', 'system_admin'].includes(user.role)) return;
             const { data, error } = await supabase2
                 .from('jobboard_transactions')
-                .select('transaction_id, paypal_subscription_id')
+                .select('transaction_id, paypal_subscription_id, payment_account')
                 .eq('email', clientEmail)
                 .eq('payment_status', 'success')
                 .order('created_at', { ascending: false })
@@ -813,17 +815,54 @@ export const JobBoardTicketEditModal: React.FC<TicketEditModalProps> = ({
                                                     className="w-full border px-3 py-2 rounded-lg"
                                                     placeholder="Add a final note before resolving..."
                                                     required
-                                                />                                                <button
-                                                    onClick={handleResolveTicket}
-                                                    type="button"
-                                                    disabled={!resolutionComment.trim() || isSubmittingComment}
-                                                    className={`px-4 py-2 rounded-lg mt-4 ${(!resolutionComment.trim() || isSubmittingComment)
-                                                        ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                                        : 'bg-green-600 text-white hover:bg-green-700 rounded'
-                                                        }`}
-                                                >
-                                                    {isSubmittingComment ? 'Resolving Ticket...' : 'Resolve Ticket'}
-                                                </button>
+                                                />
+                                                <div className="flex flex-wrap gap-3 mt-4 items-center">
+                                                    <button
+                                                        onClick={handleResolveTicket}
+                                                        type="button"
+                                                        disabled={!resolutionComment.trim() || isSubmittingComment}
+                                                        className={`px-4 py-2 rounded-lg ${(!resolutionComment.trim() || isSubmittingComment)
+                                                                ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                                                : 'bg-green-600 text-white hover:bg-green-700'
+                                                            }`}
+                                                    >
+                                                        {isSubmittingComment ? 'Resolving Ticket...' : 'Resolve Ticket'}
+                                                    </button>
+
+                                                    {client?.applywizz_id && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowCancelConfirm(true)}
+                                                            disabled={!resolutionComment.trim() || isCancellingSubscription || showCancelConfirm}
+                                                            className={`px-4 py-2 rounded-lg ${(!resolutionComment.trim() || isCancellingSubscription || showCancelConfirm)
+                                                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                                                    : 'bg-red-600 text-white hover:bg-red-700'
+                                                                }`}
+                                                        >
+                                                            Cancel Subscription
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Cancel Subscription Confirmation */}
+                                                {showCancelConfirm && (
+                                                    <div className="mt-4 p-4 border border-red-300 bg-red-50 rounded-lg">
+                                                        <p className="text-red-800 font-semibold mb-1">⚠️ Confirm Cancel Subscription</p>
+                                                        <p className="text-red-700 text-sm mb-4">
+                                                            Are you sure you want to cancel subscription for this client? This will pause their account (<strong>{client?.applywizz_id}</strong>) in the task management and send them a cancellation email.
+                                                        </p>
+                                                        <div className="flex gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowCancelConfirm(false)}
+                                                                disabled={isCancellingSubscription}
+                                                                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                            >
+                                                                No, Go Back
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )
                                     }
