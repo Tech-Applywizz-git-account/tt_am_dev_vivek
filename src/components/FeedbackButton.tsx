@@ -616,9 +616,9 @@ const FeedbackButton: React.FC<FeedbackProps> = ({ user, optedJobLinks, clientId
                             </button>
                             <button
                                 onClick={handleConfirmCancel}
-                                disabled={isCancellingNow || comment.trim().length < 5}
+                                disabled={isCancellingNow || comment.trim().length < 5 || !['paypal', 'razorpay'].includes(cancelPreviewData?.provider?.toLowerCase() || '')}
                                 className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors flex items-center gap-2 ${
-                                    isCancellingNow || comment.trim().length < 5
+                                    isCancellingNow || comment.trim().length < 5 || !['paypal', 'razorpay'].includes(cancelPreviewData?.provider?.toLowerCase() || '')
                                         ? 'bg-red-400 cursor-not-allowed'
                                         : 'bg-red-600 hover:bg-red-700'
                                 }`}
