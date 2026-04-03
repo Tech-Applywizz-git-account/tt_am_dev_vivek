@@ -22,9 +22,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const { date } = req.query as Record<string, string>;
     const ist = getISTDate();
-    const tomorrow = addDays(ist, 1);
-    const tomorrowStr = toDateStr(tomorrow);
+    
+    // Use provided date OR default to tomorrow
+    const targetDate = date ? date : toDateStr(addDays(ist, 1));
+    const targetDateObj = date ? new Date(date) : addDays(ist, 1);
+    
     const holidays = await fetchHolidaySet();
     const ams = await fetchActiveAMs();
 
@@ -34,18 +38,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const am of ams) {
       const leaves = await fetchAmLeaveSet(am.id);
-      if (!isWorkingDay(tomorrowStr, holidays, leaves)) {
+      if (!isWorkingDay(targetDate, holidays, leaves)) {
         skippedAMs++;
         results.push({ am: am.name, status: 'skipped', reason: 'leave/holiday/sunday' });
         continue;
       }
-      const count = await generateSlotsForAM(am.id, tomorrowStr);
+      const count = await generateSlotsForAM(am.id, targetDate);
       totalSlots += count;
       results.push({ am: am.name, status: 'generated', slots: count });
     }
 
-    console.log(`[SlotGenerator] ✅ ${totalSlots} slots, ${skippedAMs} AMs skipped for ${tomorrowStr}`);
-    return res.status(200).json({ success: true, date: tomorrowStr, totalSlots, skippedAMs, results });
+    console.log(`[SlotGenerator] ✅ ${totalSlots} slots, ${skippedAMs} AMs skipped for ${targetDate}`);
+    return res.status(200).json({ success: true, date: targetDate, totalSlots, skippedAMs, results });
   } catch (err: any) {
     console.error('[SlotGenerator] ❌', err.message);
     return res.status(500).json({ success: false, error: err.message });
