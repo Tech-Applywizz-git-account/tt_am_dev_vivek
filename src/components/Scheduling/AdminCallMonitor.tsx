@@ -24,22 +24,21 @@ type CallType = 'DISCOVERY' | 'ORIENTATION' | 'PROGRESS' | 'RENEWAL';
 type CallStatus = 'UNSCHEDULED' | 'SCHEDULED' | 'COMPLETED' | 'MISSED' | 'NOT_PICKED';
 
 interface AMSummary {
-  id: string;
-  name: string;
+  am_id: string;
+  am_name: string;
   is_active: boolean;
   total_clients: number;
   slots_used: number;
   slots_total: number;
-  calls_today: number;
-  calls_completed: number;
-  calls_missed: number;
-  calls_pending: number;
-  renewals_due: number;
-  completion_rate: number;
+  total_calls_today: number;
+  completed: number;
+  missed: number;
+  pending: number;
+  renewals_pending: number;
 }
 
 interface SLABreachCall {
-  id: string;
+  call_request_id: string;
   client_name: string;
   call_type: CallType;
   deadline_date: string;
@@ -127,18 +126,26 @@ export const AdminCallMonitor: React.FC = () => {
   }, []);
 
   // Aggregate stats
-  const totalStats = useMemo(() => ({
-    totalCallsToday: data.amSummary.reduce((s, a) => s + a.calls_today, 0),
-    completedToday: data.amSummary.reduce((s, a) => s + a.calls_completed, 0),
-    missedToday: data.amSummary.reduce((s, a) => s + a.calls_missed, 0),
-    pendingToday: data.amSummary.reduce((s, a) => s + a.calls_pending, 0),
-    slaBreaches: data.slaBreaches.length,
-    avgCompletionRate: data.amSummary.length > 0 
-      ? Math.round(data.amSummary.filter(a => a.is_active).reduce((s, a) => s + a.completion_rate, 0) / (data.amSummary.filter(a => a.is_active).length || 1))
-      : 0,
-    unscheduledHighPriority: data.priorityQueue.filter(q => q.priority_score >= 80).length,
-    renewalsDue: data.amSummary.reduce((s, a) => s + a.renewals_due, 0),
-  }), [data]);
+  const totalStats = useMemo(() => {
+    const summary = data.amSummary.map(am => ({
+      ...am,
+      completion_rate: am.total_calls_today > 0 ? Math.round((am.completed / am.total_calls_today) * 100) : 0
+    }));
+
+    return {
+      totalCallsToday: summary.reduce((s, a) => s + a.total_calls_today, 0),
+      completedToday: summary.reduce((s, a) => s + a.completed, 0),
+      missedToday: summary.reduce((s, a) => s + a.missed, 0),
+      pendingToday: summary.reduce((s, a) => s + a.pending, 0),
+      slaBreaches: data.slaBreaches.length,
+      avgCompletionRate: summary.length > 0 
+        ? Math.round(summary.filter(a => a.is_active).reduce((s, a) => s + a.completion_rate, 0) / (summary.filter(a => a.is_active).length || 1))
+        : 0,
+      unscheduledHighPriority: data.priorityQueue.filter(q => q.priority_score >= 80).length,
+      renewalsDue: summary.reduce((s, a) => s + a.renewals_pending, 0),
+      processedSummary: summary
+    };
+  }, [data]);
 
   const callTypeDistribution = useMemo(() => {
     const counts: Record<CallType, number> = { DISCOVERY: 0, ORIENTATION: 0, PROGRESS: 0, RENEWAL: 0 };
@@ -233,21 +240,21 @@ export const AdminCallMonitor: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {data.amSummary.map((am) => (
-                  <React.Fragment key={am.id}>
+                {totalStats.processedSummary.map((am) => (
+                  <React.Fragment key={am.am_id}>
                     <tr
                       className={`hover:bg-gray-50 transition-colors cursor-pointer ${!am.is_active ? 'opacity-50' : ''}`}
-                      onClick={() => setExpandedAM(expandedAM === am.id ? null : am.id)}
+                      onClick={() => setExpandedAM(expandedAM === am.am_id ? null : am.am_id)}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                            {am.name.split(' ').map(n => n[0]).join('')}
+                            {am.am_name?.split(' ').map(n => n[0]).join('') || '?'}
                           </div>
                           <div>
-                            <p className="font-semibold text-sm text-gray-900">{am.name}</p>
+                            <p className="font-semibold text-sm text-gray-900">{am.am_name || 'Unknown Manager'}</p>
                           </div>
-                          {expandedAM === am.id
+                          {expandedAM === am.am_id
                             ? <ChevronUp className="h-4 w-4 text-gray-400 ml-auto" />
                             : <ChevronDown className="h-4 w-4 text-gray-400 ml-auto" />}
                         </div>
@@ -261,21 +268,21 @@ export const AdminCallMonitor: React.FC = () => {
                       <td className="px-4 py-3 w-36">
                         <SlotBar used={am.slots_used} total={am.slots_total} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{am.calls_today}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{am.total_calls_today}</td>
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1 text-sm text-green-700 font-medium">
-                          <CheckCircle className="h-3.5 w-3.5" /> {am.calls_completed}
+                          <CheckCircle className="h-3.5 w-3.5" /> {am.completed}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {am.calls_missed > 0
-                          ? <span className="flex items-center gap-1 text-sm text-red-700 font-medium"><XCircle className="h-3.5 w-3.5" />{am.calls_missed}</span>
+                        {am.missed > 0
+                          ? <span className="flex items-center gap-1 text-sm text-red-700 font-medium"><XCircle className="h-3.5 w-3.5" />{am.missed}</span>
                           : <span className="text-sm text-gray-400">—</span>
                         }
                       </td>
                       <td className="px-4 py-3">
-                        {am.renewals_due > 0
-                          ? <span className="flex items-center gap-1 text-sm text-orange-700 font-semibold"><Zap className="h-3.5 w-3.5" />{am.renewals_due}</span>
+                        {am.renewals_pending > 0
+                          ? <span className="flex items-center gap-1 text-sm text-orange-700 font-semibold"><Zap className="h-3.5 w-3.5" />{am.renewals_pending}</span>
                           : <span className="text-sm text-gray-400">—</span>
                         }
                       </td>
@@ -294,15 +301,15 @@ export const AdminCallMonitor: React.FC = () => {
                       </td>
                     </tr>
                     {/* Expanded row */}
-                    {expandedAM === am.id && (
+                    {expandedAM === am.am_id && (
                       <tr>
                         <td colSpan={9} className="px-6 pb-4 pt-0 bg-gray-50">
                           <div className="grid grid-cols-4 gap-3 pt-3">
                             {[
-                              { label: 'Calls Today', value: am.calls_today, color: 'text-blue-700' },
-                              { label: 'Completed', value: am.calls_completed, color: 'text-green-700' },
-                              { label: 'Pending', value: am.calls_pending, color: 'text-amber-700' },
-                              { label: 'Missed', value: am.calls_missed, color: 'text-red-700' },
+                              { label: 'Calls Today', value: am.total_calls_today, color: 'text-blue-700' },
+                              { label: 'Completed', value: am.completed, color: 'text-green-700' },
+                              { label: 'Pending', value: am.pending, color: 'text-amber-700' },
+                              { label: 'Missed', value: am.missed, color: 'text-red-700' },
                             ].map((s) => (
                               <div key={s.label} className="bg-white rounded-xl p-3 border border-gray-200 text-center">
                                 <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
@@ -334,7 +341,7 @@ export const AdminCallMonitor: React.FC = () => {
             {data.slaBreaches.map((breach) => {
               const typeCfg = CALL_TYPE_COLORS[breach.call_type];
               return (
-                <div key={breach.id} className="px-6 py-4 hover:bg-red-50/30 transition-colors">
+                <div key={breach.call_request_id} className="px-6 py-4 hover:bg-red-50/30 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 bg-red-100 rounded-xl flex items-center justify-center">
