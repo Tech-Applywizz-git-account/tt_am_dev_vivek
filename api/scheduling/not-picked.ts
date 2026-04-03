@@ -4,7 +4,7 @@
 // Body: { callRequestId, bookingId, notes? }
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase, nextWorkingDay, toDateStr } from './_shared';
+import { supabase, nextWorkingDay, toDateStr } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');

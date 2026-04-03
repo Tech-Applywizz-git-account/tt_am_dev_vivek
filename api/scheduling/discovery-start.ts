@@ -6,7 +6,7 @@
 // Body: { clientId, amId }
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase, createDiscoveryCall, allocateBestAM } from './_shared';
+import { supabase, createDiscoveryCall, allocateBestAM } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');

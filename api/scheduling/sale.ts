@@ -4,7 +4,7 @@
 // Body: { clientId, amId }
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createDiscoveryCall } from './_shared';
+import { createDiscoveryCall } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');

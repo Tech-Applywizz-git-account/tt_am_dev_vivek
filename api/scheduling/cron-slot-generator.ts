@@ -7,7 +7,7 @@ import {
   supabase, fetchActiveAMs, fetchHolidaySet, fetchAmLeaveSet,
   generateSlotsForAM, getISTDate, toDateStr, isWorkingDay,
   validateCronSecret,
-} from './_shared';
+} from './_shared.js';
 import { addDays } from 'date-fns';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

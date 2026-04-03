@@ -3,7 +3,7 @@
 // Reports SLA breaches (calls past their deadline_date).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase, validateCronSecret } from './_shared';
+import { supabase, validateCronSecret } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');

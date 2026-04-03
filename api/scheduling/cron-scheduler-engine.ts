@@ -3,7 +3,7 @@
 // Assigns available slots to UNSCHEDULED calls (with preemption fallback).
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { runSchedulerCycle, validateCronSecret } from './_shared';
+import { runSchedulerCycle, validateCronSecret } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');

@@ -3,7 +3,7 @@
 // Returns admin monitoring data: AM summary, SLA breaches, priority queue.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_shared';
+import { supabase } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
