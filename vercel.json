@@ -1,6 +1,27 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
+  ],
+  "crons": [
+    {
+      "path":     "/api/scheduling/cron-slot-generator",
+      "schedule": "30 12 * * *"
+    },
+    {
+      "path":     "/api/scheduling/cron-scheduler-engine",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path":     "/api/scheduling/cron-missed-call-handler",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path":     "/api/scheduling/cron-sla-monitor",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path":     "/api/scheduling/cron-lifecycle-checker",
+      "schedule": "*/5 * * * *"
+    }
   ]
 }
-

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Client, User } from '../../types';
-import { Search, UserPlus, Edit, BarChart3 } from 'lucide-react';
+import { Search, UserPlus, Edit, BarChart3, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import FeedbackButton from '../FeedbackButton';
 
@@ -48,6 +48,33 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
 
     const filteredClients = getFilteredClients();
 
+    const handleStartService = async (client: Client) => {
+        if (!client.applywizz_id) {
+            alert('Cannot start service: ApplyWizz ID is missing.');
+            return;
+        }
+
+        if (!window.confirm(`Start scheduling service lifecycle for ${client.full_name}?`)) return;
+
+        try {
+            const response = await fetch('/api/scheduling/service-start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applywizzId: client.applywizz_id }),
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(`✅ Service started successfully for ${client.full_name}`);
+            } else {
+                alert(`❌ Failed to start service: ${result.error || 'Unknown error'}`);
+            }
+        } catch (err) {
+            console.error('Failed to trigger service start:', err);
+            alert('❌ Network error while starting service.');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -87,10 +114,8 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S.No.</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preferences</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Onboarded</th> */}
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View Applications</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started Service</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -106,24 +131,6 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                                             <div className="text-sm text-gray-500">{client.company_email}</div>
                                         </div>
                                     </td>
-                                    {/* <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
-                                        <div className="text-sm text-gray-500">{client.callable_phone}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-900">
-                                            <p className="text-sm text-gray-600">
-                                                Roles:{" "}
-                                                {client.job_role_preferences ? client.job_role_preferences.join(", ") : '-'}
-                                            </p>
-                                        </div>
-                                        <div className="text-sm text-gray-500">{client.salary_range}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900">
-                                            {format(new Date(client.created_at), 'yyyy-MM-dd')}
-                                        </div>
-                                    </td> */}
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <button
                                             onClick={() => handleViewClientApplications(client)}
@@ -136,6 +143,20 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                                         >
                                             <BarChart3 className="h-4 w-4" />
                                             <span>View Apps</span>
+                                        </button>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <button
+                                            onClick={() => handleStartService(client)}
+                                            disabled={!client.applywizz_id}
+                                            className={`flex items-center space-x-1 px-3 py-1 text-sm rounded-lg transition-colors ${client.applywizz_id
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                }`}
+                                            title={client.applywizz_id ? 'Start service lifecycle' : 'ApplyWizz ID required'}
+                                        >
+                                            <Zap className="h-3.5 w-3.5" />
+                                            <span>Start Service</span>
                                         </button>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">

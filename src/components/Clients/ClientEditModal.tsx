@@ -324,6 +324,19 @@ export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSu
       additionalInfoError = error;
     }
 
+    // Trigger Scheduling Lifecycle
+    if (form.applywizz_id) {
+      try {
+        await fetch('/api/scheduling/service-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applywizzId: client.applywizz_id }),
+        });
+      } catch (err) {
+        console.error('Failed to trigger scheduling lifecycle:', err);
+      }
+    }
+
     setLoading(false);
 
     if (clientError || additionalInfoError) {

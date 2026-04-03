@@ -26,7 +26,9 @@ import {
   ChevronUp,
   Headphones,
   Phone,
-  UserX
+  UserX,
+  CalendarDays,
+  Activity
 } from 'lucide-react';
 import { User } from '../../types';
 import { rolePermissions } from '../../data/mockData';
@@ -170,6 +172,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       id: 'escalations',
       label: 'Escalations',
       icon: AlertTriangle,
+      show: ['cro', 'coo', 'ceo'].includes(user.role),
+    },
+    {
+      id: 'am-call-calendar',
+      label: 'Call Calendar',
+      icon: CalendarDays,
+      show: user.role === 'account_manager',
+    },
+    {
+      id: 'call-monitoring',
+      label: 'Call Monitoring',
+      icon: Activity,
       show: ['cro', 'coo', 'ceo'].includes(user.role),
     },
     {

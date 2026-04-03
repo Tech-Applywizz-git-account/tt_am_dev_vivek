@@ -26,13 +26,13 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onViewLabResults
 
   useEffect(() => {
     const fetchBadgeValue = async () => {
-      if (!user?.email) return;
+      if (!user?.email || user.role !== 'client') return;
 
       const { data, error } = await supabase
         .from("clients")
         .select("badge_value,coding_lab_url,company_email,lab_id_1,lab_id_2,applywizz_id,mcq_results,test_results")
         .eq("company_email", user.email)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching badge value:", error.message);

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { allocateBestAM } from './scheduling/_shared';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -583,6 +584,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Generate a unique ID for the client
         const clientId = crypto.randomUUID();
 
+        // 1. Check for existing AM mapping from Discovery trigger
+        let bestAmId = DEFAULT_ONBOARDED_BY_ID;
+        try {
+            const { data: mapping } = await supabaseAdmin
+                .from('temp_clients_am_mapping')
+                .select('am_id')
+                .eq('applywizz_id', clientData.applywizz_id)
+                .maybeSingle();
+            
+            if (mapping?.am_id) {
+                bestAmId = mapping.am_id;
+            } else {
+                // Fallback to auto-allocation if no discovery mapping exists
+                bestAmId = await allocateBestAM();
+            }
+        } catch (err) {
+            console.error('AM allocation check failed:', err);
+        }
+
         // Prepare clients table data
         const clientsData = {
             id: clientId,
@@ -597,6 +617,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             work_auth_details: clientData.work_auth_details || null,
             visa_type: clientData.visa_type,
             onboarded_by: DEFAULT_ONBOARDED_BY_ID,
+            account_manager_id: bestAmId,
             sponsorship: clientData.sponsorship || false,
             applywizz_id: clientData.applywizz_id,
             badge_value: clientData.badge_value || 0,

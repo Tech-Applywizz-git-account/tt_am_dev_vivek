@@ -69,6 +69,8 @@ import JobBoardSignUpForm from './components/JobBoard/JobBoardSignUpForm';
 import ClientOnboarding from './components/JobBoard/ClientOnboarding';
 import KarmafyPendingOverlay from './components/ClientDashboard/KarmafyPendingOverlay';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { AMCallCalendar } from './components/Scheduling/AMCallCalendar';
+import { AdminCallMonitor } from './components/Scheduling/AdminCallMonitor';
 
 
 function App() {
@@ -2762,6 +2764,12 @@ function App() {
             <JobTrackingDashboard currentUserEmail={currentUser?.email} />
           </div>
         );
+
+      case 'am-call-calendar':
+        return <AMCallCalendar amId={currentUser?.id} amName={currentUser?.name} />;
+
+      case 'call-monitoring':
+        return <AdminCallMonitor />;
 
       default:
         return (
