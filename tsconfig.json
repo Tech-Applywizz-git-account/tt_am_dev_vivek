@@ -13,9 +13,11 @@
     "moduleResolution": "node",
     "esModuleInterop": true,
     "jsx": "react-jsx" ,
+    
     "paths": {
       "@/*": ["*"]
     }
   },
   "include": ["src","vite-env.d.ts"]
 }
+
