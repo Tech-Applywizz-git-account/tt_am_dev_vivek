@@ -3,21 +3,16 @@ import {
   Phone,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  Clock,
   Users,
-  TrendingUp,
-  TrendingDown,
   BarChart3,
   AlertTriangle,
   RefreshCw,
   ChevronDown,
   ChevronUp,
   Activity,
-  Calendar,
   Zap,
 } from 'lucide-react';
-import { format, parseISO, isToday, isBefore, addDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 // ─── Types ───────────────────────────────────────────────────────────
 type CallType = 'DISCOVERY' | 'ORIENTATION' | 'PROGRESS' | 'RENEWAL';
@@ -98,8 +93,9 @@ export const AdminCallMonitor: React.FC = () => {
   const [data, setData] = useState<{
     amSummary: AMSummary[],
     slaBreaches: SLABreachCall[],
-    priorityQueue: PriorityQueueItem[]
-  }>({ amSummary: [], slaBreaches: [], priorityQueue: [] });
+    priorityQueue: PriorityQueueItem[],
+    callTypeDistribution: { type: CallType, count: number }[]
+  }>({ amSummary: [], slaBreaches: [], priorityQueue: [], callTypeDistribution: [] });
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
@@ -111,7 +107,8 @@ export const AdminCallMonitor: React.FC = () => {
         setData({
           amSummary: result.amSummary,
           slaBreaches: result.slaBreaches,
-          priorityQueue: result.priorityQueue
+          priorityQueue: result.priorityQueue,
+          callTypeDistribution: result.callTypeDistribution
         });
       }
     } catch (err) {
@@ -138,8 +135,8 @@ export const AdminCallMonitor: React.FC = () => {
       missedToday: summary.reduce((s, a) => s + a.missed, 0),
       pendingToday: summary.reduce((s, a) => s + a.pending, 0),
       slaBreaches: data.slaBreaches.length,
-      avgCompletionRate: summary.length > 0 
-        ? Math.round(summary.filter(a => a.is_active).reduce((s, a) => s + a.completion_rate, 0) / (summary.filter(a => a.is_active).length || 1))
+      avgCompletionRate: summary.reduce((s, a) => s + a.total_calls_today, 0) > 0
+        ? Math.round((summary.reduce((s, a) => s + a.completed, 0) / summary.reduce((s, a) => s + a.total_calls_today, 0)) * 100)
         : 0,
       unscheduledHighPriority: data.priorityQueue.filter(q => q.priority_score >= 80).length,
       renewalsDue: summary.reduce((s, a) => s + a.renewals_pending, 0),
@@ -148,18 +145,15 @@ export const AdminCallMonitor: React.FC = () => {
   }, [data]);
 
   const callTypeDistribution = useMemo(() => {
-    const counts: Record<CallType, number> = { DISCOVERY: 0, ORIENTATION: 0, PROGRESS: 0, RENEWAL: 0 };
-    data.priorityQueue.forEach(item => {
-      counts[item.call_type] = (counts[item.call_type] || 0) + 1;
-    });
-    const total = Object.values(counts).reduce((s, v) => s + v, 0);
+    const raw = data.callTypeDistribution || [];
+    const total = raw.reduce((s, v) => s + v.count, 0);
     if (total === 0) return [];
-    return Object.entries(counts).map(([type, count]) => ({
-      type: type as CallType,
+    return raw.map(({ type, count }) => ({
+      type,
       count,
       pct: Math.round((count / total) * 100),
     }));
-  }, [data.priorityQueue]);
+  }, [data.callTypeDistribution]);
 
   return (
     <div className="space-y-6">
@@ -174,9 +168,13 @@ export const AdminCallMonitor: React.FC = () => {
             <Activity className="h-3.5 w-3.5 text-green-500" />
             Live · Updated just now
           </span>
-          <button className="flex items-center gap-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 px-3 py-1.5 rounded-full transition-colors"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -385,7 +383,7 @@ export const AdminCallMonitor: React.FC = () => {
             </span>
           </div>
           <div className="divide-y divide-gray-100">
-            {data.priorityQueue.sort((a, b) => b.priority_score - a.priority_score).map((item, idx) => {
+            {[...data.priorityQueue].sort((a, b) => b.priority_score - a.priority_score).map((item, idx) => {
               const typeCfg = CALL_TYPE_COLORS[item.call_type];
               return (
                 <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">

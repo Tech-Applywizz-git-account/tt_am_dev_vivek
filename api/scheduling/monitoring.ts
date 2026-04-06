@@ -13,21 +13,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const [summaryRes, breachRes, queueRes] = await Promise.all([
+    const [summaryRes, breachRes, queueRes, distributionRes] = await Promise.all([
       supabase.from('v_am_daily_summary').select('*'),
       supabase.from('v_sla_breaches').select('*').limit(20),
       supabase.from('v_priority_queue').select('*').limit(10),
+      supabase.from('call_requests').select('call_type').neq('status', 'COMPLETED'),
     ]);
 
     if (summaryRes.error) throw summaryRes.error;
-    if (breachRes.error)  throw breachRes.error;
-    if (queueRes.error)   throw queueRes.error;
+    if (breachRes.error) throw breachRes.error;
+    if (queueRes.error) throw queueRes.error;
+    if (distributionRes.error) throw distributionRes.error;
+
+    // Aggregate distribution
+    const distCounts: Record<string, number> = { DISCOVERY: 0, ORIENTATION: 0, PROGRESS: 0, RENEWAL: 0 };
+    (distributionRes.data || []).forEach((row: any) => {
+      distCounts[row.call_type] = (distCounts[row.call_type] || 0) + 1;
+    });
 
     return res.status(200).json({
       success: true,
-      amSummary:     summaryRes.data || [],
-      slaBreaches:   breachRes.data  || [],
-      priorityQueue: queueRes.data   || [],
+      amSummary: summaryRes.data || [],
+      slaBreaches: breachRes.data || [],
+      priorityQueue: queueRes.data || [],
+      callTypeDistribution: Object.entries(distCounts).map(([type, count]) => ({ type, count })),
     });
   } catch (err: any) {
     console.error('[/api/scheduling/monitoring]', err.message);
