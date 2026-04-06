@@ -17,6 +17,10 @@ import {
   CalendarX,
   ClipboardList,
   Loader2,
+  Star,
+  Smile,
+  Meh,
+  Frown,
 } from 'lucide-react';
 import {
   format,
@@ -169,114 +173,186 @@ const CallCard: React.FC<CallCardProps> = ({ call, compact, onClick }) => {
 interface CallDetailModalProps {
   call: ScheduledCall | null;
   onClose: () => void;
-  onComplete: (callId: string, bookingId: string) => void;
+  onComplete: (callId: string, bookingId: string, data: any) => void;
   onNotPicked: (callId: string, bookingId: string) => void;
   loading: boolean;
 }
 
 const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComplete, onNotPicked, loading }) => {
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [sentiment, setSentiment] = useState<'HAPPY' | 'NEUTRAL' | 'FRUSTRATED' | null>(null);
+  const [notes, setNotes] = useState('');
+  const [comment, setComment] = useState('');
+
   if (!call) return null;
   const cfg = CALL_TYPE_CONFIG[call.call_type];
   const statusCfg = STATUS_CONFIG[call.status];
 
+  const handleFinish = () => {
+    onComplete(call.id, call.booking_id, {
+      rating,
+      sentiment,
+      notes,
+      comment
+    });
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`${cfg.bg} border-b-4 ${cfg.border} p-5`}>
+        <div className={`${cfg.bg} border-b border-gray-100 p-6`}>
           <div className="flex items-start justify-between">
             <div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${cfg.text}`}>
+              <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${cfg.text} bg-white/50 px-2 py-0.5 rounded`}>
                 {cfg.label} Call{call.sequence_number ? ` #${call.sequence_number}` : ''}
               </span>
-              <h2 className="text-xl font-bold text-gray-900 mt-1">{call.client_name}</h2>
+              <h2 className="text-2xl font-black text-gray-900 mt-2">{call.client_name}</h2>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400">&times;</button>
           </div>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-4">
-          {/* Status Row */}
-          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
-            <span className="text-sm text-gray-500 font-medium">Status</span>
-            <span className={`flex items-center gap-1.5 font-semibold text-sm ${statusCfg.color}`}>
-              {statusCfg.icon} {statusCfg.label}
-            </span>
-          </div>
-
-          {/* Time */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1">Scheduled</p>
-              <p className="font-semibold text-sm text-gray-800">
-                {format(parseISO(call.scheduled_date), 'dd MMM yyyy')}
-              </p>
-              <p className="text-sm text-gray-600">{call.start_time} – {call.end_time} IST</p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-400 mb-1">Deadline</p>
-              <p className="font-semibold text-sm text-gray-800">
-                {format(parseISO(call.deadline_date), 'dd MMM yyyy')}
-              </p>
-            </div>
-          </div>
-
-          {/* Priority */}
-          <div className="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
-            <span className="text-sm text-gray-500 font-medium">Priority Score</span>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-24 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-green-400 to-orange-500 rounded-full"
-                  style={{ width: `${Math.min((call.priority_score / 150) * 100, 100)}%` }}
-                />
+        <div className="p-6">
+          {!isCompleting ? (
+            <div className="space-y-4">
+              {/* Status Row */}
+              <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-4">
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-wider">Status</span>
+                <span className={`flex items-center gap-1.5 font-black text-sm ${statusCfg.color}`}>
+                  {statusCfg.icon} {statusCfg.label}
+                </span>
               </div>
-              <span className="font-bold text-gray-800 text-sm">{call.priority_score}</span>
-            </div>
-          </div>
 
-          {/* Delay/Miss info */}
-          {(call.delay_days > 0 || call.miss_count > 0) && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1">
-              {call.delay_days > 0 && (
-                <p className="text-sm text-red-700 flex items-center gap-2">
-                  <RotateCcw className="h-4 w-4" />
-                  Delayed by <strong>{call.delay_days} day{call.delay_days > 1 ? 's' : ''}</strong>
-                </p>
-              )}
-              {call.miss_count > 0 && (
-                <p className="text-sm text-red-700 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Missed / Not picked <strong>{call.miss_count} time{call.miss_count > 1 ? 's' : ''}</strong>
-                </p>
+              {/* Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-1">Scheduled</p>
+                  <p className="font-bold text-gray-800">
+                    {format(parseISO(call.scheduled_date), 'dd MMM yyyy')}
+                  </p>
+                  <p className="text-sm text-gray-500">{call.start_time} – {call.end_time}</p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-1">Deadline</p>
+                  <p className="font-bold text-gray-800">
+                    {format(parseISO(call.deadline_date), 'dd MMM yyyy')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Priority */}
+              <div className="bg-gray-50 rounded-2xl p-4 flex items-center justify-between">
+                <span className="text-sm text-gray-500 font-bold uppercase tracking-wider">Priority</span>
+                <div className="flex items-center gap-3">
+                  <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600 rounded-full"
+                      style={{ width: `${Math.min((call.priority_score / 150) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="font-black text-gray-800 text-sm whitespace-nowrap">{call.priority_score} pts</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              {call.status === 'BOOKED' && (
+                <div className="grid grid-cols-2 gap-3 pt-4">
+                  <button
+                    onClick={() => setIsCompleting(true)}
+                    className="py-4 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm shadow-lg shadow-green-100 transition-all active:scale-95"
+                  >
+                    Mark Completed
+                  </button>
+                  <button
+                    disabled={loading}
+                    onClick={() => onNotPicked(call.id, call.booking_id)}
+                    className="py-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-lg shadow-amber-100 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? 'Processing...' : 'Not Picked'}
+                  </button>
+                </div>
               )}
             </div>
-          )}
+          ) : (
+            <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black text-gray-900">Finish Session</h3>
+                <button onClick={() => setIsCompleting(false)} className="text-xs font-bold text-blue-600 hover:underline">Back</button>
+              </div>
 
-          {/* Actions */}
-          {call.status === 'BOOKED' && (
-            <div className="grid grid-cols-2 gap-3 pt-2">
+              {/* Star Rating */}
+              <div className="space-y-2">
+                <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider">Interaction Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      onMouseEnter={() => setHover(s)}
+                      onMouseLeave={() => setHover(0)}
+                      onClick={() => setRating(s)}
+                    >
+                      <Star className={`h-8 w-8 transition-colors ${(hover || rating) >= s ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sentiment */}
+              <div className="space-y-2">
+                <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider">Client Sentiment</label>
+                <div className="flex gap-2">
+                  {(['HAPPY', 'NEUTRAL', 'FRUSTRATED'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSentiment(s)}
+                      className={`p-2 rounded-xl border transition-all ${sentiment === s ? 'bg-blue-50 border-blue-200 scale-110' : 'bg-gray-50 border-transparent hover:border-gray-200 opacity-60'}`}
+                    >
+                      {s === 'HAPPY' && <Smile className="h-6 w-6 text-green-500" />}
+                      {s === 'NEUTRAL' && <Meh className="h-6 w-6 text-amber-500" />}
+                      {s === 'FRUSTRATED' && <Frown className="h-6 w-6 text-red-500" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider">Internal Notes (Summary)</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Describe what happened during the call..."
+                    className="w-full rounded-2xl border border-gray-100 bg-gray-50 p-3 h-24 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-black uppercase tracking-wider">Formal Comment (Feedback)</label>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Specific feedback for the review system..."
+                    className="w-full rounded-2xl border border-gray-100 bg-gray-50 p-3 h-20 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  />
+                </div>
+              </div>
+
               <button
-                disabled={loading}
-                onClick={() => onComplete(call.id, call.booking_id)}
-                className="py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium text-sm transition-colors disabled:opacity-50"
+                disabled={loading || !sentiment}
+                onClick={handleFinish}
+                className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Mark Completed'}
-              </button>
-              <button
-                disabled={loading}
-                onClick={() => onNotPicked(call.id, call.booking_id)}
-                className="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-sm transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Processing...' : 'Not Picked'}
+                {loading ? 'Processing...' : 'Complete & Close Session'}
               </button>
             </div>
           )}
@@ -562,13 +638,20 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
     fetchLeaves();
   }, [currentDate, amId, viewMode]);
 
-  const handleComplete = async (callId: string, bookingId: string) => {
+  const handleComplete = async (callId: string, bookingId: string, data: any) => {
     try {
       setActionLoading(true);
       const res = await fetch('/api/scheduling/complete-call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callRequestId: callId, bookingId }),
+        body: JSON.stringify({
+          callRequestId: callId,
+          bookingId,
+          notes: data.notes,
+          clientSentiment: data.sentiment,
+          rating: data.rating,
+          comment: data.comment
+        }),
       });
       if (res.ok) {
         setSelectedCall(null);

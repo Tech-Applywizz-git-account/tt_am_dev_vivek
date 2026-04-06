@@ -39,7 +39,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .select(`
         id, status, notes, client_sentiment, created_at,
         call_requests!inner (
-          id, call_type, sequence_number, am_id, users!am_id (name)
+          id, call_type, sequence_number, am_id, users!am_id (name),
+          feedback (id, submitted_by, rating, comment)
         )
       `)
             .eq('call_requests.client_id', clientId)
