@@ -48,30 +48,49 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
 
     const filteredClients = getFilteredClients();
 
-    const handleStartService = async (client: Client) => {
+    const [isServiceStartModalOpen, setIsServiceStartModalOpen] = React.useState(false);
+    const [selectedClientForService, setSelectedClientForService] = React.useState<Client | null>(null);
+    const [serviceStartDate, setServiceStartDate] = React.useState<string>(new Date().toISOString().split('T')[0]);
+    const [subscriptionType, setSubscriptionType] = React.useState<string>('');
+    const [isSubmittingService, setIsSubmittingService] = React.useState(false);
+
+    const handleStartService = (client: Client) => {
         if (!client.applywizz_id) {
             alert('Cannot start service: ApplyWizz ID is missing.');
             return;
         }
+        setSelectedClientForService(client);
+        setSubscriptionType(client.subscription_type || '');
+        setIsServiceStartModalOpen(true);
+    };
 
-        if (!window.confirm(`Start scheduling service lifecycle for ${client.full_name}?`)) return;
+    const handleConfirmServiceStart = async () => {
+        if (!selectedClientForService) return;
 
+        setIsSubmittingService(true);
         try {
             const response = await fetch('/api/scheduling/service-start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ applywizzId: client.applywizz_id }),
+                body: JSON.stringify({
+                    applywizzId: selectedClientForService.applywizz_id,
+                    serviceStartDate,
+                    subscriptionType
+                }),
             });
 
             const result = await response.json();
             if (response.ok) {
-                alert(`✅ Service started successfully for ${client.full_name}`);
+                alert(`✅ Service successfully scheduled for ${selectedClientForService.full_name}`);
+                setIsServiceStartModalOpen(false);
             } else {
-                alert(`❌ Failed to start service: ${result.error || 'Unknown error'}`);
+                alert(`❌ Oops! ${result.error || 'Failed to start service'}`);
             }
         } catch (err) {
             console.error('Failed to trigger service start:', err);
             alert('❌ Network error while starting service.');
+        } finally {
+            setIsSubmittingService(false);
         }
     };
 
@@ -182,6 +201,92 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Service Start Confirmation Modal */}
+                {isServiceStartModalOpen && selectedClientForService && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isSubmittingService && setIsServiceStartModalOpen(false)}></div>
+                        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                            <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                                        <Zap className="h-5 w-5" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900">Start Service Lifecycle</h3>
+                                </div>
+                                <button
+                                    onClick={() => setIsServiceStartModalOpen(false)}
+                                    className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                                    disabled={isSubmittingService}
+                                >
+                                    <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 text-sm text-blue-800">
+                                    <p>You are about to start the scheduling lifecycle for:</p>
+                                    <p className="font-bold text-blue-900 mt-0.5">{selectedClientForService.full_name}</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Service Start Date</label>
+                                        <input
+                                            type="date"
+                                            value={serviceStartDate}
+                                            onChange={(e) => setServiceStartDate(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Subscription Tier (Duration)</label>
+                                        <select
+                                            value={subscriptionType}
+                                            onChange={(e) => setSubscriptionType(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+                                        >
+                                            <option value="">Select Duration</option>
+                                            <option value="30">30 Days</option>
+                                            <option value="60">60 Days</option>
+                                            <option value="90">90 Days</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex space-x-3 pt-2">
+                                    <button
+                                        onClick={() => setIsServiceStartModalOpen(false)}
+                                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                        disabled={isSubmittingService}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmServiceStart}
+                                        disabled={isSubmittingService || !subscriptionType || !serviceStartDate}
+                                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center space-x-2"
+                                    >
+                                        {isSubmittingService ? (
+                                            <>
+                                                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span>Scheduling...</span>
+                                            </>
+                                        ) : (
+                                            <span>Schedule Lifecycle</span>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
             <FeedbackButton user={currentUser} />
         </div>
