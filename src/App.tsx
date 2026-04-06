@@ -71,6 +71,7 @@ import KarmafyPendingOverlay from './components/ClientDashboard/KarmafyPendingOv
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { AMCallCalendar } from './components/Scheduling/AMCallCalendar';
 import { AdminCallMonitor } from './components/Scheduling/AdminCallMonitor';
+import { CallHistoryView } from './components/Clients/CallHistoryView';
 
 
 function App() {
@@ -2770,6 +2771,9 @@ function App() {
 
       case 'call-monitoring':
         return <AdminCallMonitor />;
+
+      case 'call-history':
+        return <CallHistoryView clientId={currentClientId || ''} />;
 
       default:
         return (

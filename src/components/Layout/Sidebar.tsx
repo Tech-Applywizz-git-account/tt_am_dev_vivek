@@ -28,7 +28,8 @@ import {
   Phone,
   UserX,
   CalendarDays,
-  Activity
+  Activity,
+  History
 } from 'lucide-react';
 import { User } from '../../types';
 import { rolePermissions } from '../../data/mockData';
@@ -215,6 +216,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       label: 'Settings',
       icon: Settings,
       show: user.role === 'system_admin',
+    },
+    {
+      id: 'call-history',
+      label: 'Call History',
+      icon: History,
+      show: user.role === 'client' && !optedJobLinks,
     },
   ];
 
