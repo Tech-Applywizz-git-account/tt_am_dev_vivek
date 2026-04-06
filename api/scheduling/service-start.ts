@@ -16,11 +16,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { applywizzId } = req.body || {};
+  const { applywizzId, serviceStartDate } = req.body || {};
   if (!applywizzId) return res.status(400).json({ error: 'applywizzId is required' });
 
   try {
-    // Lookup client by applywizzId
+    // 1. Lookup client by applywizzId
     const { data: client, error: lookupError } = await supabase
       .from('clients')
       .select('id, account_manager_id, service_start_date, subscription_type, subscription_end_date')
@@ -31,8 +31,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Client not found with this applywizzId' });
     }
 
-    const clientId = client.id;
-    // Idempotency check — don't create twice
+    // 2. If serviceStartDate is provided, calculate end date and UPDATE client
+    let finalClient = { ...client };
+    if (serviceStartDate) {
+      if (!client.subscription_type) {
+        return res.status(400).json({ error: 'Client subscription_type is missing in database. Cannot calculate end date.' });
+      }
+
+      const days = parseInt(client.subscription_type as string);
+      const start = new Date(serviceStartDate);
+      const end   = new Date(start.getTime());
+      end.setDate(start.getDate() + days);
+      
+      const endStr = end.toISOString().split('T')[0];
+
+      const { data: updated, error: updateErr } = await supabase
+        .from('clients')
+        .update({
+          service_start_date: serviceStartDate,
+          subscription_start_date: serviceStartDate,
+          subscription_end_date: endStr
+        })
+        .eq('id', client.id)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+      finalClient = updated;
+      console.log(`[service-start] Updated client ${applywizzId} with dates: ${serviceStartDate} -> ${endStr}`);
+    }
+
+    const clientId = finalClient.id;
+    // 3. Idempotency check — don't create twice
     const { count } = await supabase
       .from('call_requests')
       .select('id', { count: 'exact', head: true })
@@ -43,16 +73,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, message: 'Lifecycle already exists', skipped: true });
     }
 
-    if (!client.service_start_date || !client.subscription_type || !client.subscription_end_date) {
+    if (!finalClient.service_start_date || !finalClient.subscription_type || !finalClient.subscription_end_date) {
       return res.status(400).json({
-        error: 'Client is missing service_start_date, subscription_type, or subscription_end_date',
+        error: 'Client is missing service_start_date (or it wasnt provided), subscription_type, or subscription_end_date',
         hint: 'Ensure applywizz_id is set and subscription fields are populated',
       });
     }
 
-    await createLifecycleForClient(client);
+    await createLifecycleForClient(finalClient);
     console.log(`[service-start] ✅ Lifecycle created for client=${clientId}`);
-    return res.status(200).json({ success: true, clientId });
+    return res.status(200).json({ success: true, clientId, serviceStartDate: finalClient.service_start_date, subscriptionEndDate: finalClient.subscription_end_date });
   } catch (err: any) {
     console.error('[/api/scheduling/service-start]', err.message);
     return res.status(500).json({ success: false, error: err.message });
