@@ -495,8 +495,21 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   const fetchCalls = async () => {
     try {
       setLoading(true);
-      const start = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      const end = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+      // Determine fetch range based on viewMode
+      let start, end;
+      if (viewMode === 'month') {
+        // Fetch full month grid
+        start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      } else if (viewMode === 'week') {
+        start = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        end = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      } else {
+        // day view — still fetch the whole week for smoother transitions
+        start = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        end = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      }
 
       const res = await fetch(`/api/scheduling/am-calls?amId=${amId}&from=${start}&to=${end}`);
       const result = await res.json();
@@ -510,8 +523,9 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
           call_type: b.call_requests.call_type,
           status: b.status,
           scheduled_date: b.scheduled_date,
-          start_time: b.scheduled_start_time,
-          end_time: b.scheduled_end_time,
+          // Normalize times: Database might return 'HH:mm:ss', we need 'HH:mm' for comparisons
+          start_time: b.scheduled_start_time?.substring(0, 5),
+          end_time: b.scheduled_end_time?.substring(0, 5),
           sequence_number: b.call_requests.sequence_number,
           deadline_date: b.call_requests.deadline_date,
           delay_days: b.call_requests.delay_days,
@@ -546,7 +560,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   useEffect(() => {
     fetchCalls();
     fetchLeaves();
-  }, [currentDate, amId]);
+  }, [currentDate, amId, viewMode]);
 
   const handleComplete = async (callId: string, bookingId: string) => {
     try {
