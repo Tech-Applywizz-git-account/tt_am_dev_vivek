@@ -18,9 +18,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 // ─── Constants ────────────────────────────────────────────────
 
 export const BASE_PRIORITY = {
-  RENEWAL:     100,
-  DISCOVERY:   80,
-  PROGRESS:    50,
+  RENEWAL: 100,
+  DISCOVERY: 80,
+  PROGRESS: 50,
   ORIENTATION: 20,
 } as const;
 
@@ -30,11 +30,16 @@ export const PROGRESS_DAYS: Record<string, number[]> = {
   '90': [15, 30, 45, 60, 75],
 };
 
-// IST time slots: 20:45–05:00 (excluding 23:00–00:00 break)
-export const SLOT_SCHEDULE = [
-  '20:45', '21:15', '21:45', '22:15', '22:45',   // before break
-  '00:00', '00:30', '01:00', '01:30', '02:00',   // after midnight
-  '02:30', '03:00', '03:30', '04:00', '04:30',
+// IST time slots: 
+// Evening Shift Starts (e.g. Monday Night)
+export const EVENING_SLOTS = [
+  '20:45', '21:15', '21:45', '22:15', '22:45'
+];
+
+// Morning Shift Ends (e.g. Tuesday Morning)
+export const MORNING_SLOTS = [
+  '00:00', '00:30', '01:00', '01:30', '02:00',
+  '02:30', '03:00', '03:30', '04:00', '04:30'
 ];
 
 // ─── Date Helpers ─────────────────────────────────────────────
@@ -51,9 +56,10 @@ export function toDateStr(d: Date): string {
   return format(d, 'yyyy-MM-dd');
 }
 
-/** True if date string is a Sunday. */
-export function isSunday(dateStr: string): boolean {
-  return getDay(parseISO(dateStr)) === 0;
+/** True if date string is a Saturday or Sunday (no new shift starts). */
+export function isWeekend(dateStr: string): boolean {
+  const day = getDay(parseISO(dateStr));
+  return day === 0 || day === 6; // 0=Sunday, 6=Saturday
 }
 
 /** Compute end_time given start_time (adds 30 min, wraps at midnight). */
@@ -78,13 +84,15 @@ export async function fetchAmLeaveSet(amId: string): Promise<Set<string>> {
   return new Set((data || []).map((l: any) => l.leave_date));
 }
 
-/** True if a date is a working day (not Sunday, holiday, or AM leave). */
+/** True if a date is a working day (Shift can START on this day). 
+ * Shifts start on Mon, Tue, Wed, Thu, Fri.
+ */
 export function isWorkingDay(
   dateStr: string,
   holidays: Set<string>,
   leaves: Set<string> = new Set()
 ): boolean {
-  return !isSunday(dateStr) && !holidays.has(dateStr) && !leaves.has(dateStr);
+  return !isWeekend(dateStr) && !holidays.has(dateStr) && !leaves.has(dateStr);
 }
 
 /** Get the next working day after a given date, checking AM leaves. */
@@ -116,15 +124,38 @@ export function priorityScore(basePriority: number, delayDays: number): number {
 
 // ─── Core Scheduling Logic ────────────────────────────────────
 
-/** Slot Generator: generate 15 slots for a given AM + date. */
-export async function generateSlotsForAM(amId: string, dateStr: string): Promise<number> {
-  const slots = SLOT_SCHEDULE.map(startTime => ({
-    am_id:      amId,
-    slot_date:  dateStr,
-    start_time: startTime,
-    end_time:   addThirtyMin(startTime),
-    status:     'AVAILABLE',
-  }));
+/** Slot Generator: generate slots for a given AM + date. 
+ * morningActive: generate 00:00-04:30 (end of previous day's shift).
+ * eveningActive: generate 20:45-22:45 (start of today's shift).
+ */
+export async function generateSlotsForAM(
+  amId: string,
+  dateStr: string,
+  morningActive: boolean,
+  eveningActive: boolean
+): Promise<number> {
+  const slots: any[] = [];
+
+  if (morningActive) {
+    MORNING_SLOTS.forEach(startTime => {
+      slots.push({
+        am_id: amId, slot_date: dateStr, start_time: startTime,
+        end_time: addThirtyMin(startTime), status: 'AVAILABLE',
+      });
+    });
+  }
+
+  if (eveningActive) {
+    EVENING_SLOTS.forEach(startTime => {
+      slots.push({
+        am_id: amId, slot_date: dateStr, start_time: startTime,
+        end_time: addThirtyMin(startTime), status: 'AVAILABLE',
+      });
+    });
+  }
+
+  if (slots.length === 0) return 0;
+
   const { count, error } = await supabase
     .from('time_slots')
     .upsert(slots, { onConflict: 'am_id,slot_date,start_time', ignoreDuplicates: true, count: 'exact' });
@@ -246,7 +277,7 @@ export async function runMissedCallCycle(): Promise<{ handled: number; alerts: n
       call_request_id: call.id, booking_id: booking.id,
       status: 'MISSED_BY_AM',
       notes: `Auto-detected. miss_count=${newMiss}`,
-    }).then(() => {});
+    }).then(() => { });
     await supabase.from('call_requests').update({
       status: 'UNSCHEDULED', miss_count: newMiss,
       delay_days: newDelay, earliest_date: toDateStr(nextDay), last_scheduled_at: null,
@@ -337,7 +368,7 @@ export async function createLifecycleForClient(client: {
     subscription_type, subscription_end_date: endStr } = client;
 
   const start = parseISO(startStr);
-  const end   = parseISO(endStr);
+  const end = parseISO(endStr);
 
   const calls: any[] = [];
 

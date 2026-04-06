@@ -13,6 +13,10 @@ import {
   RotateCcw,
   TrendingUp,
   Filter,
+  X,
+  CalendarX,
+  ClipboardList,
+  Loader2,
 } from 'lucide-react';
 import {
   format,
@@ -29,6 +33,8 @@ import {
   isSameMonth,
   isToday,
   parseISO,
+  isBefore,
+  startOfDay,
 } from 'date-fns';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -50,6 +56,14 @@ interface ScheduledCall {
   miss_count: number;
   priority_score: number;
   subscription_type?: '30' | '60' | '90';
+}
+
+interface AMLeave {
+  id: string;
+  am_id: string;
+  leave_date: string;
+  reason?: string;
+  created_at: string;
 }
 
 type ViewMode = 'day' | 'week' | 'month';
@@ -272,6 +286,189 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
   );
 };
 
+// ─── AM Leave Components ──────────────────────────────────────────────
+
+interface ApplyLeaveModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (date: string, reason: string) => Promise<void>;
+  loading: boolean;
+}
+
+const ApplyLeaveModal: React.FC<ApplyLeaveModalProps> = ({ isOpen, onClose, onSubmit, loading }) => {
+  const [date, setDate] = useState('');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!date) {
+      setError('Please select a date.');
+      return;
+    }
+
+    const istNow = new Date();
+    const minAllowedDate = startOfDay(addDays(istNow, 3));
+    const targetDate = startOfDay(parseISO(date));
+
+    if (isBefore(targetDate, minAllowedDate)) {
+      setError('Leaves must be applied at least 3 days in advance.');
+      return;
+    }
+
+    try {
+      await onSubmit(date, reason);
+      setDate('');
+      setReason('');
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to apply for leave.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="bg-blue-600 p-5 flex items-center justify-between text-white">
+          <div className="flex items-center gap-2">
+            <CalendarX className="h-5 w-5" />
+            <h2 className="text-lg font-bold">Apply for Leave</h2>
+          </div>
+          <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-sm flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5" />
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-gray-700">Leave Date</label>
+            <input
+              type="date"
+              required
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              min={format(addDays(new Date(), 3), 'yyyy-MM-dd')}
+              className="w-full rounded-xl border border-gray-200 p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+            <p className="text-[10px] text-gray-500 italic">
+              * Shifts are IST night. Leave for "2026-04-10" means you are off for the shift starting on the night of the 10th.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-gray-700">Reason (Optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Brief reason for your leave..."
+              className="w-full rounded-xl border border-gray-200 p-3 h-24 resize-none focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Submit Leave Request'
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+interface LeavesSlideOverProps {
+  isOpen: boolean;
+  onClose: () => void;
+  leaves: AMLeave[];
+  loading: boolean;
+}
+
+const LeavesSlideOver: React.FC<LeavesSlideOverProps> = ({ isOpen, onClose, leaves, loading }) => {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={`fixed inset-y-0 right-0 z-[70] w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-bold text-gray-900">Your Leaves</h2>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* List */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                <p>Loading your leaves...</p>
+              </div>
+            ) : leaves.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <CalendarX className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="font-medium">No leaves applied yet.</p>
+                <p className="text-xs mt-1">Applied leaves will show up here.</p>
+              </div>
+            ) : (
+              leaves.map((leave) => (
+                <div key={leave.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-blue-700">
+                      {format(parseISO(leave.leave_date), 'EEEE, dd MMM yyyy')}
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-400">
+                      Applied on {format(parseISO(leave.created_at), 'dd MMM')}
+                    </span>
+                  </div>
+                  {leave.reason ? (
+                    <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded-lg italic">
+                      "{leave.reason}"
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No reason provided</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
 // ─── Main Calendar Component ──────────────────────────────────────────
 
 interface AMCallCalendarProps {
@@ -285,8 +482,12 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   const [selectedCall, setSelectedCall] = useState<ScheduledCall | null>(null);
   const [filterType, setFilterType] = useState<CallType | 'ALL'>('ALL');
   const [calls, setCalls] = useState<ScheduledCall[]>([]);
+  const [leaves, setLeaves] = useState<AMLeave[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leavesLoading, setLeavesLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showLeavesSlideOver, setShowLeavesSlideOver] = useState(false);
 
   // Use amId from props or current user (hardcoded for now as per current app style)
   const amId = initialAmId || '83296684-2a1d-400a-9d9e-17631779ba3d';
@@ -296,10 +497,10 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
       setLoading(true);
       const start = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
       const end = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      
+
       const res = await fetch(`/api/scheduling/am-calls?amId=${amId}&from=${start}&to=${end}`);
       const result = await res.json();
-      
+
       if (result.success) {
         // Map backend response to frontend types
         const mapped = result.data.map((b: any) => ({
@@ -327,8 +528,24 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
     }
   };
 
+  const fetchLeaves = async () => {
+    try {
+      setLeavesLoading(true);
+      const res = await fetch(`/api/scheduling/get-leaves?amId=${amId}`);
+      const result = await res.json();
+      if (result.success) {
+        setLeaves(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch leaves:', err);
+    } finally {
+      setLeavesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCalls();
+    fetchLeaves();
   }, [currentDate, amId]);
 
   const handleComplete = async (callId: string, bookingId: string) => {
@@ -365,6 +582,26 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
     }
   };
 
+  const handleApplyLeave = async (date: string, reason: string) => {
+    try {
+      setActionLoading(true);
+      const res = await fetch('/api/scheduling/apply-leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amId, leaveDate: date, reason }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        fetchLeaves();
+        fetchCalls(); // Re-fetch calls as some might have been re-scheduled
+      } else {
+        throw new Error(result.error || 'Failed to apply for leave.');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Navigation helpers
   const navigate = (dir: 1 | -1) => {
     if (viewMode === 'week') setCurrentDate(dir === 1 ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
@@ -386,6 +623,9 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
 
   const getCallsForDate = (date: Date) =>
     filteredCalls.filter(c => isSameDay(parseISO(c.scheduled_date), date));
+
+  const amLeaveSet = useMemo(() => new Set(leaves.map(l => l.leave_date)), [leaves]);
+  const isDateOnLeave = (date: Date) => amLeaveSet.has(format(date, 'yyyy-MM-dd'));
 
   // Stats
   const todaysCalls = calls.filter(c => isSameDay(parseISO(c.scheduled_date), new Date()));
@@ -409,9 +649,27 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   return (
     <div className="space-y-5">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Call Calendar</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Your scheduled client calls — IST night shift</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Call Calendar</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Your scheduled client calls — IST night shift</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowLeavesSlideOver(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <ClipboardList className="h-4 w-4 text-blue-600" />
+            Show My Leaves
+          </button>
+          <button
+            onClick={() => setShowApplyModal(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95"
+          >
+            <CalendarX className="h-4 w-4" />
+            Apply Leave
+          </button>
+        </div>
       </div>
 
       {/* Stats Strip */}
@@ -502,6 +760,11 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
                   <p className={`text-lg font-bold mt-0.5 ${isToday(day) ? 'text-blue-600' : 'text-gray-900'}`}>
                     {format(day, 'd')}
                   </p>
+                  {isDateOnLeave(day) && (
+                    <span className="inline-block mt-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded uppercase">
+                      Leave
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -516,8 +779,15 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
                   return (
                     <div
                       key={day.toISOString()}
-                      className={`min-h-[52px] p-1 border-l border-gray-100 ${isToday(day) ? 'bg-blue-50/30' : ''}`}
+                      className={`min-h-[52px] p-1 border-l border-gray-100 relative ${isToday(day) ? 'bg-blue-50/30' : ''}`}
                     >
+                      {isDateOnLeave(day) && (
+                        <div className="absolute inset-0 bg-orange-50/40 backdrop-blur-[1px] flex items-center justify-center">
+                          {slot === '20:45' && (
+                            <span className="text-[10px] font-black text-orange-400 rotate-[-15deg] tracking-widest border border-orange-200 px-2 py-0.5 rounded uppercase">On Leave</span>
+                          )}
+                        </div>
+                      )}
                       {dayCalls.map((call) => (
                         <CallCard key={call.id} call={call} compact onClick={setSelectedCall} />
                       ))}
@@ -581,11 +851,17 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
                         className={`min-h-[80px] p-1.5 rounded-xl border transition-colors
                           ${isToday(day) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-300'}
                           ${!isSameMonth(day, currentDate) ? 'opacity-30' : ''}
+                          ${isDateOnLeave(day) ? 'bg-orange-50/50 border-orange-100' : ''}
                         `}
                       >
-                        <p className={`text-xs font-semibold mb-1 ${isToday(day) ? 'text-blue-600' : 'text-gray-600'}`}>
-                          {format(day, 'd')}
-                        </p>
+                        <div className="flex justify-between items-start">
+                          <p className={`text-xs font-semibold mb-1 ${isToday(day) ? 'text-blue-600' : 'text-gray-600'}`}>
+                            {format(day, 'd')}
+                          </p>
+                          {isDateOnLeave(day) && (
+                            <span className="text-[8px] font-bold text-orange-600 bg-orange-100 px-1 rounded">LEAVE</span>
+                          )}
+                        </div>
                         <div className="space-y-0.5">
                           {daysCalls.slice(0, 2).map((c) => (
                             <button
@@ -630,6 +906,21 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
         onComplete={handleComplete}
         onNotPicked={handleNotPicked}
         loading={actionLoading}
+      />
+
+      {/* AM Leave Modals */}
+      <ApplyLeaveModal
+        isOpen={showApplyModal}
+        onClose={() => setShowApplyModal(false)}
+        onSubmit={handleApplyLeave}
+        loading={actionLoading}
+      />
+
+      <LeavesSlideOver
+        isOpen={showLeavesSlideOver}
+        onClose={() => setShowLeavesSlideOver(false)}
+        leaves={leaves}
+        loading={leavesLoading}
       />
     </div>
   );

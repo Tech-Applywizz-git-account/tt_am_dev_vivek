@@ -24,32 +24,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { date } = req.query as Record<string, string>;
     const ist = getISTDate();
-    
-    // Use provided date OR default to tomorrow
-    const targetDate = date ? date : toDateStr(addDays(ist, 1));
-    const targetDateObj = date ? new Date(date) : addDays(ist, 1);
-    
+
+    // Use provided date OR default to day after tomorrow (2-day lookahead)
+    const targetDate = date ? date : toDateStr(addDays(ist, 2));
+    const targetDateObj = date ? new Date(date) : addDays(ist, 2);
+
+    const targetDateStr = targetDate;
+    const prevDateStr = toDateStr(addDays(new Date(targetDateStr), -1));
+
     const holidays = await fetchHolidaySet();
     const ams = await fetchActiveAMs();
 
     let totalSlots = 0;
     let skippedAMs = 0;
-    const results: Record<string, any>[] = [];
+    const results: any[] = [];
 
     for (const am of ams) {
       const leaves = await fetchAmLeaveSet(am.id);
-      if (!isWorkingDay(targetDate, holidays, leaves)) {
+
+      // Evening slots on T active if T is working day
+      const eveningActive = isWorkingDay(targetDateStr, holidays, leaves);
+
+      // Morning slots on T active if T-1 was a working day
+      const morningActive = isWorkingDay(prevDateStr, holidays, leaves);
+
+      if (!eveningActive && !morningActive) {
         skippedAMs++;
-        results.push({ am: am.name, status: 'skipped', reason: 'leave/holiday/sunday' });
+        results.push({ am: am.name, status: 'skipped', reason: 'holiday/weekend/leave for both shift segments' });
         continue;
       }
-      const count = await generateSlotsForAM(am.id, targetDate);
+
+      const count = await generateSlotsForAM(am.id, targetDateStr, morningActive, eveningActive);
       totalSlots += count;
-      results.push({ am: am.name, status: 'generated', slots: count });
+      results.push({
+        am: am.name,
+        status: 'generated',
+        slots: count,
+        segments: { morning: morningActive, evening: eveningActive }
+      });
     }
 
-    console.log(`[SlotGenerator] ✅ ${totalSlots} slots, ${skippedAMs} AMs skipped for ${targetDate}`);
-    return res.status(200).json({ success: true, date: targetDate, totalSlots, skippedAMs, results });
+    console.log(`[SlotGenerator] ✅ ${totalSlots} slots for ${targetDateStr}`);
+    return res.status(200).json({ success: true, date: targetDateStr, totalSlots, skippedAMs, results });
   } catch (err: any) {
     console.error('[SlotGenerator] ❌', err.message);
     return res.status(500).json({ success: false, error: err.message });
