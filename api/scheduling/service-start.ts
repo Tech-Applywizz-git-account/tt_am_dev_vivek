@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { applywizzId, serviceStartDate } = req.body || {};
+  const { applywizzId, serviceStartDate, subscriptionType } = req.body || {};
   if (!applywizzId) return res.status(400).json({ error: 'applywizzId is required' });
 
   try {
@@ -31,15 +31,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'Client not found with this applywizzId' });
     }
 
-    // 2. If serviceStartDate is provided, calculate end date and UPDATE client
-    let finalClient = { ...client };
-    if (serviceStartDate) {
-      if (!client.subscription_type) {
-        return res.status(400).json({ error: 'Client subscription_type is missing in database. Cannot calculate end date.' });
-      }
+    // 2. Resolve subscriptionType
+    const finalSubType = subscriptionType || client.subscription_type;
+    if (!finalSubType) {
+      return res.status(400).json({ error: 'need subscription duration' });
+    }
 
-      const days = parseInt(client.subscription_type as string);
-      const start = new Date(serviceStartDate);
+    // 3. If serviceStartDate or subscriptionType is provided/changed, update client
+    let finalClient = { ...client, subscription_type: finalSubType };
+    if (serviceStartDate || (subscriptionType && subscriptionType !== client.subscription_type)) {
+      const startDate = serviceStartDate || client.service_start_date || new Date().toISOString().split('T')[0];
+      const days = parseInt(finalSubType as string);
+      
+      const start = new Date(startDate);
       const end   = new Date(start.getTime());
       end.setDate(start.getDate() + days);
       
@@ -48,8 +52,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: updated, error: updateErr } = await supabase
         .from('clients')
         .update({
-          service_start_date: serviceStartDate,
-          subscription_start_date: serviceStartDate,
+          service_start_date: startDate,
+          subscription_start_date: startDate,
+          subscription_type: finalSubType,
           subscription_end_date: endStr
         })
         .eq('id', client.id)
@@ -58,11 +63,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (updateErr) throw updateErr;
       finalClient = updated;
-      console.log(`[service-start] Updated client ${applywizzId} with dates: ${serviceStartDate} -> ${endStr}`);
+      console.log(`[service-start] Updated client ${applywizzId} | Tier: ${finalSubType} | Dates: ${startDate} -> ${endStr}`);
     }
 
     const clientId = finalClient.id;
-    // 3. Idempotency check — don't create twice
+    // 4. Idempotency check — don't create twice
     const { count } = await supabase
       .from('call_requests')
       .select('id', { count: 'exact', head: true })
@@ -75,14 +80,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!finalClient.service_start_date || !finalClient.subscription_type || !finalClient.subscription_end_date) {
       return res.status(400).json({
-        error: 'Client is missing service_start_date (or it wasnt provided), subscription_type, or subscription_end_date',
-        hint: 'Ensure applywizz_id is set and subscription fields are populated',
+        error: 'Client is missing service_start_date, subscription_type, or subscription_end_date',
+        hint: 'Ensure all required fields are set or provided in request',
       });
     }
 
     await createLifecycleForClient(finalClient);
     console.log(`[service-start] ✅ Lifecycle created for client=${clientId}`);
-    return res.status(200).json({ success: true, clientId, serviceStartDate: finalClient.service_start_date, subscriptionEndDate: finalClient.subscription_end_date });
+    return res.status(200).json({ 
+      success: true, 
+      clientId, 
+      subscriptionType: finalClient.subscription_type,
+      serviceStartDate: finalClient.service_start_date, 
+      subscriptionEndDate: finalClient.subscription_end_date 
+    });
   } catch (err: any) {
     console.error('[/api/scheduling/service-start]', err.message);
     return res.status(500).json({ success: false, error: err.message });
