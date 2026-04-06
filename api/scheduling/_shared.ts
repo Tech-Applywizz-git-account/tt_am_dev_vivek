@@ -370,38 +370,55 @@ export async function createLifecycleForClient(client: {
   const start = parseISO(startStr);
   const end = parseISO(endStr);
 
+  const istToday = getISTDate();
+  const yesterdayStr = toDateStr(addDays(istToday, -1));
+
   const calls: any[] = [];
 
-  // ORIENTATION
-  calls.push({
-    client_id: clientId, am_id: amId, call_type: 'ORIENTATION',
-    status: 'UNSCHEDULED', earliest_date: startStr, ideal_date: startStr,
-    deadline_date: toDateStr(addDays(start, 2)), base_priority: BASE_PRIORITY.ORIENTATION,
-  });
+  // 1. ORIENTATION
+  const orientationIdeal = startStr;
+  if (orientationIdeal >= yesterdayStr) {
+    calls.push({
+      client_id: clientId, am_id: amId, call_type: 'ORIENTATION',
+      status: 'UNSCHEDULED', earliest_date: startStr, ideal_date: orientationIdeal,
+      deadline_date: toDateStr(addDays(start, 2)), base_priority: BASE_PRIORITY.ORIENTATION,
+    });
+  }
 
-  // PROGRESS calls
+  // 2. PROGRESS calls
   const days = PROGRESS_DAYS[subscription_type] || [];
   days.forEach((offset, idx) => {
-    calls.push({
-      client_id: clientId, am_id: amId, call_type: 'PROGRESS',
-      status: 'UNSCHEDULED',
-      earliest_date: toDateStr(addDays(start, offset - 1)),
-      ideal_date: toDateStr(addDays(start, offset)),
-      deadline_date: toDateStr(addDays(start, offset + 3)),
-      base_priority: BASE_PRIORITY.PROGRESS,
-      sequence_number: idx + 1,
-    });
+    const progressIdeal = toDateStr(addDays(start, offset));
+    if (progressIdeal >= yesterdayStr) {
+      calls.push({
+        client_id: clientId, am_id: amId, call_type: 'PROGRESS',
+        status: 'UNSCHEDULED',
+        earliest_date: toDateStr(addDays(start, offset - 1)),
+        ideal_date: progressIdeal,
+        deadline_date: toDateStr(addDays(start, offset + 3)),
+        base_priority: BASE_PRIORITY.PROGRESS,
+        sequence_number: idx + 1,
+      });
+    }
   });
 
-  // RENEWAL
-  calls.push({
-    client_id: clientId, am_id: amId, call_type: 'RENEWAL',
-    status: 'UNSCHEDULED',
-    earliest_date: toDateStr(addDays(end, -3)),
-    ideal_date: toDateStr(addDays(end, -3)),
-    deadline_date: endStr,
-    base_priority: BASE_PRIORITY.RENEWAL,
-  });
+  // 3. RENEWAL
+  const renewalIdeal = toDateStr(addDays(end, -3));
+  if (renewalIdeal >= yesterdayStr) {
+    calls.push({
+      client_id: clientId, am_id: amId, call_type: 'RENEWAL',
+      status: 'UNSCHEDULED',
+      earliest_date: toDateStr(addDays(end, -3)),
+      ideal_date: renewalIdeal,
+      deadline_date: endStr,
+      base_priority: BASE_PRIORITY.RENEWAL,
+    });
+  }
+
+  if (calls.length === 0) {
+    console.log(`[createLifecycleForClient] No future calls to create for client=${clientId}`);
+    return;
+  }
 
   const { error } = await supabase.from('call_requests').insert(calls);
   if (error) throw error;
