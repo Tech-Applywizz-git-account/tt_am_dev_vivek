@@ -291,11 +291,11 @@ export async function runMissedCallCycle(): Promise<{ handled: number; alerts: n
 
 /** Lifecycle Checker: find clients with service started but no lifecycle calls yet. */
 export async function detectAndCreateLifecycles(): Promise<number> {
-  // 1. Get client IDs that already have an ORIENTATION call
+  // 1. Get client IDs that already have any lifecycle call
   const { data: existing } = await supabase
     .from('call_requests')
     .select('client_id')
-    .eq('call_type', 'ORIENTATION');
+    .in('call_type', ['ORIENTATION', 'PROGRESS', 'RENEWAL']);
   const existingClientIds = new Set((existing || []).map((r: any) => r.client_id));
 
   // 2. Get clients with service started but no lifecycle yet

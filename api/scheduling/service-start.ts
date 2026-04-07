@@ -42,11 +42,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (serviceStartDate || (subscriptionType && subscriptionType !== client.subscription_type)) {
       const startDate = serviceStartDate || client.service_start_date || new Date().toISOString().split('T')[0];
       const days = parseInt(finalSubType as string);
-      
+
       const start = new Date(startDate);
-      const end   = new Date(start.getTime());
+      const end = new Date(start.getTime());
       end.setDate(start.getDate() + days);
-      
+
       const endStr = end.toISOString().split('T')[0];
 
       const { data: updated, error: updateErr } = await supabase
@@ -67,12 +67,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const clientId = finalClient.id;
-    // 4. Idempotency check — don't create twice
+    // 4. Idempotency check — don't create twice if any lifecycle call exists
     const { count } = await supabase
       .from('call_requests')
       .select('id', { count: 'exact', head: true })
       .eq('client_id', clientId)
-      .eq('call_type', 'ORIENTATION');
+      .in('call_type', ['ORIENTATION', 'PROGRESS', 'RENEWAL']);
 
     if (count && count > 0) {
       return res.status(200).json({ success: true, message: 'Lifecycle already exists', skipped: true });
@@ -87,12 +87,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await createLifecycleForClient(finalClient);
     console.log(`[service-start] ✅ Lifecycle created for client=${clientId}`);
-    return res.status(200).json({ 
-      success: true, 
-      clientId, 
+    return res.status(200).json({
+      success: true,
+      clientId,
       subscriptionType: finalClient.subscription_type,
-      serviceStartDate: finalClient.service_start_date, 
-      subscriptionEndDate: finalClient.subscription_end_date 
+      serviceStartDate: finalClient.service_start_date,
+      subscriptionEndDate: finalClient.subscription_end_date
     });
   } catch (err: any) {
     console.error('[/api/scheduling/service-start]', err.message);

@@ -186,6 +186,16 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
   const [notes, setNotes] = useState('');
   const [comment, setComment] = useState('');
 
+  // Reset internal states whenever the selected call changes.
+  useEffect(() => {
+    setIsCompleting(false);
+    setRating(0);
+    setHover(0);
+    setSentiment(null);
+    setNotes('');
+    setComment('');
+  }, [call?.id]);
+
   if (!call) return null;
   const cfg = CALL_TYPE_CONFIG[call.call_type];
   const statusCfg = STATUS_CONFIG[call.status];
@@ -998,6 +1008,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
 
       {/* Call Detail Modal */}
       <CallDetailModal
+        key={selectedCall?.id || 'none'}
         call={selectedCall}
         onClose={() => setSelectedCall(null)}
         onComplete={handleComplete}
