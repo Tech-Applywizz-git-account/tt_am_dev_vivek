@@ -57,30 +57,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (mapError) console.error('[discovery-start] Mapping save error:', mapError.message);
 
-    // 4. Create Discovery Call ONLY if client exists in main clients table
     // (call_requests requires a valid client_id foreign key)
-    if (existingClient) {
-      const { count } = await supabase
-        .from('call_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('client_id', existingClient.id)
-        .eq('call_type', 'DISCOVERY');
+    let finalClientId = existingClient?.id;
 
-      if (count && count > 0) {
-        return res.status(200).json({ success: true, message: 'Discovery call already exists', amId, skipped: true });
+    if (!finalClientId) {
+      const { data: newClient, error: createErr } = await supabase
+        .from('clients')
+        .upsert({
+          applywizz_id: applywizzId,
+          company_email: email || `${applywizzId}@pending.com`,
+          full_name: 'Pending Onboarding', // Placeholder until direct-onboard runs
+          account_manager_id: amId,
+          status: 'pending_onboarding'
+        }, { onConflict: 'applywizz_id' })
+        .select('id')
+        .single();
+
+      if (createErr) {
+        console.error('[discovery-start] Client stub creation error:', createErr.message);
+        throw createErr;
       }
-
-      const discoveryId = await createDiscoveryCall(existingClient.id, amId);
-      return res.status(200).json({ success: true, discoveryId, amId });
+      finalClientId = newClient?.id;
     }
 
-    // If client doesn't exist yet, we just return the assigned AM.
-    // They will be scheduled when the direct-onboard or sync-client runs.
-    return res.status(200).json({
-      success: true,
-      message: 'Client not found in main table. AM assigned and mapping stored for future onboarding.',
-      amId
-    });
+    // 5. Create Discovery Call (now safe because client definitely exists)
+    const { count } = await supabase
+      .from('call_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', finalClientId)
+      .eq('call_type', 'DISCOVERY');
+
+    if (count && count > 0) {
+      return res.status(200).json({ success: true, message: 'Discovery call already exists', amId, skipped: true });
+    }
+
+    const discoveryId = await createDiscoveryCall(finalClientId, amId);
+    return res.status(200).json({ success: true, discoveryId, amId });
 
   } catch (err: any) {
     console.error('[/api/scheduling/discovery-start]', err.message);
