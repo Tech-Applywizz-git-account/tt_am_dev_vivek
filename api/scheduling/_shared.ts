@@ -334,9 +334,13 @@ export async function createDiscoveryCall(clientId: string, amId: string): Promi
   const holidays = await fetchHolidaySet();
   const todayStr = toDateStr(ist);
   let earliest: Date;
-  if (inWorkingHours && isWorkingDay(todayStr, holidays)) {
+
+  // If it's a working day AND we haven't passed tonight's shift end (approx 11:15 PM IST)
+  // then "Today" is the earliest valid date.
+  if (isWorkingDay(todayStr, holidays) && totalMins < 1395) { // 1395 mins = 23:15 IST
     earliest = ist;
   } else {
+    // Otherwise, move to the next available working day
     earliest = await nextWorkingDay(ist);
   }
   const earliestStr = toDateStr(earliest);
