@@ -13,7 +13,8 @@ import {
     Frown,
     Star,
     Send,
-    X
+    X,
+    CalendarClock
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,18 @@ interface CallDetails {
         am_id: string;
         users: { name: string };
     };
+}
+
+interface UnscheduledCall {
+    id: string;
+    call_type: string;
+    status: string;
+    earliest_date: string;
+    deadline_date: string;
+    sequence_number: number | null;
+    delay_days: number;
+    am_id: string;
+    users: { name: string };
 }
 
 interface Feedback {
@@ -183,6 +196,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ callRequestId, clientId, 
 
 export const CallHistoryView: React.FC<CallHistoryViewProps> = ({ clientId }) => {
     const [bookings, setBookings] = useState<CallDetails[]>([]);
+    const [unscheduled, setUnscheduled] = useState<UnscheduledCall[]>([]);
     const [history, setHistory] = useState<CallHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -196,6 +210,7 @@ export const CallHistoryView: React.FC<CallHistoryViewProps> = ({ clientId }) =>
             if (result.success) {
                 setBookings(result.data.bookings);
                 setHistory(result.data.history);
+                setUnscheduled(result.data.unscheduled || []);
             } else {
                 setError(result.error || 'Failed to fetch call history');
             }
@@ -236,7 +251,7 @@ export const CallHistoryView: React.FC<CallHistoryViewProps> = ({ clientId }) =>
 
     const upcomingCalls = bookings.filter(b => b.status === 'BOOKED' || b.status === 'SCHEDULED');
 
-    if (loading && history.length === 0) {
+    if (loading && history.length === 0 && unscheduled.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
@@ -316,15 +331,65 @@ export const CallHistoryView: React.FC<CallHistoryViewProps> = ({ clientId }) =>
                 </section>
             )}
 
+            {/* Unscheduled Forecast Section */}
+            {unscheduled.length > 0 && (
+                <section className="space-y-4">
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <CalendarClock className="h-5 w-5 text-purple-600" />
+                        Forecasted Interactions
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {unscheduled.map((call, idx) => (
+                            <motion.div
+                                key={call.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-6 relative overflow-hidden group hover:border-purple-300 transition-colors"
+                            >
+                                <div className="absolute top-0 left-0 w-1 h-full bg-purple-200 group-hover:bg-purple-400 transition-colors"></div>
+                                <div className="relative z-10 opacity-70 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                                            {call.call_type}{call.sequence_number ? ` #${call.sequence_number}` : ''}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending</span>
+                                    </div>
+                                    <h3 className="text-lg font-bold mb-1 text-gray-800">
+                                        Expected by {format(parseISO(call.deadline_date), 'MMM do')}
+                                    </h3>
+                                    <p className="text-gray-500 text-xs mb-4">
+                                        Can be scheduled from {format(parseISO(call.earliest_date), 'MMM do')}
+                                    </p>
+                                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl p-2 border border-gray-100">
+                                        <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                            <User className="h-4 w-4 text-gray-500" />
+                                        </div>
+                                        <div className="text-xs">
+                                            <p className="text-gray-400">Account Manager</p>
+                                            <p className="font-bold text-gray-700">{call.users?.name || 'Unassigned'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {/* Timeline Section */}
             <section className="space-y-6">
                 <h2 className="text-lg font-bold text-gray-900">Interaction Timeline</h2>
 
-                {history.length === 0 && upcomingCalls.length === 0 ? (
+                {history.length === 0 && upcomingCalls.length === 0 && unscheduled.length === 0 ? (
                     <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
                         <PhoneCall className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500 font-medium">No call interactions found yet.</p>
                         <p className="text-gray-400 text-sm">Your calls will appear here once scheduled.</p>
+                    </div>
+                ) : history.length === 0 ? (
+                    <div className="text-center py-10 bg-gray-50 rounded-3xl border border-gray-100">
+                        <p className="text-gray-500 font-medium">No past interactions yet.</p>
                     </div>
                 ) : (
                     <div className="relative space-y-12 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">

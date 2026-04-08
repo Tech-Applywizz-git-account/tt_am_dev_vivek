@@ -48,11 +48,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (historyError) throw historyError;
 
+        // 3. Fetch unscheduled call requests (Forecast)
+        const { data: unscheduled, error: unscheduledError } = await supabase
+            .from('call_requests')
+            .select(`
+        id, call_type, status, earliest_date, deadline_date, sequence_number, delay_days,
+        am_id, users!am_id (name)
+      `)
+            .eq('client_id', clientId)
+            .eq('status', 'UNSCHEDULED')
+            .order('earliest_date', { ascending: true });
+
+        if (unscheduledError) throw unscheduledError;
+
         return res.status(200).json({
             success: true,
             data: {
                 bookings: bookings || [],
-                history: history || []
+                history: history || [],
+                unscheduled: unscheduled || []
             }
         });
     } catch (err: any) {
