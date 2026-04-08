@@ -21,6 +21,8 @@ import {
   Smile,
   Meh,
   Frown,
+  History,
+  MessageSquare,
 } from 'lucide-react';
 import {
   format,
@@ -186,6 +188,27 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
   const [notes, setNotes] = useState('');
   const [comment, setComment] = useState('');
 
+  // History states
+  const [history, setHistory] = useState<any[]>([]);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchHistory = async (requestId: string) => {
+    try {
+      setHistoryLoading(true);
+      const res = await fetch(`/api/scheduling/get-call-history?callRequestId=${requestId}`);
+      const result = await res.json();
+      if (result.success) {
+        setHistory(result.data.history);
+        setFeedbacks(result.data.feedback);
+      }
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // Reset internal states whenever the selected call changes.
   useEffect(() => {
     setIsCompleting(false);
@@ -194,6 +217,10 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
     setSentiment(null);
     setNotes('');
     setComment('');
+
+    if (call?.id) {
+      fetchHistory(call.id);
+    }
   }, [call?.id]);
 
   if (!call) return null;
@@ -292,6 +319,78 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
                   </button>
                 </div>
               )}
+
+              {/* History Section */}
+              <div className="border-t border-gray-100 pt-5 mt-2">
+                <div className="flex items-center gap-2 mb-4">
+                  <History className="h-4 w-4 text-gray-400" />
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Call History</h3>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                  {historyLoading ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+                      <Loader2 className="h-6 w-6 animate-spin mb-2 opacity-20" />
+                      <p className="text-[10px] uppercase font-bold tracking-wider">Loading history...</p>
+                    </div>
+                  ) : history.length === 0 ? (
+                    <p className="text-center py-6 text-xs text-gray-400 italic">No previous history found.</p>
+                  ) : (
+                    history.map((h, idx) => {
+                      const hStatus = STATUS_CONFIG[h.status as CallStatus] || { icon: <AlertCircle className="h-3 w-3" />, label: h.status, color: 'text-gray-400' };
+                      // Match feedback to this call request. Since feedback is per request in our current schema, 
+                      // we show it for COMPLETED entries.
+                      const feedbackItem = h.status === 'COMPLETED' ? feedbacks.find(f => f.call_request_id === call.id) : null;
+
+                      return (
+                        <div key={h.id} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-50">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase mb-0.5">
+                                {format(parseISO(h.created_at), 'dd MMM yyyy, HH:mm')}
+                              </p>
+                              <div className={`flex items-center gap-1 text-[10px] font-bold ${hStatus.color}`}>
+                                {hStatus.icon} {hStatus.label}
+                              </div>
+                            </div>
+                            {h.client_sentiment && (
+                              <div className="p-1 bg-white rounded-lg shadow-sm">
+                                {h.client_sentiment === 'HAPPY' && <Smile className="h-4 w-4 text-green-500" />}
+                                {h.client_sentiment === 'NEUTRAL' && <Meh className="h-4 w-4 text-amber-500" />}
+                                {h.client_sentiment === 'FRUSTRATED' && <Frown className="h-4 w-4 text-red-500" />}
+                              </div>
+                            )}
+                          </div>
+
+                          {(h.notes || feedbackItem) && (
+                            <div className="space-y-2 mt-2">
+                              {h.notes && (
+                                <div className="bg-white/80 rounded-xl p-2.5 text-xs text-gray-600 border border-gray-100">
+                                  <p className="font-bold text-[9px] text-gray-400 uppercase mb-1">AM Notes</p>
+                                  {h.notes}
+                                </div>
+                              )}
+                              {feedbackItem && (
+                                <div className="bg-blue-50/50 rounded-xl p-2.5 text-xs text-blue-700 border border-blue-100">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="font-bold text-[9px] text-blue-400 uppercase">Formal Feedback</p>
+                                    <div className="flex gap-0.5">
+                                      {[1, 2, 3, 4, 5].map(s => (
+                                        <Star key={s} className={`h-2.5 w-2.5 ${feedbackItem.rating >= s ? 'fill-blue-400 text-blue-400' : 'text-blue-200'}`} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {feedbackItem.comment}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
