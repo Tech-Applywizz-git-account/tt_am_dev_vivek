@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useUser } from '@supabase/auth-helpers-react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -49,13 +50,14 @@ type CallStatus = 'UNSCHEDULED' | 'SCHEDULED' | 'BOOKED' | 'COMPLETED' | 'MISSED
 
 interface ScheduledCall {
   id: string;
-  booking_id: string;
+  booking_id?: string;
   client_name: string;
   call_type: CallType;
   status: CallStatus;
-  scheduled_date: string; // ISO date string
-  start_time: string; // HH:MM
-  end_time: string;
+  scheduled_date?: string;
+  earliest_date?: string;
+  start_time?: string;
+  end_time?: string;
   sequence_number?: number;
   deadline_date: string;
   delay_days: number;
@@ -115,8 +117,6 @@ const STATUS_CONFIG: Record<CallStatus, { icon: React.ReactNode; label: string; 
   UNSCHEDULED: { icon: <Clock className="h-3.5 w-3.5" />, label: 'Unscheduled', color: 'text-gray-500' },
 };
 
-// (Removed mock data generator)
-
 // ─── Sub-components ───────────────────────────────────────────────────
 
 interface CallCardProps {
@@ -128,15 +128,17 @@ interface CallCardProps {
 const CallCard: React.FC<CallCardProps> = ({ call, compact, onClick }) => {
   const cfg = CALL_TYPE_CONFIG[call.call_type];
   const isMissed = call.status === 'MISSED' || call.status === 'NOT_PICKED';
+  const isUnscheduled = call.status === 'UNSCHEDULED';
 
   return (
     <button
       onClick={() => onClick(call)}
       className={`
-        w-full text-left rounded-lg border-l-4 p-2 transition-all duration-150
+        w-full text-left rounded-lg border-l-4 transition-all duration-150
         hover:shadow-md hover:scale-[1.01] active:scale-100
         ${cfg.bg} ${cfg.border}
         ${isMissed ? 'ring-1 ring-red-300' : ''}
+        ${isUnscheduled ? 'border-dashed opacity-70 grayscale-[0.2]' : ''}
         ${compact ? 'py-1.5 px-2' : 'p-3'}
       `}
     >
@@ -154,10 +156,15 @@ const CallCard: React.FC<CallCardProps> = ({ call, compact, onClick }) => {
       <div className={`font-semibold text-gray-800 truncate ${compact ? 'text-xs' : 'text-sm'}`}>
         {call.client_name}
       </div>
-      {!compact && (
+      {!compact && !isUnscheduled && (
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <Clock className="h-3 w-3" />
           {call.start_time} – {call.end_time}
+        </div>
+      )}
+      {isUnscheduled && !compact && (
+        <div className="mt-1 text-[10px] text-gray-400 font-bold uppercase tracking-wider italic">
+          Not yet scheduled
         </div>
       )}
       {isMissed && (
@@ -174,19 +181,26 @@ const CallCard: React.FC<CallCardProps> = ({ call, compact, onClick }) => {
 
 interface CallDetailModalProps {
   call: ScheduledCall | null;
+  amId?: string; // Add amId as a prop
   onClose: () => void;
   onComplete: (callId: string, bookingId: string, data: any) => void;
   onNotPicked: (callId: string, bookingId: string) => void;
+  onManualBook: (callId: string, slotId: string) => Promise<void>;
   loading: boolean;
 }
 
-const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComplete, onNotPicked, loading }) => {
+const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, amId, onClose, onComplete, onNotPicked, onManualBook, loading }) => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [sentiment, setSentiment] = useState<'HAPPY' | 'NEUTRAL' | 'FRUSTRATED' | null>(null);
   const [notes, setNotes] = useState('');
   const [comment, setComment] = useState('');
+
+  // Manual booking states
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
 
   // History states
   const [history, setHistory] = useState<any[]>([]);
@@ -209,8 +223,22 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
     }
   };
 
+  const fetchAvailableSlots = async (amId: string, date: string) => {
+    try {
+      setSlotsLoading(true);
+      const res = await fetch(`/api/scheduling/get-available-slots?amId=${amId}&date=${date}`);
+      const result = await res.json();
+      if (result.success) setAvailableSlots(result.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSlotsLoading(false);
+    }
+  };
+
   // Reset internal states whenever the selected call changes.
   useEffect(() => {
+    if (!call) return;
     setIsCompleting(false);
     setRating(0);
     setHover(0);
@@ -220,14 +248,18 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
 
     if (call?.id) {
       fetchHistory(call.id);
+      if (call.status === 'UNSCHEDULED' && call.earliest_date && amId) {
+        fetchAvailableSlots(amId, call.earliest_date);
+      }
     }
-  }, [call?.id]);
+  }, [call?.id, call?.status, amId]);
 
   if (!call) return null;
   const cfg = CALL_TYPE_CONFIG[call.call_type];
   const statusCfg = STATUS_CONFIG[call.status];
 
   const handleFinish = () => {
+    if (!call.booking_id) return;
     onComplete(call.id, call.booking_id, {
       rating,
       sentiment,
@@ -259,7 +291,7 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
           {!isCompleting ? (
             <div className="space-y-4">
               {/* Status Row */}
@@ -273,11 +305,13 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
               {/* Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-1">Scheduled</p>
-                  <p className="font-bold text-gray-800">
-                    {format(parseISO(call.scheduled_date), 'dd MMM yyyy')}
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-1">
+                    {call.status === 'UNSCHEDULED' ? 'Earliest Date' : 'Scheduled'}
                   </p>
-                  <p className="text-sm text-gray-500">{call.start_time} – {call.end_time}</p>
+                  <p className="font-bold text-gray-800">
+                    {format(parseISO((call.scheduled_date || call.earliest_date)!), 'dd MMM yyyy')}
+                  </p>
+                  <p className="text-sm text-gray-500">{call.start_time ? `${call.start_time} – ${call.end_time}` : 'TBD'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-1">Deadline</p>
@@ -287,22 +321,8 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
                 </div>
               </div>
 
-              {/* Priority */}
-              <div className="bg-gray-50 rounded-2xl p-4 flex items-center justify-between">
-                <span className="text-sm text-gray-500 font-bold uppercase tracking-wider">Priority</span>
-                <div className="flex items-center gap-3">
-                  <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-600 rounded-full"
-                      style={{ width: `${Math.min((call.priority_score / 150) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className="font-black text-gray-800 text-sm whitespace-nowrap">{call.priority_score} pts</span>
-                </div>
-              </div>
-
               {/* Actions */}
-              {call.status === 'BOOKED' && (
+              {call.status === 'BOOKED' && call.booking_id && (
                 <div className="grid grid-cols-2 gap-3 pt-4">
                   <button
                     onClick={() => setIsCompleting(true)}
@@ -312,11 +332,48 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
                   </button>
                   <button
                     disabled={loading}
-                    onClick={() => onNotPicked(call.id, call.booking_id)}
+                    onClick={() => onNotPicked(call.id, call.booking_id!)}
                     className="py-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-lg shadow-amber-100 transition-all active:scale-95 disabled:opacity-50"
                   >
                     {loading ? 'Processing...' : 'Not Picked'}
                   </button>
+                </div>
+              )}
+
+              {call.status === 'UNSCHEDULED' && (
+                <div className="pt-4 space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <h3 className="text-sm font-bold text-gray-900">Book this Session Manually</h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {slotsLoading ? (
+                      <div className="col-span-3 py-4 text-center text-xs text-gray-400">Finding free slots...</div>
+                    ) : availableSlots.length === 0 ? (
+                      <div className="col-span-3 py-4 text-center text-xs text-gray-400 bg-gray-50 rounded-xl italic">No slots free for this date.</div>
+                    ) : (
+                      availableSlots.map(s => (
+                        <button
+                          key={s.id}
+                          disabled={bookingInProgress}
+                          onClick={async () => {
+                            setBookingInProgress(true);
+                            await onManualBook(call.id, s.id);
+                            setBookingInProgress(false);
+                          }}
+                          className="py-2 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        >
+                          {s.start_time}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {bookingInProgress && (
+                    <div className="flex items-center justify-center gap-2 text-blue-600 animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-[10px] font-bold uppercase">Booking now...</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -338,8 +395,6 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
                   ) : (
                     history.map((h, idx) => {
                       const hStatus = STATUS_CONFIG[h.status as CallStatus] || { icon: <AlertCircle className="h-3 w-3" />, label: h.status, color: 'text-gray-400' };
-                      // Match feedback to this call request. Since feedback is per request in our current schema, 
-                      // we show it for COMPLETED entries.
                       const feedbackItem = h.status === 'COMPLETED' ? feedbacks.find(f => f.call_request_id === call.id) : null;
 
                       return (
@@ -365,8 +420,7 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, onClose, onComp
                           {(h.notes || feedbackItem) && (
                             <div className="space-y-2 mt-2">
                               {h.notes && (
-                                <div className="bg-white/80 rounded-xl p-2.5 text-xs text-gray-600 border border-gray-100">
-                                  <p className="font-bold text-[9px] text-gray-400 uppercase mb-1">AM Notes</p>
+                                <div className="bg-white/80 rounded-xl p-2.5 text-xs text-gray-600 border border-gray-100 font-medium">
                                   {h.notes}
                                 </div>
                               )}
@@ -674,8 +728,18 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showLeavesSlideOver, setShowLeavesSlideOver] = useState(false);
 
-  // Use amId from props or current user (hardcoded for now as per current app style)
-  const amId = initialAmId || '83296684-2a1d-400a-9d9e-17631779ba3d';
+  const user = useUser();
+  const amId = initialAmId || user?.id;
+
+  if (!amId) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-50 rounded-2xl border border-gray-100">
+        <User className="h-12 w-12 text-gray-300 mb-4" />
+        <h2 className="text-lg font-bold text-gray-800">Please Sign In</h2>
+        <p className="text-gray-500 max-w-sm mt-2">You need to be signed in as an Account Manager to view the scheduling calendar.</p>
+      </div>
+    );
+  }
 
   const fetchCalls = async () => {
     try {
@@ -684,14 +748,9 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
       // Determine fetch range based on viewMode
       let start, end;
       if (viewMode === 'month') {
-        // Fetch full month grid
         start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
         end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      } else if (viewMode === 'week') {
-        start = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        end = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
       } else {
-        // day view — still fetch the whole week for smoother transitions
         start = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
         end = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
       }
@@ -700,15 +759,14 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
       const result = await res.json();
 
       if (result.success) {
-        // Map backend response to frontend types
-        const mapped = result.data.map((b: any) => ({
+        // 1. Map bookings
+        const booked = result.data.bookings.map((b: any) => ({
           id: b.call_requests.id,
-          booking_id: b.id, // Keep track of booking ID for actions
+          booking_id: b.id,
           client_name: b.call_requests.clients.full_name,
           call_type: b.call_requests.call_type,
           status: b.status,
           scheduled_date: b.scheduled_date,
-          // Normalize times: Database might return 'HH:mm:ss', we need 'HH:mm' for comparisons
           start_time: b.scheduled_start_time?.substring(0, 5),
           end_time: b.scheduled_end_time?.substring(0, 5),
           sequence_number: b.call_requests.sequence_number,
@@ -718,7 +776,23 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
           priority_score: b.call_requests.base_priority + (b.call_requests.delay_days * 10),
           subscription_type: b.call_requests.clients.subscription_type
         }));
-        setCalls(mapped);
+
+        // 2. Map unscheduled requests
+        const unscheduled = result.data.unscheduled.map((r: any) => ({
+          id: r.id,
+          client_name: r.clients.full_name,
+          call_type: r.call_type,
+          status: r.status,
+          earliest_date: r.earliest_date,
+          sequence_number: r.sequence_number,
+          deadline_date: r.deadline_date,
+          delay_days: r.delay_days,
+          miss_count: r.miss_count,
+          priority_score: r.base_priority + (r.delay_days * 10),
+          subscription_type: r.clients.subscription_type
+        }));
+
+        setCalls([...booked, ...unscheduled]);
       }
     } catch (err) {
       console.error('Failed to fetch calls:', err);
@@ -743,8 +817,10 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   };
 
   useEffect(() => {
-    fetchCalls();
-    fetchLeaves();
+    if (amId) {
+      fetchCalls();
+      fetchLeaves();
+    }
   }, [currentDate, amId, viewMode]);
 
   const handleComplete = async (callId: string, bookingId: string, data: any) => {
@@ -789,6 +865,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   };
 
   const handleApplyLeave = async (date: string, reason: string) => {
+    if (!amId) return;
     try {
       setActionLoading(true);
       const res = await fetch('/api/scheduling/apply-leave', {
@@ -799,7 +876,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
       const result = await res.json();
       if (res.ok) {
         fetchLeaves();
-        fetchCalls(); // Re-fetch calls as some might have been re-scheduled
+        fetchCalls();
       } else {
         throw new Error(result.error || 'Failed to apply for leave.');
       }
@@ -808,14 +885,22 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
     }
   };
 
-  // Navigation helpers
-  const navigate = (dir: 1 | -1) => {
-    if (viewMode === 'week') setCurrentDate(dir === 1 ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
-    else if (viewMode === 'month') setCurrentDate(dir === 1 ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
-    else setCurrentDate(addDays(currentDate, dir));
+  const handleManualBook = async (callId: string, slotId: string) => {
+    try {
+      setActionLoading(true);
+      const res = await fetch('/api/scheduling/manual-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callRequestId: callId, slotId }),
+      });
+      if (res.ok) {
+        setSelectedCall(null);
+        fetchCalls();
+      }
+    } finally {
+      setActionLoading(false);
+    }
   };
-
-  const goToday = () => setCurrentDate(new Date());
 
   // Week days
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -828,32 +913,32 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
   );
 
   const getCallsForDate = (date: Date) =>
-    filteredCalls.filter(c => isSameDay(parseISO(c.scheduled_date), date));
+    filteredCalls.filter(c => isSameDay(parseISO((c.scheduled_date || c.earliest_date)!), date));
+
+  const getUnscheduledForDate = (date: Date) =>
+    filteredCalls.filter(c => c.status === 'UNSCHEDULED' && isSameDay(parseISO(c.earliest_date!), date));
 
   const amLeaveSet = useMemo(() => new Set(leaves.map(l => l.leave_date)), [leaves]);
   const isDateOnLeave = (date: Date) => amLeaveSet.has(format(date, 'yyyy-MM-dd'));
 
   // Stats
-  const todaysCalls = calls.filter(c => isSameDay(parseISO(c.scheduled_date), new Date()));
   const stats = {
-    today: todaysCalls.length,
+    today: calls.filter(c => isSameDay(parseISO((c.scheduled_date || c.earliest_date)!), new Date())).length,
     completed: calls.filter(c => c.status === 'COMPLETED').length,
-    pending: calls.filter(c => c.status === 'SCHEDULED').length,
+    pending: calls.filter(c => c.status === 'SCHEDULED' || c.status === 'BOOKED').length,
     missed: calls.filter(c => c.status === 'MISSED' || c.status === 'NOT_PICKED').length,
   };
 
-  // Range label
   const rangeLabel = viewMode === 'week'
     ? `${format(weekStart, 'dd MMM')} – ${format(addDays(weekStart, 6), 'dd MMM yyyy')}`
     : viewMode === 'month'
       ? format(currentDate, 'MMMM yyyy')
       : format(currentDate, 'EEEE, dd MMMM yyyy');
 
-  // IST time slots for week view (simplified for display)
   const timeSlots = ['20:45', '21:15', '21:45', '22:15', '22:45', '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30'];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 p-4">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -900,44 +985,49 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          {/* Left: navigation */}
           <div className="flex items-center gap-2">
             <button
-              onClick={goToday}
+              onClick={() => setCurrentDate(new Date())}
               className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
               Today
             </button>
-            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <button
+              onClick={() => {
+                const dir = viewMode === 'week' ? subWeeks : viewMode === 'month' ? subMonths : subWeeks;
+                setCurrentDate(dir(currentDate, 1));
+              }}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
               <ChevronLeft className="h-5 w-5 text-gray-600" />
             </button>
-            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <button
+              onClick={() => {
+                const dir = viewMode === 'week' ? addWeeks : viewMode === 'month' ? addMonths : addWeeks;
+                setCurrentDate(dir(currentDate, 1));
+              }}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
               <ChevronRight className="h-5 w-5 text-gray-600" />
             </button>
             <span className="text-sm font-semibold text-gray-900 ml-1">{rangeLabel}</span>
           </div>
 
-          {/* Center: type filter */}
           <div className="flex items-center gap-1.5">
             {(['ALL', 'DISCOVERY', 'ORIENTATION', 'PROGRESS', 'RENEWAL'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
                 className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${filterType === t
-                  ? t === 'ALL' ? 'bg-gray-800 text-white' : `${CALL_TYPE_CONFIG[t as CallType]?.dot} text-white`
+                  ? 'bg-gray-800 text-white'
                   : 'text-gray-500 hover:bg-gray-100'
                   }`}
-                style={filterType === t && t !== 'ALL' ? { backgroundColor: undefined } : {}}
               >
-                {t === 'ALL' ? 'All' :
-                  t === 'DISCOVERY' ? '🔮 Discovery' :
-                    t === 'ORIENTATION' ? '🔵 Orientation' :
-                      t === 'PROGRESS' ? '🟢 Progress' : '🟠 Renewal'}
+                {t}
               </button>
             ))}
           </div>
 
-          {/* Right: view toggle */}
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             {(['day', 'week', 'month'] as ViewMode[]).map((v) => (
               <button
@@ -953,19 +1043,14 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
 
         {/* Week Grid */}
         {viewMode === 'week' && (
-          <div className="overflow-x-auto">
-            {/* Day headers */}
-            <div className="grid border-b border-gray-100" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
+          <div className="overflow-x-auto overflow-y-auto max-h-[70vh] custom-scrollbar">
+            {/* Header */}
+            <div className="grid border-b border-gray-100 sticky top-0 bg-white z-10" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
               <div className="p-3" />
               {weekDays.map((day) => (
-                <div
-                  key={day.toISOString()}
-                  className={`p-3 text-center border-l border-gray-100 ${isToday(day) ? 'bg-blue-50' : ''}`}
-                >
+                <div key={day.toISOString()} className={`p-3 text-center border-l border-gray-100 ${isToday(day) ? 'bg-blue-50' : ''}`}>
                   <p className="text-xs font-medium text-gray-500 uppercase">{format(day, 'EEE')}</p>
-                  <p className={`text-lg font-bold mt-0.5 ${isToday(day) ? 'text-blue-600' : 'text-gray-900'}`}>
-                    {format(day, 'd')}
-                  </p>
+                  <p className={`text-lg font-bold ${isToday(day) ? 'text-blue-600' : 'text-gray-900'}`}>{format(day, 'd')}</p>
                   {isDateOnLeave(day) && (
                     <span className="inline-block mt-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded uppercase">
                       Leave
@@ -975,18 +1060,30 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
               ))}
             </div>
 
-            {/* Time rows */}
+            {/* Unscheduled Row */}
+            <div className="grid border-b border-gray-100 bg-gray-50/20" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
+              <div className="px-3 py-4 text-[10px] font-black text-gray-400 text-right uppercase leading-tight">Pending<br />Requests</div>
+              {weekDays.map((day) => {
+                const dayUnscheduled = getUnscheduledForDate(day);
+                return (
+                  <div key={day.toISOString()} className="p-1 border-l border-gray-100 min-h-[60px] space-y-1 relative">
+                    {isDateOnLeave(day) && (
+                      <div className="absolute inset-0 bg-orange-50/20" />
+                    )}
+                    {dayUnscheduled.map(c => <CallCard key={c.id} call={c} compact onClick={setSelectedCall} />)}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Time Slots */}
             {timeSlots.map((slot) => (
               <div key={slot} className="grid border-b border-gray-50" style={{ gridTemplateColumns: '72px repeat(7, 1fr)' }}>
-                {/* Time label */}
                 <div className="px-3 py-2 text-xs text-gray-400 text-right font-mono">{slot}</div>
                 {weekDays.map((day) => {
                   const dayCalls = getCallsForDate(day).filter(c => c.start_time === slot);
                   return (
-                    <div
-                      key={day.toISOString()}
-                      className={`min-h-[52px] p-1 border-l border-gray-100 relative ${isToday(day) ? 'bg-blue-50/30' : ''}`}
-                    >
+                    <div key={day.toISOString()} className={`min-h-[52px] p-1 border-l border-gray-100 relative ${isToday(day) ? 'bg-blue-50/30' : ''}`}>
                       {isDateOnLeave(day) && (
                         <div className="absolute inset-0 bg-orange-50/40 backdrop-blur-[1px] flex items-center justify-center">
                           {slot === '20:45' && (
@@ -994,9 +1091,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
                           )}
                         </div>
                       )}
-                      {dayCalls.map((call) => (
-                        <CallCard key={call.id} call={call} compact onClick={setSelectedCall} />
-                      ))}
+                      {dayCalls.map(c => <CallCard key={c.id} call={c} compact onClick={setSelectedCall} />)}
                     </div>
                   );
                 })}
@@ -1007,35 +1102,51 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
 
         {/* Day View */}
         {viewMode === 'day' && (
-          <div className="p-6 space-y-3">
-            <p className="text-sm text-gray-500 font-medium mb-4">
-              {getCallsForDate(currentDate).length} calls scheduled
-            </p>
-            {getCallsForDate(currentDate).length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <Calendar className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">No calls scheduled for this day</p>
+          <div className="p-6 space-y-6">
+            {getUnscheduledForDate(currentDate).length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Upcoming Unscheduled</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {getUnscheduledForDate(currentDate).map(c => <CallCard key={c.id} call={c} onClick={setSelectedCall} />)}
+                </div>
               </div>
-            ) : (
-              getCallsForDate(currentDate)
-                .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                .map((call) => (
-                  <CallCard key={call.id} call={call} onClick={setSelectedCall} />
-                ))
             )}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Shift Schedule</h3>
+                </div>
+                {isDateOnLeave(currentDate) && (
+                  <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-lg uppercase">On Leave Today</span>
+                )}
+              </div>
+              {getCallsForDate(currentDate).filter(c => c.status !== 'UNSCHEDULED').length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">No confirmed calls.</p>
+                </div>
+              ) : (
+                getCallsForDate(currentDate)
+                  .filter(c => c.status !== 'UNSCHEDULED')
+                  .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
+                  .map(c => <CallCard key={c.id} call={c} onClick={setSelectedCall} />)
+              )}
+            </div>
           </div>
         )}
 
         {/* Month View */}
         {viewMode === 'month' && (
           <div className="p-4">
-            {/* Month day labels */}
             <div className="grid grid-cols-7 mb-2">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
                 <div key={d} className="text-center text-xs font-medium text-gray-500 py-2">{d}</div>
               ))}
             </div>
-            {/* Month days */}
             {(() => {
               const msStart = startOfMonth(currentDate);
               const msEnd = endOfMonth(currentDate);
@@ -1051,20 +1162,21 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
                 <div className="grid grid-cols-7 gap-1">
                   {days.map((day) => {
                     const daysCalls = getCallsForDate(day);
+                    const onLeave = isDateOnLeave(day);
                     return (
                       <div
                         key={day.toISOString()}
                         className={`min-h-[80px] p-1.5 rounded-xl border transition-colors
                           ${isToday(day) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-300'}
                           ${!isSameMonth(day, currentDate) ? 'opacity-30' : ''}
-                          ${isDateOnLeave(day) ? 'bg-orange-50/50 border-orange-100' : ''}
+                          ${onLeave ? 'bg-orange-50/50 border-orange-100' : ''}
                         `}
                       >
                         <div className="flex justify-between items-start">
                           <p className={`text-xs font-semibold mb-1 ${isToday(day) ? 'text-blue-600' : 'text-gray-600'}`}>
                             {format(day, 'd')}
                           </p>
-                          {isDateOnLeave(day) && (
+                          {onLeave && (
                             <span className="text-[8px] font-bold text-orange-600 bg-orange-100 px-1 rounded">LEAVE</span>
                           )}
                         </div>
@@ -1080,9 +1192,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
                               {c.client_name}
                             </button>
                           ))}
-                          {daysCalls.length > 2 && (
-                            <p className="text-[9px] text-gray-400 pl-1">+{daysCalls.length - 2} more</p>
-                          )}
+                          {daysCalls.length > 2 && <p className="text-[9px] text-gray-400 pl-1">+{daysCalls.length - 2} more</p>}
                         </div>
                       </div>
                     );
@@ -1094,28 +1204,28 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
         )}
 
         {/* Legend */}
-        <div className="px-6 py-3 border-t border-gray-100 flex items-center gap-4 flex-wrap">
-          {Object.entries(CALL_TYPE_CONFIG).map(([type, cfg]) => (
-            <div key={type} className="flex items-center gap-1.5">
-              <div className={`h-2.5 w-2.5 rounded-full ${cfg.dot}`} />
-              <span className="text-xs text-gray-500">{cfg.label}</span>
+        <div className="px-6 py-3 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+          {Object.entries(CALL_TYPE_CONFIG).map(([t, c]) => (
+            <div key={t} className="flex items-center gap-1.5">
+              <div className={`h-2 w-2 rounded-full ${c.dot}`} />
+              {c.label}
             </div>
           ))}
-          <div className="ml-auto text-xs text-gray-400">All times in IST</div>
+          <div className="ml-auto">All times in IST</div>
         </div>
       </div>
 
-      {/* Call Detail Modal */}
+      {/* Modals */}
       <CallDetailModal
-        key={selectedCall?.id || 'none'}
         call={selectedCall}
+        amId={amId}
         onClose={() => setSelectedCall(null)}
         onComplete={handleComplete}
         onNotPicked={handleNotPicked}
+        onManualBook={handleManualBook}
         loading={actionLoading}
       />
 
-      {/* AM Leave Modals */}
       <ApplyLeaveModal
         isOpen={showApplyModal}
         onClose={() => setShowApplyModal(false)}

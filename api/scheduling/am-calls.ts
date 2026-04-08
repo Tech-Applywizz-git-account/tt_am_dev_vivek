@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!amId) return res.status(400).json({ error: 'amId is required' });
 
   try {
+    // 1. Fetch Confirmed Bookings
     let query = supabase
       .from('call_bookings')
       .select(`
@@ -39,10 +40,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       query = query.eq('scheduled_date', targetDate);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    const { data: bookings, error: bookingsError } = await query;
+    if (bookingsError) throw bookingsError;
 
-    return res.status(200).json({ success: true, data: data || [] });
+    // 2. Fetch Unscheduled Call Requests (on their earliest_date)
+    let requestsQuery = supabase
+      .from('call_requests')
+      .select(`
+        id, call_type, status, sequence_number,
+        delay_days, miss_count, deadline_date, earliest_date, base_priority,
+        clients!inner (id, full_name, subscription_type)
+      `)
+      .eq('am_id', amId)
+      .eq('status', 'UNSCHEDULED');
+
+    if (from && to) {
+      requestsQuery = requestsQuery.gte('earliest_date', from).lte('earliest_date', to);
+    } else {
+      const targetDate = date || toDateStr(getISTDate());
+      requestsQuery = requestsQuery.eq('earliest_date', targetDate);
+    }
+
+    const { data: requests, error: requestsError } = await requestsQuery;
+    if (requestsError) throw requestsError;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        bookings: bookings || [],
+        unscheduled: requests || []
+      }
+    });
   } catch (err: any) {
     console.error('[/api/scheduling/am-calls]', err.message);
     return res.status(500).json({ success: false, error: err.message });
