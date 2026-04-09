@@ -30,6 +30,137 @@ export const PROGRESS_DAYS: Record<string, number[]> = {
   '90': [15, 30, 45, 60, 75],
 };
 
+export const CALL_TEMPLATES: Record<string, { subject: string; context: string }> = {
+  DISCOVERY: {
+    subject: "Discovery Call Scheduled – Let’s Get Started",
+    context: `Hi {{Client Name}},
+
+Thank you for choosing to work with us. We’re delighted to begin this journey with you.
+
+Your Discovery Call has been scheduled to better understand your goals, expectations, and requirements so we can tailor our approach to your needs.
+
+Call Details:
+
+Date: {{Date}}
+Time: {{Time}}
+Account Manager: {{AM Name}}
+
+Please join the meeting using the link below:
+
+Agenda for the Call:
+- Understand your goals and expectations
+- Discuss your background and specific requirements
+- Align on the overall approach and next steps
+
+Preparation for the Call:
+- Join from a quiet, distraction-free environment
+- Ensure a stable internet connection
+- Keep any relevant information or questions ready
+- Kindly inform us in advance if you are unable to attend
+
+We look forward to speaking with you.
+
+Warm regards,
+Team`
+  },
+  ORIENTATION: {
+    subject: "Orientation Call Scheduled – Getting You Set Up",
+    context: `Hi {{Client Name}},
+
+Welcome aboard! We’re excited to have you with us and look forward to supporting you throughout your journey.
+
+Your Orientation Call has been scheduled to guide you through our processes, tools, and collaboration model.
+
+Call Details:
+
+Date: {{Date}}
+Time: {{Time}}
+Account Manager: {{AM Name}}
+
+Please join the meeting using the link below:
+
+Agenda for the Call:
+- Overview of our services and workflow
+- Introduction to key tools and platforms
+- Communication channels and request processes
+- Best practices to help you succeed
+
+Preparation for the Call:
+- Be in a calm and quiet environment
+- Ensure a stable internet connection
+- Keep a notebook or notes application handy
+
+We look forward to helping you get started smoothly.
+
+Warm regards,
+Team`
+  },
+  PROGRESS: {
+    subject: "Progress Review Call Scheduled – Reviewing Your Progress",
+    context: `Hi {{Client Name}},
+
+We hope you are doing well.
+
+It’s time for your Progress Review Call, where we will assess your progress, share feedback, and discuss the way forward.
+
+Call Details:
+
+Date: {{Date}}
+Time: {{Time}}
+Account Manager: {{AM Name}}
+
+Please join the meeting using the link below:
+
+Agenda for the Call:
+- Review your progress to date
+- Share feedback and performance insights
+- Identify areas of improvement
+- Define the next action plan
+
+Preparation for the Call:
+- Join from a quiet and focused environment
+- Ensure reliable internet connectivity
+- Be prepared to discuss your experience and any challenges
+
+We look forward to your continued progress.
+
+Warm regards,
+Team`
+  },
+  RENEWAL: {
+    subject: "Subscription Renewal Discussion – Next Steps",
+    context: `Hi {{Client Name}},
+
+We hope you’ve had a valuable experience with us so far.
+
+As your current subscription approaches its end, we would like to connect with you to review your journey and discuss the next steps.
+
+Call Details:
+
+Date: {{Date}}
+Time: {{Time}}
+Account Manager: {{AM Name}}
+
+Please join the meeting using the link below:
+
+Agenda for the Call:
+- Review your overall progress and outcomes
+- Discuss renewal and continuation options
+- Address any questions or concerns
+- Plan the next phase of your journey
+
+Preparation for the Call:
+- Be available in a quiet environment
+- Ensure stable internet connectivity
+- Keep any questions or concerns ready for discussion
+
+We look forward to continuing our association with you.
+
+Warm regards,
+Team`
+  }
+};
+
 // IST time slots: 
 // Evening Shift Starts (e.g. Monday Night)
 export const EVENING_SLOTS = [
@@ -163,6 +294,83 @@ export async function generateSlotsForAM(
   return count ?? slots.length;
 }
 
+/** Sync booking with Teams Meeting API. */
+export async function triggerTeamsMeetingSync(bookingId: string) {
+  const TEAMS_DOMAIN = process.env.TEAMS_DOMAIN;
+  if (!TEAMS_DOMAIN) {
+    console.error('[TeamsSync] Missing TEAMS_DOMAIN environment variable.');
+    return;
+  }
+
+  try {
+    // 1. Fetch all details for the booking
+    const { data: b, error } = await supabase
+      .from('call_bookings')
+      .select(`
+        scheduled_date, scheduled_start_time, scheduled_end_time,
+        call_requests (
+          call_type,
+          clients (full_name, company_email),
+          users (name, email)
+        )
+      `)
+      .eq('id', bookingId)
+      .single();
+
+    if (error || !b) throw new Error(error?.message || 'Booking not found');
+
+    const req = b.call_requests as any;
+    const client = req.clients;
+    const am = req.users;
+    const callType = req.call_type;
+
+    const template = CALL_TEMPLATES[callType];
+    if (!template) {
+      console.warn(`[TeamsSync] No template found for call type: ${callType}`);
+      return;
+    }
+
+    // 2. Prepare data for placeholders
+    const dateFormatted = format(parseISO(b.scheduled_date), 'dd MMM yyyy');
+    const timeRange = `${b.scheduled_start_time.substring(0, 5)} - ${b.scheduled_end_time.substring(0, 5)} IST`;
+
+    // 3. Fill template
+    let subject = template.subject;
+    let context = template.context
+      .replace(/{{Client Name}}/g, client.full_name)
+      .replace(/{{Date}}/g, dateFormatted)
+      .replace(/{{Time}}/g, timeRange)
+      .replace(/{{AM Name}}/g, am.name);
+
+    // 4. Construct URL
+    // Format: 2024-04-12T10:00:00
+    const startIso = `${b.scheduled_date}T${b.scheduled_start_time}`;
+    const endIso = `${b.scheduled_date}T${b.scheduled_end_time}`;
+
+    const url = new URL(`${TEAMS_DOMAIN}/api/teams-meeting`);
+    url.searchParams.append('from', am.email);
+    url.searchParams.append('to', client.company_email);
+    url.searchParams.append('start', startIso);
+    url.searchParams.append('end', endIso);
+    url.searchParams.append('subject', subject);
+    url.searchParams.append('context', context);
+
+    console.log(`[TeamsSync] Triggering sync for booking=${bookingId} type=${callType}`);
+
+    // 5. Call API
+    const res = await fetch(url.toString(), { method: 'GET' });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[TeamsSync] API Error (Status ${res.status}): ${errText}`);
+    } else {
+      console.log(`[TeamsSync] Success for booking=${bookingId}`);
+    }
+
+  } catch (err: any) {
+    console.error(`[TeamsSync] Internal Error: ${err.message}`);
+  }
+}
+
 /** Scheduler Engine: one full assignment cycle. Returns { scheduled, preempted, skipped }. */
 export async function runSchedulerCycle(): Promise<{ scheduled: number; preempted: number; skipped: number }> {
   const todayStr = toDateStr(getISTDate());
@@ -201,13 +409,17 @@ export async function runSchedulerCycle(): Promise<{ scheduled: number; preempte
 
     if (slot) {
       // Direct booking
-      await supabase.from('call_bookings').insert({
+      const { data: newBooking } = await supabase.from('call_bookings').insert({
         call_request_id: call.id, slot_id: slot.id,
         scheduled_date: slot.slot_date, scheduled_start_time: slot.start_time,
         scheduled_end_time: slot.end_time, status: 'BOOKED',
-      });
+      }).select('id').single();
+
       await supabase.from('time_slots').update({ status: 'BOOKED' }).eq('id', slot.id);
       await supabase.from('call_requests').update({ status: 'SCHEDULED', last_scheduled_at: new Date().toISOString() }).eq('id', call.id);
+
+      if (newBooking) triggerTeamsMeetingSync(newBooking.id).catch(() => { });
+
       scheduled++;
     } else if (preemptionOps < MAX_PREEMPTIONS) {
       // Try preemption
@@ -230,13 +442,16 @@ export async function runSchedulerCycle(): Promise<{ scheduled: number; preempte
           status: 'UNSCHEDULED', preemption_count: victim.preemption_count + 1,
           delay_days: victim.delay_days + 1, last_scheduled_at: null,
         }).eq('id', victim.id);
-        await supabase.from('call_bookings').insert({
+        const { data: newBooking } = await supabase.from('call_bookings').insert({
           call_request_id: call.id, slot_id: vb.slot_id,
           scheduled_date: vb.scheduled_date, scheduled_start_time: vb.scheduled_start_time,
           scheduled_end_time: vb.scheduled_end_time, status: 'BOOKED',
-        });
+        }).select('id').single();
         await supabase.from('time_slots').update({ status: 'BOOKED' }).eq('id', vb.slot_id);
         await supabase.from('call_requests').update({ status: 'SCHEDULED', last_scheduled_at: new Date().toISOString() }).eq('id', call.id);
+
+        if (newBooking) triggerTeamsMeetingSync(newBooking.id).catch(() => { });
+
         scheduled++;
         preempted++;
         preemptionOps++;

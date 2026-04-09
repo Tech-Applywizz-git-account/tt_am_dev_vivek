@@ -4,7 +4,7 @@
 // Body: { callRequestId, slotId }
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from './_shared.js';
+import { supabase, triggerTeamsMeetingSync } from './_shared.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -30,14 +30,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (slot.status !== 'AVAILABLE') throw new Error('Slot is no longer available');
 
         // 2. Create the booking
-        const { error: bookingErr } = await supabase.from('call_bookings').insert({
+        const { data: booking, error: bookingErr } = await supabase.from('call_bookings').insert({
             call_request_id: callRequestId,
             slot_id: slotId,
             scheduled_date: slot.slot_date,
             scheduled_start_time: slot.start_time,
             scheduled_end_time: slot.end_time,
             status: 'BOOKED',
-        });
+        }).select('id').single();
+
         if (bookingErr) throw bookingErr;
 
         // 3. Update slot status
@@ -48,6 +49,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             status: 'SCHEDULED',
             last_scheduled_at: new Date().toISOString()
         }).eq('id', callRequestId);
+
+        // 5. Trigger Teams Sync (Async)
+        if (booking) {
+            triggerTeamsMeetingSync(booking.id).catch(err => {
+                console.error('[ManualBook] TeamsSync failed (silently):', err.message);
+            });
+        }
 
         return res.status(200).json({ success: true });
     } catch (err: any) {
