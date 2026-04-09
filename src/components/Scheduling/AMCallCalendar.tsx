@@ -52,6 +52,7 @@ interface ScheduledCall {
   id: string;
   booking_id?: string;
   client_name: string;
+  applywizz_id?: string;
   call_type: CallType;
   status: CallStatus;
   scheduled_date?: string;
@@ -284,7 +285,9 @@ const CallDetailModal: React.FC<CallDetailModalProps> = ({ call, amId, onClose, 
               <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${cfg.text} bg-white/50 px-2 py-0.5 rounded`}>
                 {cfg.label} Call{call.sequence_number ? ` #${call.sequence_number}` : ''}
               </span>
-              <h2 className="text-2xl font-black text-gray-900 mt-2">{call.client_name}</h2>
+              <h2 className="text-2xl font-black text-gray-900 mt-2">
+                {call.client_name} {call.applywizz_id ? `(${call.applywizz_id})` : ''}
+              </h2>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400">&times;</button>
           </div>
@@ -764,6 +767,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
           id: b.call_requests.id,
           booking_id: b.id,
           client_name: b.call_requests.clients.full_name,
+          applywizz_id: b.call_requests.clients.applywizz_id,
           call_type: b.call_requests.call_type,
           status: b.status,
           scheduled_date: b.scheduled_date,
@@ -781,6 +785,7 @@ export const AMCallCalendar: React.FC<AMCallCalendarProps> = ({ amId: initialAmI
         const unscheduled = result.data.unscheduled.map((r: any) => ({
           id: r.id,
           client_name: r.clients.full_name,
+          applywizz_id: r.clients.applywizz_id,
           call_type: r.call_type,
           status: r.status,
           earliest_date: r.earliest_date,

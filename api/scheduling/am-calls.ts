@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         call_requests!inner (
           id, call_type, status, sequence_number,
           delay_days, miss_count, deadline_date, base_priority,
-          clients!inner (id, full_name, subscription_type)
+          clients!inner (id, full_name, subscription_type, applywizz_id)
         )
       `)
       .eq('call_requests.am_id', amId)
@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select(`
         id, call_type, status, sequence_number,
         delay_days, miss_count, deadline_date, earliest_date, base_priority,
-        clients!inner (id, full_name, subscription_type)
+        clients!inner (id, full_name, subscription_type, applywizz_id)
       `)
       .eq('am_id', amId)
       .eq('status', 'UNSCHEDULED');
