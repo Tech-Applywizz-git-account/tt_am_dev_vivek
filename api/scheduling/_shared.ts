@@ -5,6 +5,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { addDays, format, getDay, parseISO } from 'date-fns';
 
+export { addDays, format, getDay, parseISO };
+
 // ─── Supabase Client (Service Role — bypasses RLS) ────────────
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -403,16 +405,31 @@ export async function runSchedulerCycle(): Promise<{ scheduled: number; preempte
 
   for (const call of sorted) {
     // Find available slot
-    const { data: slots } = await supabase
+    const { data: rawSlots } = await supabase
       .from('time_slots')
       .select('id, slot_date, start_time, end_time')
       .eq('am_id', call.am_id)
       .eq('status', 'AVAILABLE')
       .gte('slot_date', todayStr)
-      .order('slot_date').order('start_time')
-      .limit(1);
+      .order('slot_date')
+      .limit(50);
 
-    const slot = slots?.[0] ?? null;
+    const nowIST = getISTDate();
+    const sortedSlots = (rawSlots || []).map(s => {
+      const hour = parseInt(s.start_time.split(':')[0]);
+      const [sh, sm] = s.start_time.split(':').map(Number);
+      let realDateStr = s.slot_date;
+      if (hour < 5) {
+        realDateStr = toDateStr(addDays(parseISO(s.slot_date), 1));
+      }
+      const d = parseISO(realDateStr);
+      d.setHours(sh, sm, 0, 0);
+      return { ...s, slotDateTime: d };
+    })
+      .filter(s => s.slotDateTime > nowIST)
+      .sort((a, b) => a.slotDateTime.getTime() - b.slotDateTime.getTime());
+
+    const slot = sortedSlots[0] || null;
 
     if (slot) {
       // Direct booking
