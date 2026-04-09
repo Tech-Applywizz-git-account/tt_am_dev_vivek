@@ -331,7 +331,14 @@ export async function triggerTeamsMeetingSync(bookingId: string) {
     }
 
     // 2. Prepare data for placeholders
-    const dateFormatted = format(parseISO(b.scheduled_date), 'dd MMM yyyy');
+    // Detect if this is an early morning slot (00:00 - 05:00) which belongs to the next calendar day
+    const hour = parseInt(b.scheduled_start_time.split(':')[0]);
+    let calendarDate = b.scheduled_date;
+    if (hour >= 0 && hour < 5) {
+      calendarDate = toDateStr(addDays(parseISO(b.scheduled_date), 1));
+    }
+
+    const dateFormatted = format(parseISO(calendarDate), 'dd MMM yyyy');
     const timeRange = `${b.scheduled_start_time.substring(0, 5)} - ${b.scheduled_end_time.substring(0, 5)} IST`;
 
     // 3. Fill template
@@ -344,8 +351,8 @@ export async function triggerTeamsMeetingSync(bookingId: string) {
 
     // 4. Construct URL
     // Format: 2024-04-12T10:00:00
-    const startIso = `${b.scheduled_date}T${b.scheduled_start_time}`;
-    const endIso = `${b.scheduled_date}T${b.scheduled_end_time}`;
+    const startIso = `${calendarDate}T${b.scheduled_start_time}`;
+    const endIso = `${calendarDate}T${b.scheduled_end_time}`;
 
     const url = new URL(`${TEAMS_DOMAIN}/api/teams-meeting`);
     url.searchParams.append('from', am.email);
