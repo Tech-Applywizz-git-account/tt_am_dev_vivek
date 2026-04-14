@@ -491,7 +491,16 @@ export async function runSchedulerCycle(): Promise<{ scheduled: number; preempte
 
 /** Missed Call Handler: requeue past-due SCHEDULED calls. */
 export async function runMissedCallCycle(): Promise<{ handled: number; alerts: number }> {
-  const todayStr = toDateStr(getISTDate());
+  const istDate = getISTDate();
+  const istHour = istDate.getHours();
+
+  // Exit if we are in the shift window or buffer window (00:00 to 05:59 IST)
+  if (istHour < 6) {
+    console.log('[MissedCallHandler] 😴 System is quiet during active shift/buffer (00:00-06:00 IST).');
+    return { handled: 0, alerts: 0 };
+  }
+
+  const todayStr = toDateStr(istDate);
   let handled = 0, alerts = 0;
 
   const { data: missed } = await supabase
