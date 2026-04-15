@@ -350,11 +350,14 @@ export async function triggerTeamsMeetingSync(bookingId: string) {
       .replace(/{{Date}}/g, dateFormatted)
       .replace(/{{Time}}/g, timeRange)
       .replace(/{{AM Name}}/g, am.name);
-
+      
     // 4. Construct URL
-    // Format: 2024-04-12T10:00:00
-    const startIso = `${calendarDate}T${b.scheduled_start_time}`;
-    const endIso = `${calendarDate}T${b.scheduled_end_time}`;
+    // Times are stored in IST (UTC+5:30). We must send the +05:30 offset so
+    // Microsoft Graph / Teams renders the meeting at the correct local time
+    // instead of interpreting the naive string as UTC (which would shift the
+    // meeting 5 h 30 min earlier in Teams).
+    const startIso = `${calendarDate}T${b.scheduled_start_time}:00+05:30`;
+    const endIso = `${calendarDate}T${b.scheduled_end_time}:00+05:30`;
 
     const url = new URL(`${TEAMS_DOMAIN}/api/teams-meeting`);
     url.searchParams.append('from', am.email);
